@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "importedAt": "2026-08-20",
+  "skills": {
+    "build-loop-claude-code": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/build-loop-claude-code/SKILL.md",
+      "computedHash": "c8e1422ce095facbfb0390f519fbfd571b9354a54039987b575ce441f6cc4dcf"
+    },
+    "build-loop-codex": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/build-loop-codex/SKILL.md",
+      "computedHash": "2d620370d55a729fbed2ce447e3e17bd9e949bf5c442eebec2c58e20bc64692c"
+    },
+    "build-loop-cursor": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/build-loop-cursor/SKILL.md",
+      "computedHash": "54b8e55c5c78850111c62b5d49f6c751bd6f3a759ab9ff7d771ab0e8192d1b34"
+    },
+    "build-mvp": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/build-mvp/SKILL.md",
+      "computedHash": "3508ca3e64a93bb7c4ef84ad5c46b9d42fd5c8687ab3c292fe2f754a89d8faf8"
+    },
+    "design-better": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/design-better/SKILL.md",
+      "computedHash": "c0ef36c9f2eef6543564408b3a96888a56021251f7a0e1cbe8a96861c8d98b54"
+    },
+    "design-system": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/design-system/SKILL.md",
+      "computedHash": "c3c1410699a0c8a6bb2a8f0106df18be669740d1162ec93ce2058b7af9c33bd9"
+    },
+    "idea-generator": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/idea-generator/SKILL.md",
+      "computedHash": "fa06bad37a779831f1e4c86434e9fdb0e2bd8f6a74051b512b87184a9cb6eee7"
+    },
+    "idea-validator": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/idea-validator/SKILL.md",
+      "computedHash": "95d876b7ed70f5aedb0f8316545a582a6497e5b16b3eb58971b3bc70de29a8b1"
+    },
+    "launch-checklist": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/launch-checklist/SKILL.md",
+      "computedHash": "6de2bf44e1f2b30e2b05a3b8887015676ad6369241702f6d062450013a33c12a"
+    },
+    "product-planner": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "sourceCommit": "fb74cac0fc9d2d0ed920432ae64630b011029f9b",
+      "skillPath": "skills/product-planner/SKILL.md",
+      "computedHash": "987282b4faf214fcbc1ac19fbb883214db8cb3a444ddf0cf70c8c919d9332c01"
+    }
+  }
+}
