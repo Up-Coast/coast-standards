@@ -22,6 +22,10 @@ is a faithful paraphrase of a filed decision.
 
 ## Questions and decisions
 
+- **When Abbey asks a question, answer it — change nothing.** (Abbey, 2026-08-20: "stop
+  making changes when I ask a question.") No file edits, plan updates, or commits in the
+  same turn as answering; offering "want me to update X accordingly?" inside the answer is
+  fine. The change happens when she decides.
 - **Ask the minimum real questions**, each phrased as a recommended default Abbey can veto.
   Decide internal engineering questions yourself.
 - **Ask only on real design changes.** "If what you've done matches my requirements and
