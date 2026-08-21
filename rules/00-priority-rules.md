@@ -60,10 +60,9 @@ rather than building or hacking — its licence must be compatible and recorded.
 standard applies to your own codebase: a helper that already exists is an already-solved
 problem too.
 
-Origin (Abbey, 20 Aug 2026: "the simplest code possible… complex stuff always causes
-problems"; clarified 21 Aug after an agent read it as permission for shortcuts: "it is
-intended to avoid complex over-engineering. It is not intended for coding agents to take
-shortcuts.")
+Origin (Abbey, 20 Aug 2026: "complex stuff always causes problems"; clarified 21 Aug after
+an agent read the rule as permission for shortcuts: "it is intended to avoid complex
+over-engineering. It is not intended for coding agents to take shortcuts.")
 
 ## 2c. A coding agent never changes infrastructure unless told to
 
