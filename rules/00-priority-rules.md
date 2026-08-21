@@ -46,8 +46,11 @@ scattered through handlers. Mechanics in `types/backend-service.md`.
 
 ## 2b. Simple and elegant: clear, easy to read and understand
 
-Solutions should be simple and elegant — clear, easy to read and easy to understand. That
-is a quality of the finished code, not a measure of how little effort it took. It rules out
+Solutions should be simple and elegant — clear, easy to read and easy to understand — built
+on native solutions, never on workarounds. Native always wins, even when it is the more
+complex option: a workaround is never acceptable just because it makes the code look
+simpler. Favour native solutions. Simplicity is a quality of the finished code, not a
+measure of how little effort it took. It rules out
 over-engineering (speculative layers, cleverness, abstractions nothing uses) and it equally
 rules out shortcuts, workarounds, and partial solutions: a hack is not simple, it is
 incomplete. If a reviewer has to work to understand the code, that is a finding; if a
