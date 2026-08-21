@@ -20,7 +20,8 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/05-design-and-ui.md` | Design tokens, component reuse, reading design mocks, copy rules, accessibility |
 | `rules/06-testing.md` | Test types, TDD, false-passing patterns, what "coverage" means |
 | `rules/07-documentation-git-process.md` | Docs, diagrams, decision logs, git and PR discipline |
-| `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus Coast ships into customer repos (iOS, macOS, Android, React Native, Web). Copy the one matching your target into the project. |
+| `rules/08-auditing-and-completeness.md` | How to audit: rebuild the list from the code, never review the list. Read before any audit or "what's left" pass. |
+| `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. |
 | `skills/` | The BuilderOS skills (BuildGreatProducts/builder-os, MIT), vendored verbatim |
 | `skills-lock.json` | Pins each vendored skill to its source commit + SHA-256, matching Coast's pattern |
 | `TEMPLATE-CLAUDE.md` | Paste-in starter block for a new project's CLAUDE.md |
@@ -46,8 +47,17 @@ open-source BuilderOS skill set that Coast's build loop wraps.
   words, marked as quotes.
 - Category B sources (rules Coast enforces on the apps it builds): Coast's
   `Templates/rules/` corpus, the specialist agent system prompts, the reviewer gates, and the
-  deterministic CI checks. The `rules/platform/` files are byte-for-byte copies of the
-  shipped corpus.
+  deterministic CI checks. The five app-platform files in `rules/platform/` (iOS, macOS,
+  Android, React Native, Web) are byte-for-byte copies of the shipped corpus.
+- **The numbered `rules/` files are language-agnostic** — DRY, security, localization,
+  testing, documentation, and audit discipline apply to a Python service exactly as they do
+  to a Swift app. Only the `platform/` files are language-specific.
+- `rules/platform/domain-rules-python.md` (Python backends and services) is Up Coast
+  standards, **not** part of Coast's shipped corpus — Coast builds mobile and web app
+  targets, so it has no Python rules doc to copy. Added 20 August 2026 for client backend
+  work. If Coast ever ships a Python target, that corpus and this file must be reconciled.
+- `rules/08-auditing-and-completeness.md` is Up Coast standards, written 20 August 2026 from
+  the Coast completeness-sweep failure it describes.
 - `skills/` is vendored from [BuildGreatProducts/builder-os](https://github.com/BuildGreatProducts/builder-os)
   (MIT — license retained at `skills/BUILDEROS-LICENSE.txt`), pinned in `skills-lock.json`.
   Per Coast's rule, vendored skills are flag-don't-edit; local fixes go upstream or into a
