@@ -1,6 +1,10 @@
 # Localization
 
-Every project is built localizable from day one, whether or not a second language is
+> **Applies to:** project type A — apps and frontends with user-facing text. A backend,
+> pipeline, or CLI satisfies priority rule 2 through the one-home-for-messages rule in
+> `types/backend-service.md` instead. See `PROJECT-TYPES.md`.
+
+Every project with a user interface is built localizable from day one, whether or not a second language is
 scheduled. Retrofitting string externalization is expensive; doing it from the first commit
 is free. (This section closes a known gap: Coast's shipped per-platform corpus has no L-*
 section even though Coast enforces these rules internally via its strings specialist.)

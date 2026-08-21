@@ -1,5 +1,10 @@
 # Architecture and code
 
+> **Applies to:** all project types for layering, granularity, naming, and DRY; the
+> **Platform behavior** section (MVVM split, reactive state, responsive layout, UI
+> threading) is for project type A — apps with a user interface — only. Backends and
+> pipelines get their equivalents from `types/backend-service.md`. See `PROJECT-TYPES.md`.
+
 The engineering standards Coast enforces on every project it builds, generalized for any
 Up Coast project. Per-platform checkable versions live in `platform/domain-rules-*.md`;
 this file is the reasoning layer behind them.

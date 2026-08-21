@@ -1,5 +1,8 @@
 # Design and UI
 
+> **Applies to:** project type A only — apps and frontends. Nothing here applies to a
+> headless service or pipeline. See `PROJECT-TYPES.md`.
+
 How agents consume Abbey's designs and build UI. The craft layer (hierarchy, interaction,
 motion, polish) is covered by the vendored BuilderOS `design-better` skill; token generation
 by `design-system`. These are the standing rules on top.

@@ -31,12 +31,18 @@ Concretely, on every project:
 Enforcement: reviews grep the diff for inlined strings, styling literals, and duplicated
 logic, and fail the change when they find them.
 
-## 2. All user-facing strings are externalized — always, from day one
+## 2. User-facing text is never hardcoded — always, from day one
 
-No user-facing text is ever hardcoded in a view, component, or template. Every string lives
-in the string catalog/locale files under a named key, so the product is localizable without
-touching code. This applies to error messages, empty states, accessibility labels, and text
-assembled from data. Full mechanics in `04-localization.md`. (Coast D36)
+**Projects with a user interface (type A):** no user-facing text is ever hardcoded in a
+view, component, or template. Every string lives in the string catalog/locale files under a
+named key, so the product is localizable without touching code. This applies to error
+messages, empty states, accessibility labels, and text assembled from data. Full mechanics
+in `04-localization.md`. (Coast D36)
+
+**Backends, pipelines, and CLIs (types B, C, D):** a localization catalog is usually
+ceremony, but every string a person will eventually read — API error text, emails,
+notifications, CLI output — still has exactly ONE home rather than sitting as literals
+scattered through handlers. Mechanics in `types/backend-service.md`.
 
 ## 3. OWASP rules are followed
 
