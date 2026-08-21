@@ -82,6 +82,35 @@ So, in every audit, also do this:
 - When a claim turns out to be unsupported, the finding is not just the missing code — it
   is also that the belief went unchallenged, and both belong in the report.
 
+## Case log — what has actually been missed, and the check each one produces
+
+**This list grows.** Every time an audit misses something significant, the miss gets added
+here with the mechanical check that would have caught it. The value of this file is not its
+principles — it is this list, because each entry is a failure that really happened and a
+check that is cheap to run.
+
+All entries below are from Coast, August 2026. Several audits ran in the same few days and
+all of them came back clean while these were sitting in the code.
+
+| What was missed | Why it survived the audit | The check that catches it |
+|---|---|---|
+| A specialist agent had a full role definition — rules, tool permissions, refusal messages, question routing — and **no implementation**. Any work needing it stopped and asked a human to do it by hand. | Audits were scoped to a different layer, and no live run had ever contained the kind of work that would trigger it. | **Every case in every enum needs a construction site.** Grep for each case being constructed, not just declared. A case nothing constructs is a design that never shipped. And **every branch in a dispatch table that returns nothing is a missing feature** — read them all. |
+| A pipeline stage would **permanently block** on certain work, with no way for a human to clear it, because the stop was placed before the code that reads a human's decision. | **No test fixture ever set the flag that triggers it.** Every fixture in the suite used the default value. | **List the flags, states, and inputs that no fixture ever exercises**, and read those paths by hand. Unbuilt and broken work survives exactly where the tests never look. |
+| A user-facing setting — a switch a founder could turn on — **was read by nothing.** The feature it promised silently never happened. | Tests confirmed the setting existed and persisted. Nothing tested that anything consumed it. | **Every user-facing setting must have a reader.** For each one, grep for something that consults it in logic, not just something that stores it. |
+| A safety rule ("no work starts before approval") was **silently off in the live product**, because it was conditioned on a record that only the demo path could create. | The rule's code existed and its tests passed — against fixtures that could produce the record. | **A guard conditioned on state that one mode cannot produce is disabled in that mode.** For each guard, ask which modes can actually satisfy its precondition. |
+| A cost-affecting path was computed, shown to the user, and **read by no step that does work.** Users were told the work would be more thorough, and it was identical. | The computation and the display were both correct and both tested. | **Every value that reaches the interface must reach the logic.** Trace each displayed value forward: who acts on it? A value that only ever gets shown is a promise nothing keeps. |
+| Work built and exported, then **never wired in** — its only callers were its own tests. | Coverage looked fine. Tests are callers. | **Grep every exported function for callers outside the test directory.** Test-only callers mean a seam was built and never connected. |
+| Deliverables that existed but **nothing installed** — several documents written for other platforms, unreachable because the only code that installs them refused those platforms. | The documents were real, complete, and reviewed. Nobody checked whether anything consumed them. | **Every artifact needs a consumer.** For each shipped file or asset, find the code that puts it where it's used. |
+| A gap **named inside a decision record** in one month, never transferred to the work list, still open two months later. | The decision log is not the work list, and nobody diffed one against the other. | **Diff the decision log against the work list.** Any decision that names an unfinished thing must have a corresponding filed task, or the gap lives only in prose nobody builds from. |
+| A capability everyone believed the product had — **creating a project** — which no specification ever described, so no spec-versus-code audit could find it. | Every sweep compared code to specs. There was no spec to fall short of. | The product-promise method above: **audit the claims, not just the specs.** |
+| An inventory page asserting *"everything not on this page is built"* — **which was false in more than a dozen places.** | The claim was inherited and never re-verified; later sessions trusted it as a premise. | **Treat every completeness claim in a document as an unverified assertion** until this sweep proves it. Retire the ones you can't prove. |
+| A rules document still stating the **opposite of a decision made hours earlier.** | The decision was recorded in one place; the document carrying the old guidance was not updated. | **When a decision reverses guidance, update every document that carries it in the same session** — then grep for the old wording to prove none survives. |
+
+The pattern across almost all of these: **the code was honest and the documents were not.**
+Nearly every gap was visible in the source — an empty branch, a comment admitting deferral,
+a message written for a human explaining what wasn't built. What failed was that nobody read
+the code for those signals, and the tracker was trusted instead.
+
 ## Reporting
 
 State the scope, the method, and the limits. "I checked every enum case for a
@@ -92,3 +121,19 @@ looking.
 
 Two claims are never made without a sweep that checked them: **"everything
 else is built"** and **"this is complete."**
+
+## When an audit misses something, add it here
+
+This is the maintenance rule for this file. A missed finding is not just a bug to fix — it
+is evidence that the method has a hole. When something significant is found that a previous
+audit should have caught:
+
+1. Add a row to the case log: what was missed, why it survived, and the **mechanical check**
+   that would have caught it. The check is the part that matters — "be more careful" is not
+   a check.
+2. If the miss doesn't fit any existing check, it is a new one. Say so.
+3. Do it in the same session as the discovery, while the reason it survived is still clear.
+
+Abbey, 20 August 2026, after several audits in the same week each came back clean while
+major pieces sat unbuilt: *"We're gathering a list of these learnings so that future audits
+are more correct."*
