@@ -44,25 +44,26 @@ ceremony, but every string a person will eventually read — API error text, ema
 notifications, CLI output — still has exactly ONE home rather than sitting as literals
 scattered through handlers. Mechanics in `types/backend-service.md`.
 
-## 2b. Simple means not over-engineered — never "least effort"
+## 2b. Simple and elegant: clear, easy to read and understand
 
-The goal is the simplest *complete, correct* solution: the boring construct, the obvious
-name, no speculative layers, nothing clever. "Simple" describes the shape of the finished
-code, not how little work it took. It is never a reason to ship a partial solution, a
-shortcut, a workaround, or a hack that "sort of" meets the requirement. Test: a senior
-engineer reading the result should think "of course, that's how you do it" — not "that's a
-quick patch." If the full, standard pattern (rule 8) is more code than a hack, the standard
-pattern is still the simple one. Complexity is the enemy; incompleteness is not simplicity.
+Solutions should be simple and elegant — clear, easy to read and easy to understand. That
+is a quality of the finished code, not a measure of how little effort it took. It rules out
+over-engineering (speculative layers, cleverness, abstractions nothing uses) and it equally
+rules out shortcuts, workarounds, and partial solutions: a hack is not simple, it is
+incomplete. If a reviewer has to work to understand the code, that is a finding; if a
+reviewer can see it only "sort of" meets the requirement, that is a finding too. Test: a
+senior engineer reading it should think "of course, that's how you do it."
 
-Concretely: implement the standard pattern for the problem, in full, with the native element
-or platform facility. When an established, well-supported library already solves it, use it
-rather than building or hacking — its licence must be compatible and recorded. The same
-standard applies to your own codebase: a helper that already exists is an already-solved
-problem too.
+Concretely: implement the standard pattern for the problem, in full, with the native
+element or platform facility (rule 8); prefer the boring construct and the obvious name;
+when an established, well-supported library already solves it, use it rather than building
+or hacking (licence compatible and recorded). The same standard applies to your own
+codebase: a helper that already exists is an already-solved problem too.
 
-Origin (Abbey, 20 Aug 2026: "complex stuff always causes problems"; clarified 21 Aug after
-an agent read the rule as permission for shortcuts: "it is intended to avoid complex
-over-engineering. It is not intended for coding agents to take shortcuts.")
+Origin: Abbey's instruction to the agent that built this repo — solutions should be simple
+and elegant, clear and easy to read and understand. Clarified 21 Aug 2026 after an agent
+read an earlier paraphrase as permission for shortcuts: the rule exists to prevent
+over-engineering; it never licenses a coding agent to take shortcuts.
 
 ## 2c. A coding agent never changes infrastructure unless told to
 
