@@ -57,6 +57,31 @@ page."
    not listed is done, either prove it with a sweep or delete the sentence.
    Replace it with what was actually checked, and when.
 
+## Audit against the product's promise, not only against its specs
+
+Comparing code to specs finds things that were designed and never built. It cannot find the
+more dangerous gap: **capabilities everyone assumes the product has, that were never
+designed in the first place.** There is no spec for the code to fall short of, so the sweep
+comes back clean and the belief survives.
+
+Origin (20 August 2026): repeated sweeps of the Coast codebase found every designed-but-
+unbuilt piece, and all of them agreed the setup step worked. None noticed that the product
+could not *create* a project at all — it only ever installed governance onto a repository
+that already existed. That was never a spec violation; the specs were written around
+adopting existing code. It was a gap between what the product was believed to do and what
+anyone had ever designed.
+
+So, in every audit, also do this:
+
+- **Write down what the product claims** — from its marketing, its onboarding, its own
+  help text, and the sentences the team says out loud about it. Then check each claim
+  against the code, as a claim, independent of whether a spec exists for it.
+- **Walk the first-run path as a new user**, not as someone who knows where the working
+  parts are. The gaps a team can't see are the ones their habits route around.
+- **Treat "we always said it does X" as a finding to verify**, never as a premise.
+- When a claim turns out to be unsupported, the finding is not just the missing code — it
+  is also that the belief went unchallenged, and both belong in the report.
+
 ## Reporting
 
 State the scope, the method, and the limits. "I checked every enum case for a
