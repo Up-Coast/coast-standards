@@ -44,27 +44,26 @@ ceremony, but every string a person will eventually read — API error text, ema
 notifications, CLI output — still has exactly ONE home rather than sitting as literals
 scattered through handlers. Mechanics in `types/backend-service.md`.
 
-## 2b. Simple beats clever, and solved problems stay solved
+## 2b. Simple means not over-engineered — never "least effort"
 
-Two halves of the same instinct (Abbey, 20 Aug 2026).
+The goal is the simplest *complete, correct* solution: the boring construct, the obvious
+name, no speculative layers, nothing clever. "Simple" describes the shape of the finished
+code, not how little work it took. It is never a reason to ship a partial solution, a
+shortcut, a workaround, or a hack that "sort of" meets the requirement. Test: a senior
+engineer reading the result should think "of course, that's how you do it" — not "that's a
+quick patch." If the full, standard pattern (rule 8) is more code than a hack, the standard
+pattern is still the simple one. Complexity is the enemy; incompleteness is not simplicity.
 
-**The simplest thing that works is the goal, not the fallback.** Her words: *"I believe in
-simple solutions, the simplest code possible that looks like a 10 year old wrote it is the
-goal honestly. Complex stuff always causes problems."* Clever code is a liability: it is
-harder to review, harder to change, and it hides its bugs. If a reviewer has to work to
-understand it, that is a finding, not a compliment. Prefer the boring construct, the obvious
-name, and the shorter path — and when something genuinely must be intricate, say why in the
-one comment that earns its place.
+Concretely: implement the standard pattern for the problem, in full, with the native element
+or platform facility. When an established, well-supported library already solves it, use it
+rather than building or hacking — its licence must be compatible and recorded. The same
+standard applies to your own codebase: a helper that already exists is an already-solved
+problem too.
 
-**Don't solve an already-solved problem.** Before building infrastructure, a framework, or a
-utility layer, check whether an established, well-supported thing already does it — the
-platform's own facility first, then a proven open-source option. Reinventing it costs the
-build, the bugs, and the maintenance forever after, all to end up where you could have
-started. (This is why the vendored BuilderOS skills are used rather than rewritten: they
-work, they were tested, and rebuilding them would buy nothing.) Two conditions on adopting
-something: it has to be genuinely established, and its licence has to be compatible and
-recorded. And keep the same standard for your own codebase — a helper that already exists
-is an already-solved problem too.
+Origin (Abbey, 20 Aug 2026: "the simplest code possible… complex stuff always causes
+problems"; clarified 21 Aug after an agent read it as permission for shortcuts: "it is
+intended to avoid complex over-engineering. It is not intended for coding agents to take
+shortcuts.")
 
 ## 2c. A coding agent never changes infrastructure unless told to
 
