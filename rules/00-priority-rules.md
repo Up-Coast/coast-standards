@@ -66,6 +66,17 @@ something: it has to be genuinely established, and its licence has to be compati
 recorded. And keep the same standard for your own codebase — a helper that already exists
 is an already-solved problem too.
 
+## 2c. A coding agent never changes infrastructure unless told to
+
+(Abbey, 2026-08-21, hard rule.) Never create, modify, or destroy infrastructure — cloud
+apps/machines/volumes, storage buckets, secrets and tokens, DNS, deployments, CI pipelines,
+account settings — unless the user has told you, in the current conversation, to do that
+specific thing. If a task appears to need it, finish every part that doesn't, then stop and
+ask in one sentence. Read-only checks (status, logs, health) are fine. Setup work the user
+assigns is still Claude's job; unprompted infrastructure changes never are. Origin: a
+session asked for UI fixes created and destroyed a staging app, volume, bucket and secrets
+on the user's account on its own initiative — "a huge breach of trust."
+
 ## 3. OWASP rules are followed
 
 Every project complies with the security rules in `03-security-owasp.md`, which are sourced
