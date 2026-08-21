@@ -76,19 +76,36 @@ Never accept "it compiles" or "tests pass" as a claim; require that a build/test
 truth; the author's word ≠ truth.** Anything that must happen lives in a hook, a script, or
 CI — never in prose telling someone to remember.
 
-## Tests are locked once written
+## Changing a test is a decision made before the work, not during it
 
-- From the moment the tests-first commit exists, **existing tests may not be modified or
-  deleted while implementing.** A failing test is fixed by fixing the code, or escalated as
-  a question.
-- The legitimate case — the required behaviour genuinely changed — is handled by changing
-  the test **before the work starts**, never during it.
-- After implementation begins, tests may only be **added**. "Implement to green" is not done
-  if the diff touches existing tests.
-- Abbey's words: *"we need to make sure that the agent doing work that touches test didn't
-  just change the tests so that they pass … tests should be written before the work starts
-  that's one of our best defences against this problem and this also means that any test
-  that needs to be modified should be modified before the work starts."*
+**This rule protects the integrity of the codebase, not the sanctity of the tests.** Tests
+absolutely do need to change sometimes — when the required behaviour genuinely changed, the
+test asserting the old behaviour is now wrong, and changing it is the correct move.
+
+What is being prevented is the specific failure of an implementer meeting a red test and
+making it green by editing the test instead of the code — and its uglier twin, **contorting
+the implementation into something convoluted purely to avoid touching a test.** Both damage
+the codebase. Writing spaghetti to dodge a test edit is a worse outcome than the edit.
+
+So the discipline is about *when and by whom* the decision gets made:
+
+- **Decide test changes when planning the work, not while fighting a red run.** If the
+  behaviour is changing, say so up front and change the test then — with the change visible
+  and reviewable as part of the plan rather than buried in an implementation diff.
+- **Mid-implementation, a red test is a question, not a licence.** If it turns out the test
+  encodes an assumption the new behaviour invalidates, stop and raise it — then change the
+  test deliberately, and record why. What is never acceptable is silently weakening or
+  deleting a test so a run goes green.
+- **Every test change states the reason.** "The behaviour changed, here's how" is a good
+  reason. "It was failing" is not a reason.
+- Abbey's original framing: *"we need to make sure that the agent doing work that touches
+  test didn't just change the tests so that they pass … tests should be written before the
+  work starts that's one of our best defences against this problem and this also means that
+  any test that needs to be modified should be modified before the work starts."* And her
+  clarification (20 Aug 2026): *"If the function itself changed wouldn't that require
+  changing the test? We shouldn't be writing speghetti code to get around modifying a test.
+  The rules around tests are not about the tests themselves, they are about the integrity of
+  the codebase. Sometimes a test does need to be modified."*
 
 ## Three nets, each for what only it can catch
 

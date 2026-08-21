@@ -8,17 +8,23 @@
   fetch, reconcile, push. Never leave work only on one machine.
 - **Repos are private in the Up-Coast org** unless decided otherwise; secret-scan before
   the first push of any repo.
-- **One checkout per project, branch-switched — NOT worktrees.** (Abbey, 20 Aug 2026,
-  reversing the earlier worktree guidance in this file.) Worktrees make a full extra copy
-  per branch, and cleanup only ever covers the happy paths — paused, blocked, crashed, and
-  walked-away work leaves copies behind, invisibly, until a disk fills. Use one checkout and
-  switch branches. **When work has to be parked mid-stream, commit it to its own branch
-  first**, then switch; resume by checking that branch back out. Her words: *"if we don't
-  have a foolproof way of managing the space that these worktrees might eat up on someone's
-  computer then we need to... remove worktree useage and enforce one at a time. If a ticket
-  is paused, a commit will be made and the local environment will do a git branch and work
-  on a new branch."* Reintroducing worktrees for parallel runs is a re-opening of this
-  decision — ask her, don't assume it's an implementation detail. Keep `main` releasable.
+- **Worktrees: fine when a person or session manages them; not in shipped software.**
+  (Abbey, 20 Aug 2026, scoping the earlier blanket guidance in this file.)
+  - **A development session may use worktrees** for its own parallel work — a Claude Code
+    session, or you at the terminal. Whoever creates them is present to clean them up, so
+    the disk risk is bounded and visible.
+  - **Software shipped to someone else must not leave worktrees on their machine.** A
+    product that creates a full extra copy per branch has to clean up on *every* ending, not
+    just the happy ones — paused, blocked, crashed, and walked-away work all leave copies
+    behind, invisibly, until a non-technical user's disk fills with something they can't
+    find. Unless the cleanup story is airtight, use one checkout and switch branches.
+  - **When work has to be parked mid-stream, commit it to its own branch first**, then
+    switch; resume by checking that branch back out. Her words: *"if we don't have a
+    foolproof way of managing the space that these worktrees might eat up on someone's
+    computer then we need to... remove worktree useage and enforce one at a time. If a
+    ticket is paused, a commit will be made and the local environment will do a git branch
+    and work on a new branch."*
+  - Keep `main` releasable either way.
 - **Protected main where the platform allows it:** PR required, review required, status
   checks required, no force-push, no deletion.
 

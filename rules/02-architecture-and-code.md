@@ -91,6 +91,16 @@ this file is the reasoning layer behind them.
   the AIs could have better context (they just need to learn the APIs of each module they
   need to interact with rather than learn the code for example)."* The boundary is what
   makes a small working context possible.
+- **And it draws the line of responsibility.** Each module has someone — a person or an
+  agent — responsible for it. They are not responsible for anyone else's module and must
+  not write their code to accommodate the internals of one. Abbey: *"agents are responsible
+  for their area of the code, they shouldn't be building their code trying to make it work
+  with code another agent is responsible for. We are drawing clear boundaries on area of
+  responsibility. As long as the other API returns the information the agent needs that is
+  the only thing the agent should care about."* Practically: if the API gives you what you
+  need, you are done looking. If it doesn't, that is a conversation with its owner about
+  the API — never a workaround built on knowledge of their internals, and never a fix you
+  reach in and make yourself.
 - **Enforcement is structural, not detection-only.** *"It should be impossible for agents to
   make changes they are not authorized to do."* Scoping by prompt or by convention is not
   sufficient on its own; out-of-authority changes should be technically impossible. Detection

@@ -44,6 +44,28 @@ ceremony, but every string a person will eventually read — API error text, ema
 notifications, CLI output — still has exactly ONE home rather than sitting as literals
 scattered through handlers. Mechanics in `types/backend-service.md`.
 
+## 2b. Simple beats clever, and solved problems stay solved
+
+Two halves of the same instinct (Abbey, 20 Aug 2026).
+
+**The simplest thing that works is the goal, not the fallback.** Her words: *"I believe in
+simple solutions, the simplest code possible that looks like a 10 year old wrote it is the
+goal honestly. Complex stuff always causes problems."* Clever code is a liability: it is
+harder to review, harder to change, and it hides its bugs. If a reviewer has to work to
+understand it, that is a finding, not a compliment. Prefer the boring construct, the obvious
+name, and the shorter path — and when something genuinely must be intricate, say why in the
+one comment that earns its place.
+
+**Don't solve an already-solved problem.** Before building infrastructure, a framework, or a
+utility layer, check whether an established, well-supported thing already does it — the
+platform's own facility first, then a proven open-source option. Reinventing it costs the
+build, the bugs, and the maintenance forever after, all to end up where you could have
+started. (This is why the vendored BuilderOS skills are used rather than rewritten: they
+work, they were tested, and rebuilding them would buy nothing.) Two conditions on adopting
+something: it has to be genuinely established, and its licence has to be compatible and
+recorded. And keep the same standard for your own codebase — a helper that already exists
+is an already-solved problem too.
+
 ## 3. OWASP rules are followed
 
 Every project complies with the security rules in `03-security-owasp.md`, which are sourced
