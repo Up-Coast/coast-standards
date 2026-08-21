@@ -70,3 +70,20 @@ by `design-system`. These are the standing rules on top.
   nothing. Walk the WHOLE product against the design files, not just the screens you built.
 - Real screenshots of finished work are wanted evidence; redrawn/mocked "explanatory" UI is
   never acceptable as a stand-in for the design or the build.
+
+## Destructive actions
+
+- **A destructive confirm is click-only.** Never attach the default-action / Return key
+  binding to stop, abandon, delete, or any removal-class confirm — even when the mock draws
+  it as the visual primary. Platform guidance wins over the mock's visual weight here;
+  Escape/cancel keeps its shortcut. Reviews treat a default-action binding on a destructive
+  button as a defect. (Abbey: *"the user must click not hit enter for destructive actions."*)
+
+## Status and colour, concretely
+
+- Status is never colour alone: pair a **glyph and a text badge** with it (a fixed glyph set
+  such as `■ ▲ ● ○` mapped to the status words), so meaning survives colour-blindness,
+  greyscale printing, and small sizes.
+- In a fixed status palette, **a colour means exactly one thing** — reserve the alarm colour
+  for the top severity only, and give any demo/placeholder state its own colour used nowhere
+  else.

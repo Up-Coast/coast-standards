@@ -67,3 +67,85 @@ for the existing code first, then start the feature.
   report is not the record.
 - Screenshot-vs-design comparison is a quality dial; the honest walk of the whole product
   is the gate.
+
+## The build result is the truth — never an agent's word for it
+
+An agent does not know whether its code compiles unless something actually ran the build.
+Never accept "it compiles" or "tests pass" as a claim; require that a build/test step
+*actually ran* and passed, verified by a step that cannot be skipped. **Build result =
+truth; the author's word ≠ truth.** Anything that must happen lives in a hook, a script, or
+CI — never in prose telling someone to remember.
+
+## Tests are locked once written
+
+- From the moment the tests-first commit exists, **existing tests may not be modified or
+  deleted while implementing.** A failing test is fixed by fixing the code, or escalated as
+  a question.
+- The legitimate case — the required behaviour genuinely changed — is handled by changing
+  the test **before the work starts**, never during it.
+- After implementation begins, tests may only be **added**. "Implement to green" is not done
+  if the diff touches existing tests.
+- Abbey's words: *"we need to make sure that the agent doing work that touches test didn't
+  just change the tests so that they pass … tests should be written before the work starts
+  that's one of our best defences against this problem and this also means that any test
+  that needs to be modified should be modified before the work starts."*
+
+## Three nets, each for what only it can catch
+
+Spend the expensive net only where judgment is genuinely needed:
+
+- **Structure → a deterministic script.** Schema diffs and symbol graphs: anything in the
+  change that isn't on the approved item list fails mechanically.
+- **Behaviour → tests.** Locked by the rule above.
+- **Quality and justification → review judgment.** The only net that needs a mind.
+
+## Red main stops everything
+
+Failing tests on the main branch halt the *start* of all new work — the fix is the only job
+until it's green. This covers breakage that arrived from outside (a teammate's push), not
+just your own merges.
+
+## Cadence — verify everything, waste nothing
+
+Quality never drops; the goal is to stop paying for runs that prove nothing.
+
+- Parallel lanes run their own target during the loop, and the **full suite once** before
+  the lane's final commit. A serial merge step re-runs it after each merge.
+- Sessions working on shared files keep the full suite green before every commit.
+- **One review pass per task, at the end** — not per file, not per commit.
+- Bundle verification: one full-suite run over a batch, not one per merge, and never a
+  re-run of a suite nothing has changed since.
+- Abbey: *"please do not do extraneous test suite runs or things that you can bundle
+  together later. We should of course test our own work, we don't want quality to drop at
+  all, for any reason, I just saying don't be wasteful."*
+
+## Never re-run a proven paid pipeline as routine verification
+
+Where a test path costs real money per run, a proven end-to-end path is not re-verified out
+of habit. Verify with the free suite, a mock run, or records that already exist. A real
+metered run needs **both** a concrete reason — a major change to that subsystem, a genuinely
+new stage, or a live seam unverifiable any other way — **and** explicit sign-off. A
+deliberately dead credential may be a spend guard; don't chase it as a bug.
+
+## Long runs: watchdog, don't wait
+
+- Know what a healthy run looks like for the project, in wall-clock terms, before you start
+  one.
+- **Never pipe a long run through `tail` alone** — it starves the log until exit, so nobody
+  can tell stuck from slow. Stream through `tee` to a file and give the human the path.
+- Build the test target first, then run under a **hard timeout** sized to a healthy run. A
+  fired timeout means a wedge: kill it, re-run with the known-hanging suite skipped, and
+  **say in the report that you skipped it.**
+- A suite that can wedge is a defect with a root cause. Find it; a permanent skip is not a
+  fix.
+
+## Proving a background run is alive
+
+- The reliable signal is **recent file activity on disk** (a transcript or output file being
+  written), not a process count — work may run in-process — and not a launch confirmation.
+- Set a watchdog that polls for that activity after launching anything long-running.
+- A dead run's partial work survives on disk: relaunch with instructions to review and
+  resume, **never blind-restart**.
+- When a status claim is challenged, re-verify from primary evidence rather than restating
+  it more softly. (Abbey, after this failed three times in a row: *"I should not have had to
+  challenge you 3 times, please be more thorough and correct next time."*)

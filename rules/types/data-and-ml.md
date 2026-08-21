@@ -74,3 +74,15 @@ quietly incorrect**, and nothing in the ordinary review path catches that.
   method supports; do not present an estimate as a measurement.
 - **Sample size and coverage travel with the number.** A rate computed from
   three records is labeled as such.
+
+## Null handling is a correctness rule, not a style choice
+
+- **Use the data library's own null test, never language identity comparison**, on boundary
+  and threshold checks — `pd.isna()`, not `is None`. They are not equivalent: a real
+  incident had an `is None` check silently misclassify high-risk vehicles as cleared,
+  because the missing value wasn't `None`. This is the checkable form of "unknown is a value,
+  not a zero."
+- **Establish the grain before writing the ingest path.** Decide whether a source row is an
+  event or a whole lifecycle episode *before* designing the upsert — getting it wrong
+  produces duplicated downstream alerts that look like real ones. Downstream triggers fire
+  on genuine inserts only, never on updates.

@@ -80,3 +80,17 @@ carry the checkable per-platform variants; this is the cross-platform core.
   for them — prefer active/inactive status.
 - Prompt-injection coverage is part of testing on any surface that feeds external text to a
   model. Low-connectivity behavior is tested on everything.
+
+## Spreadsheets and uploads
+
+- **CSV and spreadsheet exports escape formula-injection prefixes** (`=`, `+`, `-`, `@`) so
+  an exported cell can't execute when the file is opened. Cell content from an uploaded
+  file is rendered as text, never interpreted. [OWASP CSV Injection]
+- **Upload endpoints validate type and size BEFORE processing**, not after — the ordering is
+  the rule, because validation after parsing has already run the risky step. [OWASP Cheat
+  Sheet: File Upload]
+
+## Frontend supply chain
+
+- **No CDN-loaded scripts.** Dependencies are installed and pinned by lockfile; a script
+  fetched from a CDN at runtime defeats the lockfile entirely and changes under you.

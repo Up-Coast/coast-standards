@@ -22,6 +22,8 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/06-testing.md` | Test types, TDD, false-passing patterns, what "coverage" means |
 | `rules/07-documentation-git-process.md` | Docs, diagrams, decision logs, git and PR discipline |
 | `rules/08-auditing-and-completeness.md` | How to audit: rebuild the list from the code, never review the list. Read before any audit or "what's left" pass. |
+| `rules/09-models-and-agents.md` | Model effort defaults (frugal, per role, never inherited), verifying which model is running, commit attribution, not dictating diffs into code you don't own |
+| `rules/10-development-environment.md` | Atomic commands and permission prompts, disk hygiene, the cost of branch switching |
 | `rules/types/backend-service.md` | The reasoning layer for services with no screen: layering without a UI, API contracts, async/workers, operability, data safety |
 | `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
 | `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. |

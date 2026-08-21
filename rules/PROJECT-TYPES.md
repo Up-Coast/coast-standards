@@ -36,6 +36,8 @@ you are working in before you invoke a rule.
 | `06-testing.md` | ✅ | ✅ | ✅ + `types/data-and-ml.md` | ✅ |
 | `07-documentation-git-process.md` | ✅ | ✅ | ✅ | ✅ |
 | `08-auditing-and-completeness.md` | ✅ | ✅ | ✅ | ✅ |
+| `09-models-and-agents.md` | ✅ | ✅ | ✅ | ✅ |
+| `10-development-environment.md` | ✅ | ✅ | ✅ | ✅ |
 | `types/backend-service.md` | — | ✅ | ✅ | — |
 | `types/data-and-ml.md` | — | — | ✅ | — |
 | `platform/domain-rules-<platform>.md` | pick yours | `domain-rules-python.md` | `domain-rules-python.md` | pick yours |

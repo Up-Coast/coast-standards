@@ -79,3 +79,48 @@ this file is the reasoning layer behind them.
   existing was reused.
 - Reviews mechanically scan diffs for inlined strings, styling literals, hand-rolled
   versions of platform features, and duplicated logic.
+
+## Boundaries the build system enforces
+
+- **Module boundaries are packages, not conventions.** Realize the module layer so a
+  forbidden import is a **compile error**, not a lint finding someone can ignore. (Abbey:
+  *"I think modules should be enforced as packages."*) Where the language can't do it
+  natively, use the ecosystem's enforcement tool — dependency-cruiser (JS), import-linter
+  (Python), ArchUnit (JVM).
+- **Why this matters beyond tidiness**, in Abbey's words: modularization exists *"so that
+  the AIs could have better context (they just need to learn the APIs of each module they
+  need to interact with rather than learn the code for example)."* The boundary is what
+  makes a small working context possible.
+- **Enforcement is structural, not detection-only.** *"It should be impossible for agents to
+  make changes they are not authorized to do."* Scoping by prompt or by convention is not
+  sufficient on its own; out-of-authority changes should be technically impossible. Detection
+  sits behind the wall, never as the wall.
+
+## Granularity, with numbers
+
+The advisory thresholds, so "too big" is checkable rather than argued: a type over **300
+lines**, or with more than **7 initializer-injected dependencies**, raises a warning. These
+are inputs to a judgment about granularity — warnings, never automatic failures — and the
+constants live in config the agent can't reach.
+
+## Prove it runs before building it out
+
+- **The first task of a feature is a runnable spike.** Decompose into small tasks and make
+  task one invoke something that actually runs, with an optional pause for a human to try
+  it. This front-loads the "this approach doesn't work" discovery so review cycles aren't
+  spent finding it later.
+- **Flag data and external dependencies in the plan, before writing code.** List the
+  non-code inputs the product needs to be genuinely usable — content datasets, third-party
+  services, licensing, accounts — with sourcing options, rough effort, and a recommendation,
+  in the same plan as the code. (Origin: an entire app was built before anyone flagged that
+  its headline feature depended on a food database nobody had sourced. Abbey: *"you should
+  have flagged this before even starting."*)
+
+## No silent rework, no silent stalls
+
+Nothing retries, re-runs, or spends invisibly. Every automatic re-run is budget-bounded,
+visible while it happens, and recorded afterwards. Hitting any attempt, authority, or write
+limit fails **loudly**, with the full log as the cause — never a quiet stall, and never a
+loop that burns money where nobody can see it. Abbey filed this as a rule for the whole
+architecture, binding on anything added later: *"We don't want to risk customers burning
+through credits due to a stuck loop."*
