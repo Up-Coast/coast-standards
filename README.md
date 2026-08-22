@@ -56,7 +56,10 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 - Category B sources (rules Coast enforces on the apps it builds): Coast's
   `Templates/rules/` corpus, the specialist agent system prompts, the reviewer gates, and the
   deterministic CI checks. The five app-platform files in `rules/platform/` (iOS, macOS,
-  Android, React Native, Web) are byte-for-byte copies of the shipped corpus.
+  Android, React Native, Web) are byte-for-byte copies of the shipped corpus. Each carries
+  Coast's version stamp on its first line (`<!-- coast-rules-version: N -->`, since
+  2026-08-21): a project's copy is never auto-updated — Coast offers a newer version with
+  the changes in plain words, and the founder takes it with an explicit click.
 - **The numbered `rules/` files are NOT all universal.** They were extracted from an app
   project, and several assume a screen. `PROJECT-TYPES.md` says exactly which apply to
   which kind of project; the app-only files carry an applicability header. (Corrected
