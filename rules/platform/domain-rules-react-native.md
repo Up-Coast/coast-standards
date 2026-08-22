@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 3 -->
+<!-- coast-rules-version: 4 -->
 # Project rules
 
 This file ships with your project as a curated default, sourced from
