@@ -28,6 +28,7 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
 | `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. |
 | `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
+| `examples/` | Reference snapshots of real engagements — not rules, just what a project actually delivered, kept for scoping future client work by rule of thumb |
 | `skills/` | The BuilderOS skills (BuildGreatProducts/builder-os, MIT), vendored verbatim |
 | `skills-lock.json` | Pins each vendored skill to its source commit + SHA-256, matching Coast's pattern |
 | `TEMPLATE-CLAUDE.md` | Paste-in starter block for a new project's CLAUDE.md |
@@ -72,6 +73,10 @@ open-source BuilderOS skill set that Coast's build loop wraps.
   work. If Coast ever ships a Python target, that corpus and this file must be reconciled.
 - `rules/08-auditing-and-completeness.md` is Up Coast standards, written 20 August 2026 from
   the Coast completeness-sweep failure it describes.
+- `examples/fleetsignal-full-scope.md` is Up Coast standards, added 21 August 2026: a
+  reference list of everything delivered on the FleetSignal client engagement outside its
+  frontend build (backend hardening, standards docs, security, deploy infra, analytics,
+  localization, ops tooling, handoff docs), kept for scoping future client projects.
 - `skills/` is vendored from [BuildGreatProducts/builder-os](https://github.com/BuildGreatProducts/builder-os)
   (MIT — license retained at `skills/BUILDEROS-LICENSE.txt`), pinned in `skills-lock.json`.
   Per Coast's rule, vendored skills are flag-don't-edit; local fixes go upstream or into a
