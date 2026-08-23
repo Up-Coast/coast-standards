@@ -166,3 +166,25 @@ deliberately dead credential may be a spend guard; don't chase it as a bug.
 - When a status claim is challenged, re-verify from primary evidence rather than restating
   it more softly. (Abbey, after this failed three times in a row: *"I should not have had to
   challenge you 3 times, please be more thorough and correct next time."*)
+
+## A stand-in must fail the way production fails
+
+A test double that can only succeed or fail cleanly never exercises the
+paths that break in production. Every stand-in for an external service
+must be able to express that service's real refusal modes — the partial
+denial ("403 — I won't even list them"), the plan-gated feature, the
+empty-but-valid answer, the malformed response — not just success and a
+clean thrown error.
+
+Origin (Coast, 2026-08-22, the More Good Days walk): four chained defects
+shipped behind a GitHub stand-in that could not say "403 — I won't tell
+you". Each had correct handling code that was never reached (one read the
+wrong account's plan; one turned an unreadable ruleset listing into a
+hard failure before its own skip branch could run — ordering, not logic).
+The walk found them all in one evening because production refused where
+the stand-in never could.
+
+Practice: when writing a stand-in, enumerate the real service's
+documented failure responses first and make the double able to produce
+each one; when a live defect is traced to an unreachable handler, teach
+the stand-in that refusal in the same fix.
