@@ -225,6 +225,18 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
 - **TEST-3** A test proves behavior: it fails when the behavior it names is
   broken. Assertions so weak that any implementation passes don't count as
   coverage. [Project rule]
+- **TEST-4** Test data looks like real data. Fixtures are the size, shape
+  and messiness of the real thing: lists long enough to overflow a
+  container, names long enough to truncate, documents written in the
+  industry's words rather than the product's, and stand-ins for outside
+  services that can express that service's real refusals (403, 404, empty,
+  unreachable, slow) — not merely success and one tidy error. A fixture
+  built to be convenient tests the fixture. [Project rule]
+- **TEST-5** Pressure-test on purpose, as its own discipline: deliberately
+  push past what is expected — many more items than anyone would have,
+  values at and beyond the declared limits, empty and enormous, slow and
+  absent. At least the surfaces that render project data carry one case
+  each. [Project rule]
 
 ## Documentation (DOC)
 

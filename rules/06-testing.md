@@ -167,6 +167,33 @@ deliberately dead credential may be a spend guard; don't chase it as a bug.
   it more softly. (Abbey, after this failed three times in a row: *"I should not have had to
   challenge you 3 times, please be more thorough and correct next time."*)
 
+## Fixtures the size of the real thing, and pressure past it
+
+A fixture built to be convenient tests the fixture. Test data must be the
+size, shape and messiness of the real thing: lists long enough to overflow
+a container, names long enough to truncate, documents written in the
+industry's words rather than the product's own vocabulary.
+
+And push past it deliberately, as its own discipline: many more items than
+anyone would have, values at and beyond the declared limits, empty and
+enormous, slow and absent. Every surface that renders project data carries
+at least one case at real size and one past it.
+
+Origin (Coast, 2026-08-22, the More Good Days walk): the primary intake
+screen overprinted itself on a real project, drawing a screen list over
+the section beneath it — because every fixture project carried a handful
+of screens and the real one carried thirteen. In the same evening: a
+document checker that passed its own fixtures and refused a real 24 KB,
+14-section PRD, because the fixtures were written in the product's
+vocabulary by the same hand as the matcher; and a blueprint that showed
+"1 module · 0 data models" where the real answer was 17 and 9.
+
+Abbey, correcting the framing that "real data breaks what fixtures
+cannot": *"test mocks should be using data that is similar to what would
+be used for real. Our mocks need to be improved. We should be pressure
+testing also in addition to realistic mocks."* The first framing blames
+the world; the second blames the tests, and only the second produces work.
+
 ## A stand-in must fail the way production fails
 
 A test double that can only succeed or fail cleanly never exercises the
