@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 4 -->
+<!-- coast-rules-version: 5 -->
 # Rules for AI features
 
 This file ships with your project as a curated default, installed when you
