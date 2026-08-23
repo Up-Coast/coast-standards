@@ -133,7 +133,7 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   advisory signals for a reviewer, never automatic failures. [SOLID single-responsibility principle]
 - **A-4** No speculative abstraction: an interface exists only where
   something real substitutes for it — a second implementation or a test
-  fake. Module-boundary seams qualify by definition. [YAGNI — industry practice]
+  fake. A boundary between two modules qualifies by definition. [YAGNI — industry practice]
 - **A-5** Standard needs — routing, state, data fetching — are met with
   the framework's standard mechanism, not an invented framework that
   fights the one in use. [Framework documentation — per framework]

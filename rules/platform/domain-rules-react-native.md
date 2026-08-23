@@ -128,7 +128,7 @@ apply wherever a rule names them.
   advisory signals for a reviewer, never automatic failures. [SOLID single-responsibility principle]
 - **A-4** No speculative abstraction: an interface exists only where
   something real substitutes for it — a second implementation or a test
-  fake. Module-boundary seams qualify by definition. [YAGNI — industry practice]
+  fake. A boundary between two modules qualifies by definition. [YAGNI — industry practice]
 - **A-5** Standard needs — navigation, state, styling — are met with the
   ecosystem's standard mechanism (e.g. React Navigation, React state or an
   established store), not an invented framework that fights the platform.

@@ -112,7 +112,7 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   signals for a reviewer, never automatic failures. [SOLID single-responsibility principle]
 - **A-4** No speculative abstraction: a protocol or interface exists only
   where something real substitutes for it — a second implementation or a
-  test fake. Module-boundary seams qualify by definition. [YAGNI — industry practice]
+  test fake. A boundary between two modules qualifies by definition. [YAGNI — industry practice]
 - **A-5** Standard needs — navigation, state, dependency wiring — are met
   with the platform's standard mechanism, not an invented framework that
   fights the platform. [Apple platform conventions]
