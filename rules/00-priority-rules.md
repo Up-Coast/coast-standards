@@ -79,6 +79,24 @@ assigns is still Claude's job; unprompted infrastructure changes never are. Orig
 session asked for UI fixes created and destroyed a staging app, volume, bucket and secrets
 on the user's account on its own initiative — "a huge breach of trust."
 
+## 2d. Facts about the world are never hardcoded — ask, don't assume
+
+(Abbey, 2026-08-29, after a hardcoded branch name blocked a Coast build: "WHY is anything
+hardcoded? Our coding guidelines should have prevented against that.") A fact about
+anything outside the code — a repository's default branch, a file path, a URL or port, a
+plan or platform tier, an external system's names, formats, or limits — is never written
+as a literal at a use site. Each such fact is either asked of the system that owns it or
+read from its ONE configured home, through one shared function that every caller uses
+(this is DRY, rule 1, applied to environment facts). The failure mode this prevents: the
+assumption gets fixed at one call site and survives at seven others, so the "fixed" bug
+keeps returning. Origin: `origin/main` was hardcoded across eight files in Coast; the
+repo's real default branch was different; nothing could build.
+
+Enforcement: reviews grep the diff for known environment literals (branch names like
+"main"/"master", absolute paths, hardcoded hosts and ports) exactly as they grep for
+inlined strings and styling literals — and the shipped per-platform rules files carry
+this as a checkable rule (C-5 / ARCH-8), so customer-project reviewers enforce it too.
+
 ## 3. OWASP rules are followed
 
 Every project complies with the security rules in `03-security-owasp.md`, which are sourced

@@ -45,6 +45,16 @@ web file's rules for that part.
   deployment, and never a value read straight out of `os.environ` deep
   inside feature code. [Twelve-Factor App; OWASP ASVS]
 
+- **ARCH-8** No hardcoded facts about the world outside the code. A
+  repository's default branch, a file path, a URL or port, a plan or
+  platform tier, an external system's names or limits — every such fact
+  is either asked of the system that owns it or read from its one
+  configured home, through one shared function every caller uses. A
+  literal assumption about external state (a branch named "main", a
+  fixed path or URL) is a review failure wherever the real answer can
+  be asked for. [Twelve-Factor App, config; deterministic check:
+  review greps the diff for known environment literals]
+
 ## Security (SEC)
 
 - **SEC-1** All outbound and inbound traffic uses TLS. Certificate

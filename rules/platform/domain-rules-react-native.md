@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 5 -->
+<!-- coast-rules-version: 6 -->
 # Project rules
 
 This file ships with your project as a curated default, sourced from
@@ -171,6 +171,16 @@ apply wherever a rule names them.
 - **C-4** A change merges with zero new TypeScript errors and a clean run
   of the project's ESLint and Prettier configuration. [ESLint / Prettier —
   deterministic check]
+
+- **C-5** No hardcoded facts about the world outside the code. A
+  repository's default branch, a file path, a URL or port, a plan or
+  platform tier, an external system's names or limits — every such fact
+  is either asked of the system that owns it or read from its one
+  configured home, through one shared function every caller uses. A
+  literal assumption about external state (a branch named "main", a
+  fixed path or URL) is a review failure wherever the real answer can
+  be asked for. [Twelve-Factor App, config; deterministic check:
+  review greps the diff for known environment literals]
 
 ## Engineering quality (ENG)
 
