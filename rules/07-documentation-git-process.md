@@ -28,6 +28,27 @@
 - **Protected main where the platform allows it:** PR required, review required, status
   checks required, no force-push, no deletion.
 
+## Nothing is pushed unverified (Abbey, 2026-09-01)
+
+- **The full gate battery runs locally before every push**: build, the
+  complete test suite, the linter, the formatter in check mode, and every
+  deterministic check script the repository's CI runs. A failure stays
+  local and is fixed before anything leaves the machine.
+- **CI confirms; it never discovers.** A CI failure on a pushed commit is a
+  process defect, not a normal event. Origin: on one Coast walk a single
+  feature was pushed 15 times against 21 CI check failures for the same
+  seven files — each push a paid agent turn to learn what a local run
+  would have said in seconds. Abbey: pushing and waiting for CI to say it
+  is wrong "is a very inefficient and very costly" habit that "makes me so
+  angry."
+- **One implementation of each check, run in both places.** The script CI
+  runs IS the check; the local battery invokes that same script. A
+  re-implementation of a CI check in another language (a "mirror") is a
+  second source of truth and is forbidden — it is how a local check came
+  to pass while CI refused the same tree.
+- The same battery is installed as the repository's commit hook so a human
+  contributor meets the same refusal an agent does.
+
 ## Pull requests
 
 - The ticket/task content travels WITH the change (committed file with a predictable name,

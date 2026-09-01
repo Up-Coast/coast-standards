@@ -147,3 +147,24 @@ checklist delivered to her.
   explicit go, each time.
 - Verify factual claims about external products/APIs/policies against PRIMARY sources
   before answering; third-party coverage is a lead, never the answer.
+
+
+## Definition of done: a rule without its guard is not done (Abbey, 2026-09-01)
+
+Every rule in this corpus that CAN be checked mechanically ships with the
+check that fails the build when it is broken — a source-scan test, a lint
+rule, a CI step. A rule that lives only in a document is a request, and
+requests lose to whatever is cheapest for the session in front of the code.
+Verified on Coast on 2026-09-01: every defect class with a guard test stayed
+fixed; every class without one recurred, repeatedly, across sessions that
+had all read the rule.
+
+So a task is DONE only when both hold:
+
+1. The guard exists and is named — the test or check that makes the rule
+   unbreakable from that commit on.
+2. A reviewer who is not the builder confirms it from the code, never from
+   the builder's report.
+
+Anything marked built without both is not built. "Verified" without a test
+name or an on-screen walk is not a word to use.
