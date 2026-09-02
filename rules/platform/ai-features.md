@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 6 -->
+<!-- coast-rules-version: 7 -->
 # Rules for AI features
 
 This file ships with your project as a curated default, installed when you
