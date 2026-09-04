@@ -317,6 +317,10 @@ def builtin_hits(signature, path, text):
     if signature["id"] == "type-size":
         import type_size  # beside this file
         return type_size.hits(path, text)
+    if signature["id"] == "doc-comments":
+        import check_doc_comments  # beside this file — reads the file (and, for Swift, its module) from disk
+        platform = os.environ.get("COAST_PLATFORM") or check_doc_comments.platform_for(path)
+        return [(line, entry) for _, line, entry in check_doc_comments.undocumented([path], platform, texts={os.path.normpath(path): text})]
     return []
 
 

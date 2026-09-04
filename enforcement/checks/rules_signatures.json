@@ -1010,6 +1010,31 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float|CGFloat)\\b|\\bDouble\\(\\s*\\w*(price|amount|total)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "DOC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     },
@@ -2022,6 +2047,31 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float|CGFloat)\\b|\\bDouble\\(\\s*\\w*(price|amount|total)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "DOC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     },
@@ -2997,6 +3047,32 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float)\\b|\\.toDouble\\(\\)|\\.toFloat\\(\\)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "DOC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.java"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     },
@@ -3959,6 +4035,34 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*number\\b|parseFloat\\(\\s*\\w*(price|amount|total)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "DOC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     },
@@ -4960,6 +5064,34 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*number\\b|parseFloat\\(\\s*\\w*(price|amount|total)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "DOC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     },
@@ -5560,6 +5692,31 @@
           ],
           "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*float\\b|\\bfloat\\(\\s*\\w*(price|amount|total)",
           "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly"
+        },
+        {
+          "id": "doc-comments",
+          "rule": "STYLE-4",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git",
+            "strings",
+            "manifest"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render"
         }
       ]
     }
