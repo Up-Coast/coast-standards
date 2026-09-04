@@ -10,6 +10,13 @@ brief for this document: *"Design a system that would enable Coast to follow
 these rules and also others too… Please be the architect and research the
 best thing to do here."*
 
+**To start a session on this work, say:** *"Read
+`~/Documents/Claude/Code/up-coast-standards/enforcement/README.md` and build
+the next enforcement task."* Every decision is taken (section 7) — a session
+builds, it never re-asks. The first task is E0.1, the parity checker, in
+THIS repo. Coast's own tasks wait until the scanner is proven on Coast's own
+code.
+
 This is the ONE home for the design. Coast's own task list for its half
 lives in the Coast repo (`the-engine-plans/the-engine/build-plans/rules-enforcement-plan.md`)
 and points here; it never restates the design.
