@@ -16,12 +16,13 @@ stuff."*
 - **Use the lowest effort that reliably clears the job's quality bar.** Capability
   substitutes for effort: a frontier-class model defaults one notch *lower* than a mid-tier
   model on the same job, because it needs less deliberation to reach the same answer.
+  [check: process]
 - **Set it per role, not globally.** Reviews and second opinions err upward — a missed
   defect costs more than the tokens. Small bounded jobs (classification, extraction, a
-  yes/no check) run at minimum effort everywhere.
+  yes/no check) run at minimum effort everywhere. [check: process]
 - **Tune from recorded real spend, never from paid calibration runs.** Adjusting a default
   by running experiments to find the right setting spends the money the setting was meant to
-  save.
+  save. [check: process]
 
 ## Know which model is running before you start
 
@@ -30,9 +31,11 @@ stuff."*
   after the wrong model is worse than not starting. (Abbey, after ~5,000 lines of committed,
   tested work had to be discarded: *"I don't trust Opus to not make mistakes. Cleaning up
   another agent's plans is not as good as building right from the start."*)
+  [check: process]
 - **Commit trailers name the model that actually did the work.** Mis-attributing a commit
   corrupts the history's usefulness for exactly the debugging this rule exists to support.
   This is a git-integrity rule, not a courtesy.
+  [check: session:attribution-trailer]
 
 ## Don't dictate diffs into code you don't own
 
@@ -47,6 +50,7 @@ and just apply it, which is how a codebase accumulates changes nobody evaluated 
 surrounding code. Abbey: *"Those agents may be reactive or overly friendly and just help.
 They need to do what is best for their little part of the codebase. Keeping it readable,
 clear, simple, DRY, etc. Following the best practices for their little world."*
+[check: process]
 
 ## Check what you already have before adding manual steps
 
@@ -55,3 +59,4 @@ skills, the project's tooling reference, the memory directory, and the connected
 Assigning someone a manual task you had a tool for is a real cost, not a rounding error.
 When a permission or safety block genuinely prevents the programmatic path, **say that
 explicitly, with the fix**, rather than quietly inventing a manual workaround.
+[check: process]

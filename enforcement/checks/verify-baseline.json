@@ -1,9 +1,9 @@
 {
   "_comment": "The ratchet baseline for verify_rules.py on THIS repo's own corpus (enforcement/README.md, decision 2). The count may only fall; the verifier fails the commit when it rises, and fails when it falls until this number is lowered in the same commit. Past the deadline any gap fails. Only a person moves the deadline, and the move is recorded under 'moves' with who and why.",
   "id": "verify-rules-gaps",
-  "count": 558,
+  "count": 395,
   "written": "2026-09-04",
-  "by": "Fable (E0.1) — the starting line: 540 rules name no check, 18 name one in prose nothing runs",
+  "by": "Fable (E0.2) — every rule tagged; 395 references name checks E1/E2 have not built yet (signatures, linter configs, tool runners, hooks)",
   "deadline": "2026-12-03",
   "moves": []
 }

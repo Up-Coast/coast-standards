@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 7 -->
+<!-- coast-rules-version: 8 -->
 # Project rules
 
 This file ships with your project as a curated default, sourced from
@@ -20,47 +20,56 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   types or whole minor units — never binary floating-point arithmetic on
   fractional amounts, which cannot represent cents exactly (in JavaScript
   and in the database: `DECIMAL`/`NUMERIC`, not `FLOAT`).
-  [Industry-wide practice; see Sources]
+  [Industry-wide practice; see Sources; check: advisory:money-float, review]
 - **PAY-2** Every stored money amount carries its currency. Amounts in
   different currencies are never added or compared without an explicit
-  conversion step. [Industry-wide practice]
+  conversion step. [Industry-wide practice; check: review]
 - **PAY-3** Rounding is decided once (which method, at which step) and every
   total is computed in one place and reused — never recomputed slightly
   differently in two places. Totals shown to the user are computed
-  server-side, never trusted from the browser. [Industry-wide practice; OWASP ASVS]
+  server-side, never trusted from the browser. [Industry-wide practice; OWASP
+  ASVS; check: tool:jscpd, review]
 - **PAY-4** Raw card numbers never touch the product's own code, servers,
   or storage — payment collection goes through a certified payment
-  provider's hosted fields, checkout page, or SDK. [PCI DSS scope rules; OWASP]
+  provider's hosted fields, checkout page, or SDK. [PCI DSS scope rules; OWASP;
+  check: review]
 
 ## Security (SEC)
 
 - **SEC-1** All traffic uses HTTPS, with HTTP redirecting to HTTPS and
-  strict transport security (HSTS) enabled. [OWASP ASVS; OWASP Cheat Sheet: Transport Layer Security]
+  strict transport security (HSTS) enabled. [OWASP ASVS; OWASP Cheat Sheet:
+  Transport Layer Security; check: scan:plaintext-http]
 - **SEC-2** Data arriving from outside — user input, query parameters,
   request bodies, uploaded files, third-party responses — is validated
   server-side before use, and database queries are parameterized, never
-  assembled from strings. [OWASP ASVS; OWASP Cheat Sheets: Input Validation, Query Parameterization]
+  assembled from strings. [OWASP ASVS; OWASP Cheat Sheets: Input Validation, Query
+  Parameterization; check: scan:sql-string-assembly, review]
 - **SEC-3** Untrusted data rendered into a page goes through the
   framework's escaping — never raw HTML insertion (`innerHTML`,
   `dangerouslySetInnerHTML`) with untrusted content — and a content
-  security policy is set. [OWASP Cheat Sheets: XSS Prevention, Content Security Policy]
+  security policy is set. [OWASP Cheat Sheets: XSS Prevention, Content Security
+  Policy; check: scan:raw-html, review]
 - **SEC-4** State-changing requests are protected against cross-site
   request forgery (framework CSRF protection on, cookies `SameSite`).
-  [OWASP Cheat Sheet: CSRF Prevention]
+  [OWASP Cheat Sheet: CSRF Prevention; check: review]
 - **SEC-5** Every server endpoint checks that the signed-in user is allowed
   to reach the specific data it returns — object access is authorized by
-  ownership, not by the id being hard to guess. [OWASP ASVS; OWASP Top 10: Broken Access Control]
+  ownership, not by the id being hard to guess. [OWASP ASVS; OWASP Top 10: Broken
+  Access Control; check: review]
 - **SEC-6** No home-made cryptography. Encryption, hashing, and random
   generation use platform or well-established library implementations.
-  [OWASP ASVS]
+  [OWASP ASVS; check: review]
 - **SEC-7** Secrets — API keys, tokens, credentials — exist only
   server-side: never in client-side code, the shipped bundle, source
-  control, logs, or error messages. [OWASP ASVS; OWASP Cheat Sheet: Secrets Management]
+  control, logs, or error messages. [OWASP ASVS; OWASP Cheat Sheet: Secrets
+  Management; check: scan:secret-literal]
 - **SEC-8** Error pages and API errors never expose internals such as stack
-  traces, query text, or file paths. [OWASP Cheat Sheet: Error Handling]
+  traces, query text, or file paths. [OWASP Cheat Sheet: Error Handling; check:
+  review]
 - **SEC-9** JavaScript dependencies are pinned by the lockfile, and
   packages on security-critical paths (payments, auth, storage, crypto)
-  are actively maintained and audited before adoption. [OWASP Cheat Sheet: NPM Security]
+  are actively maintained and audited before adoption. [OWASP Cheat Sheet: NPM
+  Security; check: review]
 
 ## Accounts and sign-in (AUTH)
 
@@ -68,54 +77,58 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   auth system — never a hand-rolled account store. If passwords must be
   stored, they are hashed with a current memory-hard algorithm (Argon2id,
   scrypt, or bcrypt), never encrypted or kept readable.
-  [OWASP Cheat Sheets: Authentication, Password Storage]
+  [OWASP Cheat Sheets: Authentication, Password Storage; check: review]
 - **AUTH-2** Session cookies are `Secure`, `HttpOnly`, and `SameSite`;
   sessions expire, can be revoked, and the session id is regenerated at
-  sign-in and at any privilege change. [OWASP Cheat Sheet: Session Management]
+  sign-in and at any privilege change. [OWASP Cheat Sheet: Session Management;
+  check: review]
 - **AUTH-3** Sign-in attempts are rate-limited so accounts can't be
-  brute-forced. [OWASP ASVS]
+  brute-forced. [OWASP ASVS; check: review]
 - **AUTH-4** Sensitive actions — deleting the account, changing email,
   password, or payment details — re-confirm the user's identity first.
-  [OWASP ASVS]
+  [OWASP ASVS; check: review]
 
 ## Privacy and personal data (PRIV)
 
 - **PRIV-1** The product collects only the data the feature in front of
-  the user actually needs. [GDPR data-minimization principle]
+  the user actually needs. [GDPR data-minimization principle; check: review]
 - **PRIV-2** Non-essential cookies and trackers load only after the user
   consents, and the privacy policy states what is collected and why.
-  [GDPR / ePrivacy practice]
+  [GDPR / ePrivacy practice; check: review]
 - **PRIV-3** Personal data never appears in logs, analytics events, crash
-  reports, or URLs (including query strings). [OWASP Cheat Sheet: Logging; OWASP ASVS]
+  reports, or URLs (including query strings). [OWASP Cheat Sheet: Logging; OWASP
+  ASVS; check: ratchet:pii-in-log, review]
 - **PRIV-4** Users can delete their account, and the personal data behind
-  it, from inside the product. [GDPR right to erasure]
+  it, from inside the product. [GDPR right to erasure; check: review]
 - **PRIV-5** Personal data at rest is protected: encrypted at the storage
   layer, reachable only through the server's authorized paths, never in
-  world-readable buckets or public URLs. [OWASP ASVS; OWASP Top 10]
+  world-readable buckets or public URLs. [OWASP ASVS; OWASP Top 10; check: review]
 
 ## Accessibility (ACC)
 
 - **ACC-1** Text has a contrast ratio of at least 4.5:1 against its
-  background (3:1 for large text). [WCAG 2.2 — 1.4.3]
+  background (3:1 for large text). [WCAG 2.2 — 1.4.3; check: review]
 - **ACC-2** Click/tap targets are at least 24×24 pixels, and comfortably
-  larger for primary actions. [WCAG 2.2 — 2.5.8]
+  larger for primary actions. [WCAG 2.2 — 2.5.8; check: review]
 - **ACC-3** Every interactive element is reachable and operable by
-  keyboard alone, with a visible focus indicator. [WCAG 2.2 — 2.1.1, 2.4.7]
+  keyboard alone, with a visible focus indicator. [WCAG 2.2 — 2.1.1, 2.4.7; check:
+  review]
 - **ACC-4** Interactive elements use semantic HTML (or correct ARIA roles)
   and carry labels a screen reader can announce; images that carry meaning
-  have text alternatives. [WCAG 2.2 — 1.1.1, 4.1.2]
+  have text alternatives. [WCAG 2.2 — 1.1.1, 4.1.2; check: review]
 - **ACC-5** Text can be resized to 200% (browser zoom and text scaling)
-  without truncating away meaning. [WCAG 2.2 — 1.4.4]
+  without truncating away meaning. [WCAG 2.2 — 1.4.4; check: scan:fixed-text-size]
 - **ACC-6** Color is never the only signal — errors, success, and selection
-  are also conveyed by text, shape, or icon. [WCAG 2.2 — 1.4.1]
+  are also conveyed by text, shape, or icon. [WCAG 2.2 — 1.4.1; check: review]
 
 ## User-generated content (UGC) — applies only if users can post content others see
 
 - **UGC-1** There is a way to report content and block users, and posted
-  content is sanitized before display (see SEC-3). [Industry practice; OWASP]
+  content is sanitized before display (see SEC-3). [Industry practice; OWASP;
+  check: review]
 - **UGC-2** Uploaded files are checked for expected type and size before
   they are processed or stored, and are never served back executable.
-  [OWASP Cheat Sheet: File Upload]
+  [OWASP Cheat Sheet: File Upload; check: review]
 
 ## Architecture (A)
 
@@ -123,41 +136,46 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   presentation logic prepares what is displayed, services hold the
   business rules, repositories do the data access. Business rules never
   sit in components or route handlers, and the UI never talks to storage
-  directly. [Industry-standard separation of concerns: Service layer,
-  Repository pattern]
+  directly. [Industry-standard separation of concerns: Service layer, Repository
+  pattern; check: scan:layer-import, review]
 - **A-2** Module dependencies flow one way, with no cycles: features
   depend on shared domain abstractions, never on each other or on concrete
-  data code. [SOLID dependency-inversion principle; acyclic-dependencies principle]
+  data code. [SOLID dependency-inversion principle; acyclic-dependencies
+  principle; check: scan:import-matrix]
 - **A-3** A module or component has one job. When a change gives it a
   second job, the change splits it instead. Automated size warnings are
-  advisory signals for a reviewer, never automatic failures. [SOLID single-responsibility principle]
+  advisory signals for a reviewer, never automatic failures. [SOLID
+  single-responsibility principle; check: advisory:type-size, review]
 - **A-4** No speculative abstraction: an interface exists only where
   something real substitutes for it — a second implementation or a test
-  fake. A boundary between two modules qualifies by definition. [YAGNI — industry practice]
+  fake. A boundary between two modules qualifies by definition. [YAGNI — industry
+  practice; check: review]
 - **A-5** Standard needs — routing, state, data fetching — are met with
   the framework's standard mechanism, not an invented framework that
-  fights the one in use. [Framework documentation — per framework]
+  fights the one in use. [Framework documentation — per framework; check:
+  scan:native-pattern]
 - **A-6** A name says what a thing is, in the industry-standard
   vocabulary — a page/route is navigable, a component is reusable
   presentation, a repository does data access — and never claims a
-  different role than the code performs. [Industry-standard pattern names]
+  different role than the code performs. [Industry-standard pattern names; check:
+  review]
 
 ## Coding (C)
 
 - **C-1** The codebase is TypeScript with strict mode on; `any` does not
-  pass review where a real type is expressible. [TypeScript documentation —
-  deterministic check: the strict compiler flags]
+  pass review where a real type is expressible. [TypeScript documentation; check:
+  tsc:strict]
 - **C-2** Components and state follow the framework's idiomatic
   conventions (for React: function components, hooks, and the Rules of
   Hooks). State is never mutated in place — updates create new values.
-  [Framework documentation; deterministic check where the framework ships
-  lint rules]
+  [Framework documentation; check: eslint, review]
 - **C-3** Every promise is awaited or explicitly handled — no floating
   promises; a rejected promise always surfaces as a handled error.
-  [TypeScript/ESLint practice — deterministic check: @typescript-eslint/no-floating-promises]
+  [TypeScript/ESLint practice; check:
+  eslint:@typescript-eslint/no-floating-promises]
 - **C-4** A change merges with zero new TypeScript errors and a clean run
-  of the project's ESLint and Prettier configuration. [ESLint / Prettier —
-  deterministic check]
+  of the project's ESLint and Prettier configuration. [ESLint / Prettier; check:
+  eslint, prettier, tool:warnings-as-errors]
 
 - **C-5** No hardcoded facts about the world outside the code. A
   repository's default branch, a file path, a URL or port, a plan or
@@ -166,8 +184,7 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   configured home, through one shared function every caller uses. A
   literal assumption about external state (a branch named "main", a
   fixed path or URL) is a review failure wherever the real answer can
-  be asked for. [Twelve-Factor App, config; deterministic check:
-  review greps the diff for known environment literals]
+  be asked for. [Twelve-Factor App, config; check: scan:env-literal]
 
 ## Engineering quality (ENG)
 
@@ -176,57 +193,65 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
   framework's state system (component state or a store the UI subscribes
   to) so the UI re-renders from it — never module-level variables the UI
   polls or refreshes manually. One-shot values stay plain: no state
-  ceremony around constants. [Platform best practice — web frameworks]
+  ceremony around constants. [Platform best practice — web frameworks; check:
+  review]
 - **ENG-2** Responsive layout: pages adapt to window size with fluid
   layout (flexbox/grid, relative units, media queries). No fixed page
   dimensions, and no horizontal page scroll at common widths.
-  [Platform best practice — responsive web design]
+  [Platform best practice — responsive web design; check:
+  advisory:fixed-screen-size, review]
 - **ENG-3** Never block the main thread: long waits — network calls, heavy
   computation — are asynchronous, and heavy work moves off the UI path
-  (server-side or a worker). No busy-waiting. [Platform best practice — web performance]
+  (server-side or a worker). No busy-waiting. [Platform best practice — web
+  performance; check: scan:blocking-call]
 - **ENG-4** Background work lifetime: any worker, subscription, interval,
   or listener is tied to its owner's lifetime — unmounting, navigation, or
   cancellation cleans it up. Server-side child processes are tied to their
-  parent's lifetime. No leaks, no orphans. [Platform best practice]
+  parent's lifetime. No leaks, no orphans. [Platform best practice; check: review]
 - **ENG-5** No crash on bad input: invalid input or unexpected data
   produces a typed, surfaced error — never an unhandled exception. The
   server validates independently of the client (client-side checks are
-  convenience, not protection). [OWASP ASVS; OWASP Cheat Sheet: Error Handling]
+  convenience, not protection). [OWASP ASVS; OWASP Cheat Sheet: Error Handling;
+  check: review]
 - **ENG-6** Secrets live in the deployment platform's secret store
   (environment secrets/vault) — never in plaintext files, source control,
-  client code, or logs. [OWASP Cheat Sheet: Secrets Management]
+  client code, or logs. [OWASP Cheat Sheet: Secrets Management; check:
+  scan:secret-literal, review]
 
 ## Tests (TEST)
 
 - **TEST-1** Every acceptance criterion has at least one automated test,
-  and each test states which acceptance criterion it verifies. [Project rule]
+  and each test states which acceptance criterion it verifies. [Project rule;
+  check: scan:test-criterion-tag]
 - **TEST-2** Tests that gate a merge run without live external services —
   external dependencies are faked locally. Tests against live services run
-  separately and never block a merge. [Project rule; Google Testing Blog: hermetic testing]
+  separately and never block a merge. [Project rule; Google Testing Blog: hermetic
+  testing; check: scan:hermetic-test]
 - **TEST-3** A test proves behavior: it fails when the behavior it names is
   broken. Assertions so weak that any implementation passes don't count as
-  coverage. [Project rule]
+  coverage. [Project rule; check: review]
 - **TEST-4** Test data looks like real data. Fixtures are the size, shape
   and messiness of the real thing: lists long enough to overflow a
   container, names long enough to truncate, documents written in the
   industry's words rather than the product's, and stand-ins for outside
   services that can express that service's real refusals (403, 404, empty,
   unreachable, slow) — not merely success and one tidy error. A fixture
-  built to be convenient tests the fixture. [Project rule]
+  built to be convenient tests the fixture. [Project rule; check: review]
 - **TEST-5** Pressure-test on purpose, as its own discipline: deliberately
   push past what is expected — many more items than anyone would have,
   values at and beyond the declared limits, empty and enormous, slow and
   absent. At least the surfaces that render project data carry one case
-  each. [Project rule]
+  each. [Project rule; check: review]
 
 ## Documentation (DOC)
 
 - **DOC-1** Every exported type and function carries a doc comment saying
   what it does — including parameters and return value where they aren't
-  obvious. The generated API reference is built from these. [Project rule]
+  obvious. The generated API reference is built from these. [Project rule; check:
+  scan:doc-comments]
 - **DOC-2** A doc comment must match what the code actually does. A doc
   that reads wrong is treated as a code problem, not a wording problem.
-  [Project rule]
+  [Project rule; check: review]
 
 ---
 

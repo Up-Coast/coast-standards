@@ -3,11 +3,12 @@
 ## Git
 
 - **Commit per task, not per session.** Each commit is one completed, tested task with a
-  message that names it.
+  message that names it. [check: process]
 - **Every commit gets pushed — same session, no exceptions.** If the push is refused,
   fetch, reconcile, push. Never leave work only on one machine.
+  [check: session:unpushed-at-stop]
 - **Repos are private in the Up-Coast org** unless decided otherwise; secret-scan before
-  the first push of any repo.
+  the first push of any repo. [check: process]
 - **Worktrees: fine when a person or session manages them; not in shipped software.**
   (Abbey, 20 Aug 2026, scoping the earlier blanket guidance in this file.)
   - **A development session may use worktrees** for its own parallel work — a Claude Code
@@ -24,9 +25,9 @@
     computer then we need to... remove worktree useage and enforce one at a time. If a
     ticket is paused, a commit will be made and the local environment will do a git branch
     and work on a new branch."*
-  - Keep `main` releasable either way.
+  - Keep `main` releasable either way. [check: process]
 - **Protected main where the platform allows it:** PR required, review required, status
-  checks required, no force-push, no deletion.
+  checks required, no force-push, no deletion. [check: tool:gh-ruleset]
 
 ## Nothing is pushed unverified (Abbey, 2026-09-01)
 
@@ -34,18 +35,19 @@
   complete test suite, the linter, the formatter in check mode, and every
   deterministic check script the repository's CI runs. A failure stays
   local and is fixed before anything leaves the machine.
+  [check: session:no-verify]
 - **CI confirms; it never discovers.** A CI failure on a pushed commit is a
   process defect, not a normal event. Origin: on one Coast walk a single
   feature was pushed 15 times against 21 CI check failures for the same
   seven files — each push a paid agent turn to learn what a local run
   would have said in seconds. Abbey: pushing and waiting for CI to say it
   is wrong "is a very inefficient and very costly" habit that "makes me so
-  angry."
+  angry." [check: process]
 - **One implementation of each check, run in both places.** The script CI
   runs IS the check; the local battery invokes that same script. A
   re-implementation of a CI check in another language (a "mirror") is a
   second source of truth and is forbidden — it is how a local check came
-  to pass while CI refused the same tree.
+  to pass while CI refused the same tree. [check: process]
 - The same battery is installed as the repository's commit hook so a human
   contributor meets the same refusal an agent does.
 
@@ -63,25 +65,27 @@
 - Discovered work no task covers is surfaced and proposed as a task — never silently built.
   If a finding contradicts the task or spec, the spec wins; flag the disagreement.
 - Skipped review or untested work = unfinished work. Nothing ships on "it compiles."
-  [BuilderOS build-loop]
+  [BuilderOS build-loop; check: process]
 
 ## Documentation
 
 - **Docs ship WITH the feature, not after.** "What if their QA needs to see the
-  documentation before the product is released?"
+  documentation before the product is released?" [check: process]
 - **Prefer diagrams over prose sprawl.** Agents overproduce markdown; too many docs cause
   agents to read the wrong ones. Every new class/module of consequence gets its diagram;
   system/flow diagrams are updated in place. Keeping your own diagrams correct needs no
-  permission — do it in the same session and say so.
+  permission — do it in the same session and say so. [check: process]
 - **One predictably-named document per subject.** "Does it already exist?" must be a
   deterministic name lookup, forcing edit-not-create. No ad-hoc throwaway docs. Documents
-  are edited, not deleted-and-recreated.
+  are edited, not deleted-and-recreated. [check: process]
 - **Decision log:** structured entries (decision, rationale, date, scope), two tiers —
   global/architectural (small, always loaded) and local (feature-scoped). Bar for entry:
-  only trade-offs that would otherwise be re-litigated.
+  only trade-offs that would otherwise be re-litigated. [check: process]
 - **Change log:** stakeholder-facing, so release notes can be built from it.
+  [check: process]
 - **Plain-language product explanation grows as you build** (a "how it works" doc + FAQ
   candidates), so client-facing material never starts from zero.
+  [check: process]
 
 ## Pending-work hygiene
 
@@ -93,27 +97,28 @@ Exactly one home per item, across three lists:
 
 When a decision defers or rejects something, file it the same session. For Abbey's
 portfolio, human-task capture goes to Workflowy (one node per project, For Claude / For
-Abbey sublists) — never a second tracker.
+Abbey sublists) — never a second tracker. [check: process]
 
 ## Commit and PR cadence for agent-built work
 
 - **Commit at every step boundary**, not only at the end of a task — after the plan is
   agreed, after generated artifacts land, after tests, after implementation. (Abbey, on why:
   *"we know for certain what the plan is and can make that comparison"* and *"using PR
-  merges like that will make it a very clean audit trail."*)
+  merges like that will make it a very clean audit trail."*) [check: process]
 - **Two PRs per feature: the plan merges before the implementation opens.** The agreement is
   in the repository's history before any code exists, so the built result can be diffed
-  against what was approved.
+  against what was approved. [check: process]
 - **External working-tree drift gets its own commit.** Files moved or deleted between
   sessions are usually the human's own parallel work. Commit the drift on its own, describe
   it factually, mention it once, and **never auto-restore deleted files** — deletion is
-  usually intentional.
+  usually intentional. [check: process]
 - **Never run git against a network or FUSE-mounted working copy** (Cowork/sandbox mounts) —
   it corrupts index locks. Work against a local clone. Backup means *pull, merge, push* —
-  never a clone-and-rsync scheme.
+  never a clone-and-rsync scheme. [check: process]
 - **Secret-scan before a first push**, full history. Genuinely sensitive tracked material
   (server keys, `.p8`/`.p12`, `.env`) aborts the push and gets reported; documented
   client-safe public/anon SDK keys do not block a push to a private repo.
+  [check: scan:secret-literal]
 
 ## Reviews are real reviews
 
@@ -124,7 +129,7 @@ Abbey sublists) — never a second tracker.
 - **Everything a verdict cites is mechanically verified to exist** — files, components, and
   rule ids named in a review are checked programmatically, so a review cannot cite something
   imaginary. Reviewer outcomes are logged over time, so a reviewer that is consistently
-  wrong can be found and adjusted.
+  wrong can be found and adjusted. [check: process]
 - When only one model provider is available, a cross-provider double review falls back to a
   different model in the same family, **and the review record discloses the same-family
   bias.**
@@ -133,19 +138,19 @@ Abbey sublists) — never a second tracker.
 
 - **The API reference is generated from the code** — every public type and function with its
   signature, doc comment, and parameters — and regenerated on every check run, so it cannot
-  drift. Class diagrams likewise.
+  drift. Class diagrams likewise. [check: process]
 - **Generated docs are a review input.** A reviewer who reads a generated doc and finds it
   doesn't describe something sensible files that as a code smell: the docs can't lie about
-  the code, so a doc that reads wrong means the code is wrong.
+  the code, so a doc that reads wrong means the code is wrong. [check: process]
 - **Four documents every codebase keeps**, because agents and humans both fail without them:
   a **module map** (every module, its one-line responsibility, its allowed dependencies —
   the first thing to read before planning), a **glossary and naming conventions** file (so
   every contributor uses the same domain words), a **docs manifest** (which documents exist
   and when to read which — the cure for reading the wrong document), and a **feature-flag
   registry** (which flags exist, their state, owner, and expiry — *"or stale flags rot the
-  code"*).
+  code"*). [check: process]
 - **Documents are created only in defined types, and documents are never deleted.** Agents
   left to invent documents overproduce throwaway files, and a pile of near-duplicate
   documents makes the next reader skim headings and get it wrong. Edit the existing document
   for its subject. (Also: don't couple tooling to Markdown specifically — the format may be
-  replaced.)
+  replaced.) [check: process]

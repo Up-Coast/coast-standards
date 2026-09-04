@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 7 -->
+<!-- coast-rules-version: 8 -->
 # Project rules
 
 This file ships with your project as a curated default, sourced from
@@ -22,42 +22,46 @@ apply wherever a rule names them.
 - **PAY-1** Money amounts are stored and calculated with decimal-safe
   types or whole minor units — never JavaScript floating-point arithmetic
   on fractional amounts, which cannot represent cents exactly.
-  [Industry-wide practice; see Sources]
+  [Industry-wide practice; see Sources; check: advisory:money-float, review]
 - **PAY-2** Every stored money amount carries its currency. Amounts in
   different currencies are never added or compared without an explicit
-  conversion step. [Industry-wide practice]
+  conversion step. [Industry-wide practice; check: review]
 - **PAY-3** Rounding is decided once (which method, at which step) and every
   total is computed in one place and reused — never recomputed slightly
-  differently in two places. [Industry-wide practice]
+  differently in two places. [Industry-wide practice; check: tool:jscpd, review]
 - **PAY-4** Digital goods and features sold inside the app go through each
   store's in-app purchase system (Apple's on iOS, Google Play billing on
-  Android). [Apple App Review Guidelines §3.1; Google Play Payments policy]
+  Android). [Apple App Review Guidelines §3.1; Google Play Payments policy; check:
+  review]
 - **PAY-5** Raw card numbers never touch the app's own code or storage —
   payment collection goes through a certified payment provider's SDK or the
-  platform's payment sheet. [PCI DSS scope rules; OWASP]
+  platform's payment sheet. [PCI DSS scope rules; OWASP; check: review]
 
 ## Security (SEC)
 
 - **SEC-1** All network traffic uses encrypted connections (HTTPS/TLS) on
   both platforms; cleartext traffic stays disabled in the native
-  configuration. [OWASP MASVS-NETWORK]
+  configuration. [OWASP MASVS-NETWORK; check: scan:plaintext-http]
 - **SEC-2** Data arriving from outside the app — user input, network
   responses, deep links, shared files — is validated before use, and
   database queries are parameterized, never assembled from strings.
-  [OWASP ASVS; OWASP Cheat Sheets: Input Validation, Query Parameterization]
+  [OWASP ASVS; OWASP Cheat Sheets: Input Validation, Query Parameterization;
+  check: scan:sql-string-assembly, review]
 - **SEC-3** No home-made cryptography. Encryption, hashing, and random
   generation use platform or well-established library implementations.
-  [OWASP MASVS-CRYPTO]
+  [OWASP MASVS-CRYPTO; check: review]
 - **SEC-4** Secrets — API keys, tokens, credentials — never appear in
   source code, logs, analytics, or error messages. The JavaScript bundle is
   readable in a shipped app, so nothing secret may be embedded in JS code
-  or config it can reach. [OWASP MASVS-STORAGE; React Native security guidance]
+  or config it can reach. [OWASP MASVS-STORAGE; React Native security guidance;
+  check: scan:secret-literal]
 - **SEC-5** Error messages shown to users never expose internals such as
-  stack traces, query text, or file paths. [OWASP Cheat Sheet: Error Handling]
+  stack traces, query text, or file paths. [OWASP Cheat Sheet: Error Handling;
+  check: review]
 - **SEC-6** JavaScript dependencies are pinned by the lockfile, and
   packages on security-critical paths (payments, auth, storage, crypto)
-  are actively maintained and audited before adoption. [OWASP Cheat Sheet:
-  NPM Security; supply-chain practice]
+  are actively maintained and audited before adoption. [OWASP Cheat Sheet: NPM
+  Security; supply-chain practice; check: review]
 
 ## Accounts and sign-in (AUTH)
 
@@ -65,52 +69,59 @@ apply wherever a rule names them.
   identity provider — never a hand-rolled account store. If passwords must
   be stored, they are hashed with a current memory-hard algorithm
   (Argon2id, scrypt, or bcrypt), never encrypted or kept readable.
-  [OWASP Cheat Sheets: Authentication, Password Storage]
+  [OWASP Cheat Sheets: Authentication, Password Storage; check: review]
 - **AUTH-2** Session tokens expire, can be revoked, and are regenerated at
-  sign-in and at any privilege change. [OWASP Cheat Sheet: Session Management]
+  sign-in and at any privilege change. [OWASP Cheat Sheet: Session Management;
+  check: review]
 - **AUTH-3** Sign-in attempts are rate-limited so accounts can't be
-  brute-forced. [OWASP ASVS]
+  brute-forced. [OWASP ASVS; check: review]
 - **AUTH-4** Sensitive actions — deleting the account, changing email,
   password, or payment details — re-confirm the user's identity first.
-  [OWASP ASVS]
+  [OWASP ASVS; check: review]
 
 ## Privacy and personal data (PRIV)
 
 - **PRIV-1** The app collects only the data the feature in front of the
-  user actually needs. [Apple App Review Guidelines §5.1; Google Play User Data policy]
+  user actually needs. [Apple App Review Guidelines §5.1; Google Play User Data
+  policy; check: review]
 - **PRIV-2** Every kind of data the app collects or shares is declared in
   both stores' privacy listings (App Store privacy details and Play Data
-  safety) — no undeclared collection. [Apple App Review Guidelines §5.1; Google Play Data safety requirements]
+  safety) — no undeclared collection. [Apple App Review Guidelines §5.1; Google
+  Play Data safety requirements; check: review]
 - **PRIV-3** Personal data never appears in logs, analytics events, crash
-  reports, or URLs. [OWASP MASVS-STORAGE; OWASP Cheat Sheet: Logging]
+  reports, or URLs. [OWASP MASVS-STORAGE; OWASP Cheat Sheet: Logging; check:
+  ratchet:pii-in-log, review]
 - **PRIV-4** Users can delete their account, and the personal data behind
-  it, from inside the app. [Apple App Review Guidelines §5.1.1(v); Google Play Account deletion policy]
+  it, from inside the app. [Apple App Review Guidelines §5.1.1(v); Google Play
+  Account deletion policy; check: review]
 - **PRIV-5** Personal data stored on the device lives in the app's
   protected container with platform data protection applied — never in
   world-readable locations, and never in plain AsyncStorage when it is
-  sensitive. [OWASP MASVS-STORAGE; React Native security guidance]
+  sensitive. [OWASP MASVS-STORAGE; React Native security guidance; check: review]
 
 ## Accessibility (ACC)
 
 - **ACC-1** Text has a contrast ratio of at least 4.5:1 against its
-  background (3:1 for large text). [WCAG 2.2 — 1.4.3]
+  background (3:1 for large text). [WCAG 2.2 — 1.4.3; check: review]
 - **ACC-2** Touch targets meet each platform's minimum — 44×44 points on
   iOS, 48×48dp on Android — and never fall below 24×24 pixels.
-  [Apple HIG; Material Design accessibility; WCAG 2.2 — 2.5.8]
+  [Apple HIG; Material Design accessibility; WCAG 2.2 — 2.5.8; check: review]
 - **ACC-3** Every interactive element carries an accessibility label
   (`accessibilityLabel`/role) so screen readers can say what it does.
-  [WCAG 2.2 — 4.1.2; React Native accessibility docs]
+  [WCAG 2.2 — 4.1.2; React Native accessibility docs; check: review]
 - **ACC-4** Text respects the system text-size setting — font scaling is
-  not disabled — without truncating away meaning. [WCAG 2.2 — 1.4.4; React Native accessibility docs]
+  not disabled — without truncating away meaning. [WCAG 2.2 — 1.4.4; React Native
+  accessibility docs; check: scan:fixed-text-size]
 - **ACC-5** Color is never the only signal — errors, success, and selection
-  are also conveyed by text, shape, or icon. [WCAG 2.2 — 1.4.1]
+  are also conveyed by text, shape, or icon. [WCAG 2.2 — 1.4.1; check: review]
 
 ## User-generated content (UGC) — applies only if users can post content others see
 
 - **UGC-1** There is a way to report content, block users, and filter
-  objectionable material. [Apple App Review Guidelines §1.2; Google Play UGC policy]
+  objectionable material. [Apple App Review Guidelines §1.2; Google Play UGC
+  policy; check: review]
 - **UGC-2** Uploaded content is checked for expected type and size before
-  it is processed or stored. [OWASP Cheat Sheet: File Upload]
+  it is processed or stored. [OWASP Cheat Sheet: File Upload; check: review]
 
 ## Architecture (A)
 
@@ -118,25 +129,29 @@ apply wherever a rule names them.
   (hooks or view models) prepares what screens show, services hold the
   business rules, repositories do the data access. Business rules never
   sit in components, and the UI never talks to storage or the network
-  directly. [Industry-standard separation of concerns: Service layer,
-  Repository pattern; React docs]
+  directly. [Industry-standard separation of concerns: Service layer, Repository
+  pattern; React docs; check: scan:layer-import, review]
 - **A-2** Module dependencies flow one way, with no cycles: features
   depend on shared domain abstractions, never on each other or on concrete
-  data code. [SOLID dependency-inversion principle; acyclic-dependencies principle]
+  data code. [SOLID dependency-inversion principle; acyclic-dependencies
+  principle; check: scan:import-matrix]
 - **A-3** A module or component has one job. When a change gives it a
   second job, the change splits it instead. Automated size warnings are
-  advisory signals for a reviewer, never automatic failures. [SOLID single-responsibility principle]
+  advisory signals for a reviewer, never automatic failures. [SOLID
+  single-responsibility principle; check: advisory:type-size, review]
 - **A-4** No speculative abstraction: an interface exists only where
   something real substitutes for it — a second implementation or a test
-  fake. A boundary between two modules qualifies by definition. [YAGNI — industry practice]
+  fake. A boundary between two modules qualifies by definition. [YAGNI — industry
+  practice; check: review]
 - **A-5** Standard needs — navigation, state, styling — are met with the
   ecosystem's standard mechanism (e.g. React Navigation, React state or an
   established store), not an invented framework that fights the platform.
-  [React Native documentation]
+  [React Native documentation; check: scan:native-pattern]
 - **A-6** A name says what a thing is, in the industry-standard
   vocabulary — a Screen is a full navigable screen, a Component is
   reusable presentation, a Repository does data access — and never claims
-  a different role than the code performs. [Industry-standard pattern names]
+  a different role than the code performs. [Industry-standard pattern names;
+  check: review]
 - **A-7** If the ecosystem provides the feature, the feature is used. For
   any job the ecosystem already owns — navigation, screen structure, tab
   bars, modals, search, drawers, headers, lists, progress indicators,
@@ -150,27 +165,28 @@ apply wherever a rule names them.
   or substitute appears only where it was explicitly approved as a
   deliberate exception on the plan — never introduced silently or as a quick
   fix — and each UI plan item names the native feature it uses, so a
-  substitution is visible at approval time. [React Native documentation;
-  deterministic check: Scripts/checks/check_native_patterns.py — an added
-  escape-hatch or substitution signature from its list fails the PR unless
-  the plan's approved native-deviations list covers it; the React Native
-  signature list is seeded by the reviewer's catches and grows over time]
+  substitution is visible at approval time. An added escape-hatch or substitution
+  signature from the native-patterns checker's list fails the PR unless the plan's approved
+  native-deviations list covers it; the React Native signature list is seeded by
+  the reviewer's catches and grows over time. [React Native documentation;
+  check: scan:native-pattern]
 
 ## Coding (C)
 
 - **C-1** The codebase is TypeScript with strict mode on; `any` does not
-  pass review where a real type is expressible. [TypeScript documentation —
-  deterministic check: the strict compiler flags]
+  pass review where a real type is expressible. [TypeScript documentation; check:
+  tsc:strict]
 - **C-2** Components are function components using hooks, and the Rules of
   Hooks hold everywhere. State is never mutated in place — updates create
-  new values. [React documentation: Rules of Hooks; deterministic check:
-  eslint-plugin-react-hooks]
+  new values. [React documentation: Rules of Hooks; check:
+  eslint:react-hooks/rules-of-hooks, eslint:react-hooks/exhaustive-deps]
 - **C-3** Every promise is awaited or explicitly handled — no floating
   promises; a rejected promise always surfaces as a handled error.
-  [TypeScript/ESLint practice — deterministic check: @typescript-eslint/no-floating-promises]
+  [TypeScript/ESLint practice; check:
+  eslint:@typescript-eslint/no-floating-promises]
 - **C-4** A change merges with zero new TypeScript errors and a clean run
-  of the project's ESLint and Prettier configuration. [ESLint / Prettier —
-  deterministic check]
+  of the project's ESLint and Prettier configuration. [ESLint / Prettier; check:
+  eslint, prettier, tool:warnings-as-errors]
 
 - **C-5** No hardcoded facts about the world outside the code. A
   repository's default branch, a file path, a URL or port, a plan or
@@ -179,8 +195,7 @@ apply wherever a rule names them.
   configured home, through one shared function every caller uses. A
   literal assumption about external state (a branch named "main", a
   fixed path or URL) is a review failure wherever the real answer can
-  be asked for. [Twelve-Factor App, config; deterministic check:
-  review greps the diff for known environment literals]
+  be asked for. [Twelve-Factor App, config; check: scan:env-literal]
 
 ## Engineering quality (ENG)
 
@@ -189,57 +204,64 @@ apply wherever a rule names them.
   (component state or a store the UI subscribes to) so the UI re-renders
   from it — never module-level variables the UI polls or refreshes
   manually. One-shot values stay plain: no state ceremony around
-  constants. [Platform best practice — React]
+  constants. [Platform best practice — React; check: review]
 - **ENG-2** Responsive layout: screens adapt using flex-based layout and
   the platform's size APIs — rotation and window/screen-size changes on
-  both platforms. No fixed screen dimensions. [Platform best practice — React Native]
+  both platforms. No fixed screen dimensions. [Platform best practice — React
+  Native; check: advisory:fixed-screen-size, review]
 - **ENG-3** Never block the JavaScript thread: long waits — network calls,
   heavy computation, timers — are asynchronous, and heavy work moves off
   the UI path. No busy-waiting, and nothing that blocks is callable from a
-  render. [Platform best practice — React Native performance docs]
+  render. [Platform best practice — React Native performance docs; check:
+  scan:blocking-call]
 - **ENG-4** Background work lifetime: any worker, listener, or subscription
   the app starts is tied to its owner's lifetime — unmounting or
   cancelling cleans it up. No leaked timers, listeners, or native
-  processes. [Platform best practice — React]
+  processes. [Platform best practice — React; check: review]
 - **ENG-5** No crash on bad input: invalid input or unexpected data
   produces a typed, surfaced error — never an unhandled exception that
-  kills the app. [Platform best practice; OWASP Cheat Sheet: Error Handling]
+  kills the app. [Platform best practice; OWASP Cheat Sheet: Error Handling;
+  check: review]
 - **ENG-6** Secrets live in the platform's secure store — Keychain on iOS,
   Keystore on Android, reached through a maintained secure-storage
   module — never in plaintext files, JavaScript code, or logs.
-  [OWASP MASVS-STORAGE; React Native security guidance]
+  [OWASP MASVS-STORAGE; React Native security guidance; check:
+  scan:secret-literal, review]
 
 ## Tests (TEST)
 
 - **TEST-1** Every acceptance criterion has at least one automated test,
-  and each test states which acceptance criterion it verifies. [Project rule]
+  and each test states which acceptance criterion it verifies. [Project rule;
+  check: scan:test-criterion-tag]
 - **TEST-2** Tests that gate a merge run without live external services —
   external dependencies are faked locally. Tests against live services run
-  separately and never block a merge. [Project rule; Google Testing Blog: hermetic testing]
+  separately and never block a merge. [Project rule; Google Testing Blog: hermetic
+  testing; check: scan:hermetic-test]
 - **TEST-3** A test proves behavior: it fails when the behavior it names is
   broken. Assertions so weak that any implementation passes don't count as
-  coverage. [Project rule]
+  coverage. [Project rule; check: review]
 - **TEST-4** Test data looks like real data. Fixtures are the size, shape
   and messiness of the real thing: lists long enough to overflow a
   container, names long enough to truncate, documents written in the
   industry's words rather than the product's, and stand-ins for outside
   services that can express that service's real refusals (403, 404, empty,
   unreachable, slow) — not merely success and one tidy error. A fixture
-  built to be convenient tests the fixture. [Project rule]
+  built to be convenient tests the fixture. [Project rule; check: review]
 - **TEST-5** Pressure-test on purpose, as its own discipline: deliberately
   push past what is expected — many more items than anyone would have,
   values at and beyond the declared limits, empty and enormous, slow and
   absent. At least the surfaces that render project data carry one case
-  each. [Project rule]
+  each. [Project rule; check: review]
 
 ## Documentation (DOC)
 
 - **DOC-1** Every exported type and function carries a doc comment saying
   what it does — including parameters and return value where they aren't
-  obvious. The generated API reference is built from these. [Project rule]
+  obvious. The generated API reference is built from these. [Project rule; check:
+  scan:doc-comments]
 - **DOC-2** A doc comment must match what the code actually does. A doc
   that reads wrong is treated as a code problem, not a wording problem.
-  [Project rule]
+  [Project rule; check: review]
 
 ---
 

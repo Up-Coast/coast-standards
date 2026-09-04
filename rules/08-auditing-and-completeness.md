@@ -55,7 +55,7 @@ page."
    reachable today and how.
 7. **Retire false completeness claims.** If a document asserts that everything
    not listed is done, either prove it with a sweep or delete the sentence.
-   Replace it with what was actually checked, and when.
+   Replace it with what was actually checked, and when. [check: process]
 
 ## Audit against the product's promise, not only against its specs
 
@@ -76,9 +76,12 @@ So, in every audit, also do this:
 - **Write down what the product claims** — from its marketing, its onboarding, its own
   help text, and the sentences the team says out loud about it. Then check each claim
   against the code, as a claim, independent of whether a spec exists for it.
+  [check: process]
 - **Walk the first-run path as a new user**, not as someone who knows where the working
   parts are. The gaps a team can't see are the ones their habits route around.
+  [check: process]
 - **Treat "we always said it does X" as a finding to verify**, never as a premise.
+  [check: process]
 - When a claim turns out to be unsupported, the finding is not just the missing code — it
   is also that the belief went unchallenged, and both belong in the report.
 
@@ -111,6 +114,7 @@ The pattern across almost all of these: **the code was honest and the documents 
 Nearly every gap was visible in the source — an empty branch, a comment admitting deferral,
 a message written for a human explaining what wasn't built. What failed was that nobody read
 the code for those signals, and the tracker was trusted instead.
+[check: process]
 
 ## Reporting
 
@@ -121,7 +125,7 @@ was never earned is worse than no audit, because it stops the next person from
 looking.
 
 Two claims are never made without a sweep that checked them: **"everything
-else is built"** and **"this is complete."**
+else is built"** and **"this is complete."** [check: process]
 
 ## When an audit misses something, add it here
 
@@ -137,4 +141,4 @@ audit should have caught:
 
 Abbey, 20 August 2026, after several audits in the same week each came back clean while
 major pieces sat unbuilt: *"We're gathering a list of these learnings so that future audits
-are more correct."*
+are more correct."* [check: process]

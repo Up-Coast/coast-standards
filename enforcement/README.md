@@ -359,6 +359,7 @@ platform-specific notes follow the id. Severity `block` unless marked
 | `doc-comments` | DOC-1 | Every `public`/`open`/`export`/top-level `def` declaration preceded by a doc comment. Moves from Coast's Swift to a shipped script, all platforms. `ratchet` on adoption of an existing repo, `block` on a new one. | whole tree |
 | `type-size` | A-3, 02 granularity | Types over 300 lines, initializers with more than 7 injected dependencies. `advisory` — the rules say advisory, never a failure. | whole tree |
 | `inline-comment` | 02 naming | `//` comments that are not doc comments, `ratchet`. | added lines |
+| `money-float` | PAY-1, Python DATA-3 | A binary floating-point type (`Double`, `Float`, `number`, `float`) declared or annotated next to an identifier naming money (`price`, `amount`, `total`, `cost`, `fee`, `balance`). `advisory` only — the reviewer judges (§5.5). Named in E0.2's tags. | added lines |
 | `retired-wording` | 01 truth | A configurable list of retired words (`guarantee`, an old product name) in copy, docs and catalogs. Coast's own guard tests for demo wording become signatures here. | added lines |
 
 ### 5.2 Machine — the platform's linter (`swiftlint:<rule>`, `eslint:<rule>`, `detekt:<rule>`, `androidlint:<id>`, `tsc:strict`)
@@ -383,7 +384,7 @@ platform-specific notes follow the id. Severity `block` unless marked
 | 00 §1 duplicated logic, 02 DRY mechanics, PAY-3 recomputation | `tool:jscpd` — `--fail-on-new-clones` against the base branch, `--min-tokens 50`, on PRs and in the pre-push hook. |
 | 00 §4 data never in VCS, 07 secret-scan before first push | `scan:secret-literal` on every push; a full-history scan on the first push (adopt.py runs it). |
 | 07 protected main | `tool:gh-ruleset` — `verify_rules.py --remote` reads the ruleset and fails when the required checks, PR requirement, or empty bypass list are missing (Coast's ruleset step already writes them). |
-| 02 zero new warnings | build with warnings as errors in CI and the battery (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `-Werror`/`allWarningsAsErrors`, `tsc` errors). |
+| 02 zero new warnings, C-4 | `tool:warnings-as-errors` — build with warnings as errors in CI and the battery (`SWIFT_TREAT_WARNINGS_AS_ERRORS`, `-Werror`/`allWarningsAsErrors`, `tsc` errors); the pre-push battery names it. |
 
 ### 5.4 Session (`session:<id>`) — the Claude Code hooks and git hooks in §4.4
 
@@ -430,7 +431,7 @@ under half a day, M a day, L two or more.
 | Task | What | Size | Guard |
 |---|---|---|---|
 | E0.1 | **DONE 2026-09-04 (Fable).** `enforcement/checks/verify_rules.py`: parse every rule in `rules/platform/*.md` and the numbered files; require a `check:` tag; resolve each tag against a battery manifest per platform; print enforced/total. Runs in this repo's own CI-less hook. The starting line it measured: **held by a machine 0 of 558**; 540 rules name no check, 18 name one in prose nothing runs (the old "deterministic check: …" brackets on A-7, C-1, C-2, C-3, C-5 and ARCH-8). Convention and resolution rules: §4.1 "Built". | M | 48 tests in `enforcement/checks/tests/` (fixture documents and configs: every grammar form, every config reader, every bin, both ratchet directions, and the real corpus against the committed baseline); it FAILS on today's corpus, and the failure list IS the gap inventory |
-| E0.2 | Tag every rule (§5) in the platform documents and the numbered files. No rule content changes yet — only the bin and the check name. Version stamp 8. | M | E0.1 green on tags; rules without a tag: zero |
+| E0.2 | **DONE 2026-09-04 (Fable).** Tag every rule (§5) in the platform documents and the numbered files. No rule content changes yet — only the bin and the check name. Version stamp 8. The 18 legacy "deterministic check: …" brackets became formal tags (A-7's explanation of the approved-deviations mechanism stayed as rule text). After tagging: 551 counted rules (7 explanatory bullets are `context`), 270 reviewer, 89 process, 192 waiting on checks E1/E2 build; gap count 558 → 395, every remaining gap a check that does not exist yet. | M | E0.1 green on tags; rules without a tag: zero — proven: `verify_rules.py` reports no "no check tag" and no "unknown check" |
 | E0.3 | Move the DRY block (00 §1), the L rules (04), the token rules (05), and 2d into every platform document as `DRY-*`, `L-*`, `DES-*` sections with checks named. Version 8's plain-words changes line. | M | E0.1 green; a test that every platform doc carries DRY-1..7, L-1..12, DES-1..4 |
 
 ### Phase E1 — the scanner (this repo)

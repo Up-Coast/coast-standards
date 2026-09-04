@@ -15,7 +15,7 @@ generating prompts. (Origin: 50+ permission prompts in a single session, all fro
 commands.)
 
 Keep the project's allowlist in its local settings file current as new read-only commands
-prove routine.
+prove routine. [check: session:chained-cd]
 
 ## Disk space is a real constraint, and it breaks the tools
 
@@ -24,17 +24,17 @@ be written, notes can't be saved, and failures start looking like unrelated bugs
 state accumulates invisibly across sessions, and nobody is watching it.
 
 - **Check free space before booting an unfamiliar simulator runtime or emulator image.** A
-  new runtime can consume the last of the disk with no warning.
+  new runtime can consume the last of the disk with no warning. [check: process]
 - The sanctioned cleanup set, in order of safety: delete stale simulator runtimes (keeping
   the one the current project targets), shut down and erase unused simulator devices and
   delete unavailable ones, clear build-artifact caches (DerivedData and equivalents), and
   clear scratch directories belonging to **ended** sessions — never the current one.
 - **Never delete a person's own files to reclaim space.** Report what's large and let them
-  decide.
+  decide. [check: process]
 
 ## Branch switching has a cost — plan for it
 
 With one checkout per project rather than worktrees, switching branches invalidates
 build-artifact caches, so the next build is a cold one. That's an accepted trade for
 predictable disk use, but it means: batch work on a branch rather than hopping, and don't
-read a slow first build after a switch as a regression.
+read a slow first build after a switch as a regression. [check: process]

@@ -14,19 +14,23 @@ Concretely, on every project:
   check whether an existing one (or a composition of existing ones) covers the need.
   "Use the existing one" is a valid and expected outcome; creating a near-duplicate is a
   review failure. New helper/component/template creation must be justified — say why an
-  existing one wasn't reused. (Coast D34)
+  existing one wasn't reused. (Coast D34) [check: review]
 - **Styling lives in ONE theme file.** All colors, fonts, sizes, weights, and spacing are
   tokens in a single theme file; a second theme file can never be created; styling is never
   written into a feature file. Never invent a value or a near-match — use the design's exact
   token, or request a new token; never inline a literal. (Coast D15, D35, D101)
+  [check: scan:styling-literal, scan:second-theme-file]
 - **Strings live in ONE catalog per locale** — see rule 2.
+  [check: scan:one-catalog-per-locale]
 - **Error messages are abstracted** to one place, like strings.
+  [check: scan:ui-string-literal]
 - **Cross-cutting behavior (gestures, animations, formatting) has one home** and is used,
-  never re-implemented locally. (Coast D15)
+  never re-implemented locally. (Coast D15) [check: tool:jscpd, review]
 - **Every derived value is computed in one place and reused** — never recomputed slightly
   differently in two places (totals, scores, statuses, rounding). (Coast PAY-3, generalized)
+  [check: tool:jscpd, review]
 - **One name per thing, everywhere.** Pick the vocabulary once; never introduce a synonym
-  for something that already has a name. (Coast D107)
+  for something that already has a name. (Coast D107) [check: review]
 
 Enforcement: reviews grep the diff for inlined strings, styling literals, and duplicated
 logic, and fail the change when they find them.
@@ -43,6 +47,7 @@ in `04-localization.md`. (Coast D36)
 ceremony, but every string a person will eventually read — API error text, emails,
 notifications, CLI output — still has exactly ONE home rather than sitting as literals
 scattered through handlers. Mechanics in `types/backend-service.md`.
+[check: scan:ui-string-literal]
 
 ## 2b. Simple and elegant: clear, easy to read and understand
 
@@ -67,6 +72,7 @@ Origin: Abbey's instruction to the agent that built this repo — solutions shou
 and elegant, clear and easy to read and understand. Clarified 21 Aug 2026 after an agent
 read an earlier paraphrase as permission for shortcuts: the rule exists to prevent
 over-engineering; it never licenses a coding agent to take shortcuts.
+[check: review]
 
 ## 2c. A coding agent never changes infrastructure unless told to
 
@@ -78,6 +84,7 @@ ask in one sentence. Read-only checks (status, logs, health) are fine. Setup wor
 assigns is still Claude's job; unprompted infrastructure changes never are. Origin: a
 session asked for UI fixes created and destroyed a staging app, volume, bucket and secrets
 on the user's account on its own initiative — "a huge breach of trust."
+[check: session:infra-command]
 
 ## 2d. Facts about the world are never hardcoded — ask, don't assume
 
@@ -96,48 +103,52 @@ Enforcement: reviews grep the diff for known environment literals (branch names 
 "main"/"master", absolute paths, hardcoded hosts and ports) exactly as they grep for
 inlined strings and styling literals — and the shipped per-platform rules files carry
 this as a checkable rule (C-5 / ARCH-8), so customer-project reviewers enforce it too.
+[check: scan:env-literal]
 
 ## 3. OWASP rules are followed
 
 Every project complies with the security rules in `03-security-owasp.md`, which are sourced
 from OWASP ASVS, OWASP MASVS, and the OWASP Cheat Sheet Series. Any change touching auth,
 payments, user input, or data access gets a security review pass before it ships.
+[check: process]
 
 ## 4. Customer/user data never enters version control
 
 The git repo holds code (and deliberate reference data only). Customer data, fleet data,
 user content, and credentials never get committed. (Abbey, 2026-08-18, binding.)
+[check: scan:secret-literal]
 
 ## 5. Never invent domain logic behind a safety or business decision
 
 If a formula, threshold, or rule is owned by the client or undefined, it stays a labeled
 stub. Surface gaps explicitly — nulls, placeholders, and unvalidated data get flagged in the
-UI and the code, never silently resolved or faked.
+UI and the code, never silently resolved or faked. [check: review]
 
 ## 6. Tests are mandatory and honest
 
 Write the failing test first. Never weaken a test to make it pass. Never mark a failing task
 complete. A test must fail when the behavior it names is broken — assertions so weak that
 any implementation passes don't count as coverage. Full rules in `06-testing.md`.
+[check: scan:test-weakened, review]
 
 ## 7. Every commit gets pushed — same session, no exceptions
 
 (Abbey, 2026-07-25: "we should never commit without pushing.") If the push is refused,
 fetch, reconcile, and push — never leave work only on one machine. Commit per task, not per
-session.
+session. [check: session:unpushed-at-stop]
 
 ## 8. Native/platform-standard first
 
 If the platform provides the feature, the feature is used. Never chase an unexplained
 failure with escalating non-native workarounds — pause, confirm the failure is real, and
 ask. (Coast D128/D135; Abbey: "We should ALWAYS use the native feature unless otherwise
-approved to do differently.")
+approved to do differently.") [check: scan:native-pattern]
 
 ## 9. Abbey is the final QA gate on every release
 
 Nothing is submitted or published until her manual QA pass is done. Every launch plan
 includes that as an explicit ordered step, with a testable build and a feature-by-feature
-checklist delivered to her.
+checklist delivered to her. [check: process]
 
 ## 10. Portfolio standing decisions (never re-open)
 
@@ -147,6 +158,7 @@ checklist delivered to her.
   explicit go, each time.
 - Verify factual claims about external products/APIs/policies against PRIMARY sources
   before answering; third-party coverage is a lead, never the answer.
+[check: process]
 
 
 ## Definition of done: a rule without its guard is not done (Abbey, 2026-09-01)
@@ -167,4 +179,4 @@ So a task is DONE only when both hold:
    the builder's report.
 
 Anything marked built without both is not built. "Verified" without a test
-name or an on-screen walk is not a word to use.
+name or an on-screen walk is not a word to use. [check: process]
