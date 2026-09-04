@@ -108,7 +108,7 @@ How the design's values and components reach the code.
 - **DES-1** Every visual value is the design's exact token, used by the design's
   token name. A near-match is never inlined, and a value the design needs but
   has no token for is added to the theme as a token, not written at the use
-  site. [Up Coast standard; check: scan:styling-literal]
+  site. [Up Coast standard; check: scan:styling-literal, ratchet:spacing-literal]
 - **DES-2** A brand-colour or typeface swap is a one-file edit: nothing outside
   the theme file (`theme.ts` or the tokens stylesheet) knows a colour, font or
   spacing value. [Up Coast standard; check: scan:second-theme-file]

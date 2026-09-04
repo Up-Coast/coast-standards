@@ -247,7 +247,8 @@
           "**/src/main/**/database/migrations/**"
         ],
         "theme": [
-          "core/ui/src/main/kotlin/ui/theme/Theme.kt"
+          "core/ui/src/main/kotlin/ui/theme/Theme.kt",
+          "core/ui/src/main/kotlin/ui/theme/**"
         ],
         "ui_lib": [
           "core/ui/**"

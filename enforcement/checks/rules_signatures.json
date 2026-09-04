@@ -265,6 +265,190 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "L-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "styling-literal",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\(\\s*(red|hue|\\.sRGB|hex|\\.displayP3|\\\"#)|Color\\(\\s*(white|red|green|blue|gray):|\\\"#[0-9A-Fa-f]{6}\\\"|\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|\\.(foregroundColor|foregroundStyle|tint|background|fill|stroke)\\(\\s*\\.(red|blue|green|yellow|orange|purple|pink|gray|black|white|cyan|mint|teal|indigo|brown)\\b",
+          "words": "a colour or font size written as a literal — every visual value is a token in the theme file"
+        },
+        {
+          "id": "spacing-literal",
+          "rule": "DRY-2",
+          "severity": "ratchet",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.padding\\(\\s*(\\.\\w+\\s*,\\s*)?\\d|\\.frame\\(\\s*(width|height|minWidth|maxWidth|minHeight|maxHeight):\\s*\\d|\\bspacing:\\s*\\d|\\.cornerRadius\\(\\s*\\d|cornerRadius:\\s*\\d|lineWidth:\\s*\\d",
+          "words": "a spacing, size or radius written as a number — use the theme's spacing tokens"
+        },
+        {
+          "id": "second-theme-file",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "tree",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "generated",
+            "design_bundle",
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*Theme.swift",
+            "**/Theme+*.swift",
+            "**/Color+*.swift",
+            "**/Colors.swift",
+            "**/Palette.swift",
+            "**/DesignTokens.swift",
+            "**/Tokens.swift",
+            "**/Typography.swift"
+          ],
+          "pattern": "\\S",
+          "once": true,
+          "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit"
+        },
+        {
+          "id": "env-literal",
+          "rule": "C-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|Bundle\\.main\\.path\\(forResource",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     },
@@ -532,6 +716,190 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "L-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "styling-literal",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\(\\s*(red|hue|\\.sRGB|hex|\\.displayP3|\\\"#)|Color\\(\\s*(white|red|green|blue|gray):|\\\"#[0-9A-Fa-f]{6}\\\"|\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|\\.(foregroundColor|foregroundStyle|tint|background|fill|stroke)\\(\\s*\\.(red|blue|green|yellow|orange|purple|pink|gray|black|white|cyan|mint|teal|indigo|brown)\\b",
+          "words": "a colour or font size written as a literal — every visual value is a token in the theme file"
+        },
+        {
+          "id": "spacing-literal",
+          "rule": "DRY-2",
+          "severity": "ratchet",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.padding\\(\\s*(\\.\\w+\\s*,\\s*)?\\d|\\.frame\\(\\s*(width|height|minWidth|maxWidth|minHeight|maxHeight):\\s*\\d|\\bspacing:\\s*\\d|\\.cornerRadius\\(\\s*\\d|cornerRadius:\\s*\\d|lineWidth:\\s*\\d",
+          "words": "a spacing, size or radius written as a number — use the theme's spacing tokens"
+        },
+        {
+          "id": "second-theme-file",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "tree",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "generated",
+            "design_bundle",
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*Theme.swift",
+            "**/Theme+*.swift",
+            "**/Color+*.swift",
+            "**/Colors.swift",
+            "**/Palette.swift",
+            "**/DesignTokens.swift",
+            "**/Tokens.swift",
+            "**/Typography.swift"
+          ],
+          "pattern": "\\S",
+          "once": true,
+          "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit"
+        },
+        {
+          "id": "env-literal",
+          "rule": "C-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|Bundle\\.main\\.path\\(forResource",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     },
@@ -716,6 +1084,193 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "L-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/res/layout/**/*.xml"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "styling-literal",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/res/**/*.xml"
+          ],
+          "pattern": "Color\\(0x[0-9A-Fa-f]{6,8}\\)|fontSize\\s*=\\s*\\d+\\.sp|\\\"#[0-9A-Fa-f]{6}\\\"|android:textSize=\\\"\\d|android:(textColor|background)=\\\"#",
+          "words": "a colour or font size written as a literal — every visual value is a token in the theme file"
+        },
+        {
+          "id": "spacing-literal",
+          "rule": "DRY-2",
+          "severity": "ratchet",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/res/layout/**/*.xml"
+          ],
+          "pattern": "\\b\\d+\\.dp\\b|android:(padding|margin|layout_margin|layout_width|layout_height)\\w*=\\\"\\d+dp\\\"",
+          "words": "a spacing, size or radius written as a number — use the theme's spacing tokens"
+        },
+        {
+          "id": "second-theme-file",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "tree",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "generated",
+            "design_bundle",
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*Theme.kt",
+            "**/Color.kt",
+            "**/Colors.kt",
+            "**/Type.kt",
+            "**/Dimens.kt",
+            "**/*Tokens.kt",
+            "**/res/values/colors.xml",
+            "**/res/values/dimens.xml"
+          ],
+          "pattern": "\\S",
+          "once": true,
+          "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit"
+        },
+        {
+          "id": "env-literal",
+          "rule": "C-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.kt"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|10\\.0\\.2\\.2",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     },
@@ -877,6 +1432,207 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "L-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.tsx",
+            "**/*.jsx",
+            "**/*.ts",
+            "**/*.js"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "styling-literal",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "(?<![\\w#&])#[0-9A-Fa-f]{3,8}\\b(?=['\\\"\\s;,)])|\\bfontSize:\\s*\\d|\\bcolor:\\s*['\\\"](?!var\\(|transparent|inherit|currentColor)[a-zA-Z#]|font-size:\\s*\\d+(px|rem|em)|(?<![\\w-])color:\\s*(#|rgba?\\()",
+          "words": "a colour or font size written as a literal — every visual value is a token in the theme file"
+        },
+        {
+          "id": "spacing-literal",
+          "rule": "DRY-2",
+          "severity": "ratchet",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "\\b(padding|margin|gap|borderRadius)(Top|Bottom|Left|Right|Horizontal|Vertical|Start|End)?:\\s*\\d|(?<![\\w-])(padding|margin|gap|border-radius)(-\\w+)?:\\s*\\d+(px|rem)",
+          "words": "a spacing, size or radius written as a number — use the theme's spacing tokens"
+        },
+        {
+          "id": "second-theme-file",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "tree",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "generated",
+            "design_bundle",
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/theme.ts",
+            "**/theme.tsx",
+            "**/tokens.ts",
+            "**/colors.ts",
+            "**/palette.ts",
+            "**/*Theme.ts",
+            "**/theme.css",
+            "**/tokens.css",
+            "**/variables.css"
+          ],
+          "pattern": "\\S",
+          "once": true,
+          "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit"
+        },
+        {
+          "id": "env-literal",
+          "rule": "C-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|process\\.env\\.\\w+\\s*(\\|\\||\\?\\?)\\s*['\\\"][^'\\\"]+['\\\"]",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     },
@@ -1066,6 +1822,207 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "L-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.tsx",
+            "**/*.jsx",
+            "**/*.ts",
+            "**/*.js"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "styling-literal",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "(?<![\\w#&])#[0-9A-Fa-f]{3,8}\\b(?=['\\\"\\s;,)])|\\bfontSize:\\s*\\d|\\bcolor:\\s*['\\\"](?!var\\(|transparent|inherit|currentColor)[a-zA-Z#]|font-size:\\s*\\d+(px|rem|em)|(?<![\\w-])color:\\s*(#|rgba?\\()",
+          "words": "a colour or font size written as a literal — every visual value is a token in the theme file"
+        },
+        {
+          "id": "spacing-literal",
+          "rule": "DRY-2",
+          "severity": "ratchet",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "strings",
+            "generated",
+            "governing",
+            "manifest",
+            "docs",
+            "design_bundle",
+            "plans",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "\\b(padding|margin|gap|borderRadius)(Top|Bottom|Left|Right|Horizontal|Vertical|Start|End)?:\\s*\\d|(?<![\\w-])(padding|margin|gap|border-radius)(-\\w+)?:\\s*\\d+(px|rem)",
+          "words": "a spacing, size or radius written as a number — use the theme's spacing tokens"
+        },
+        {
+          "id": "second-theme-file",
+          "rule": "DRY-2",
+          "severity": "block",
+          "scope": "tree",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "theme",
+            "tests",
+            "generated",
+            "design_bundle",
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/theme.ts",
+            "**/theme.tsx",
+            "**/tokens.ts",
+            "**/colors.ts",
+            "**/palette.ts",
+            "**/*Theme.ts",
+            "**/theme.css",
+            "**/tokens.css",
+            "**/variables.css"
+          ],
+          "pattern": "\\S",
+          "once": true,
+          "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit"
+        },
+        {
+          "id": "env-literal",
+          "rule": "C-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|process\\.env\\.\\w+\\s*(\\|\\||\\?\\?)\\s*['\\\"][^'\\\"]+['\\\"]",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     },
@@ -1078,6 +2035,107 @@
           "severity": "block",
           "scope": "tree",
           "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        },
+        {
+          "id": "ui-string-literal",
+          "rule": "OBS-4",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "strings",
+            "generated",
+            "docs"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key"
+        },
+        {
+          "id": "env-literal",
+          "rule": "ARCH-8",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "config_home",
+            "tests",
+            "docs",
+            "strings",
+            "governing",
+            "generated",
+            "plans",
+            "manifest",
+            "design_bundle",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|os\\.environ\\.get\\(\\s*['\\\"][A-Z_]+['\\\"]\\s*,\\s*['\\\"][^'\\\"]+['\\\"]",
+          "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home"
+        },
+        {
+          "id": "secret-literal",
+          "rule": "SEC-8",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "git"
+          ],
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'][^\\\"'\\s]{12,}[\\\"'])",
+          "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
+        },
+        {
+          "id": "secret-file",
+          "group": "secret-literal",
+          "rule": "SEC-8",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "git"
+          ],
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ],
+          "pattern": "[\\s\\S]",
+          "once": true,
+          "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
         }
       ]
     }

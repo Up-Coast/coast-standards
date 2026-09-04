@@ -67,6 +67,7 @@ SIGNATURES_FILE = os.path.join(HERE, "rules_signatures.json")
 PATHS_FILE = os.path.join(HERE, "paths.json")
 BASELINE_FILE = ".coast/ratchet-baseline.json"
 EXCEPTIONS_FILE = ".coast/rules-exceptions.json"
+PATHS_OVERRIDE_FILE = ".coast/paths.json"  # a project's own class bindings, merged over the platform's (GOVERNING)
 WORKTREE = "WORKTREE"
 HEAVY_DIRECTORIES = {".git", ".gradle", "node_modules", ".build", "intermediates", "Pods", ".idea",
                      "DerivedData", "caches", "tmp", ".venv", "__pycache__"}
@@ -295,7 +296,20 @@ def ratchet_verdict(signature_id, count, baselines, today):
 
 def files_match(signature, path, extensions):
     patterns = signature.get("files") or [f"**/*{ext}" for ext in extensions]
+    if any(glob_matches(pattern, path) for pattern in signature.get("files_excluded", [])):
+        return False
     return any(glob_matches(pattern, path) for pattern in patterns)
+
+
+def builtin_added_hits(signature, path, lines):
+    """Hits of a built-in added-scope check: the whole file is lexed, only the added lines count."""
+    if signature["id"] == "ui-string-literal" and os.path.isfile(path):
+        import literals  # beside this file
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            found = literals.hits(path, handle.read())
+        added = {number for number, _ in lines}
+        return [(number, text) for number, text in found if number in added]
+    return []
 
 
 def class_applies(signature, path_class):
@@ -325,7 +339,7 @@ def signature_hits(signature, lines):
     paired = signature.get("paired")
     if paired and not pattern_hits(paired, lines, joined):
         return []
-    return hits
+    return hits[:1] if signature.get("once") else hits
 
 
 # ---------------------------------------------------------------- the run
@@ -347,7 +361,7 @@ class Scan:
 
     @staticmethod
     def check_name(signature):
-        return signature.get("group") or ("import-matrix" if signature.get("kind") == "builtin" else "rules")
+        return signature.get("group") or ("import-matrix" if signature["id"] == "import-matrix" else "rules")
 
     def excepted(self, signature, path, head, changed_paths):
         if self.deviations is None:
@@ -359,15 +373,16 @@ class Scan:
     def scan_added(self, changed, head):
         changed_paths = [path for path, _ in changed]
         for signature in self.signatures:
-            if signature.get("kind") == "builtin" or signature.get("scope", "added") != "added":
+            if signature.get("scope", "added") != "added":
                 continue
+            builtin = signature.get("kind") == "builtin"
             severity = signature.get("severity", "block")
             for path, lines in changed:
                 if not files_match(signature, path, self.paths.extensions):
                     continue
                 if not class_applies(signature, self.paths.classify(path)):
                     continue
-                hits = signature_hits(signature, lines)
+                hits = builtin_added_hits(signature, path, lines) if builtin else signature_hits(signature, lines)
                 if not hits:
                     continue
                 if severity == "advisory":
@@ -384,7 +399,7 @@ class Scan:
     def scan_tree(self, include_untracked, head):
         tree_signatures = [s for s in self.signatures if s.get("kind") != "builtin"
                            and (s.get("scope") == "tree" or s.get("severity") == "ratchet")]
-        builtins = [s for s in self.signatures if s.get("kind") == "builtin"]
+        builtins = [s for s in self.signatures if s.get("kind") == "builtin" and s.get("scope") == "tree"]
         if not tree_signatures and not builtins:
             return
         files = tree_files(include_untracked) if tree_signatures else []
@@ -430,11 +445,21 @@ class Scan:
                 self.fail("rules", SIGNATURES_FILE, 0, signature["id"], f"unknown builtin check '{signature['id']}'", signature.get("rule", "-"))
 
 
-def load_tables(platform):
+def load_tables(platform, paths_override=None):
     with open(SIGNATURES_FILE, encoding="utf-8") as handle:
         tables = json.load(handle)["platforms"]
     with open(PATHS_FILE, encoding="utf-8") as handle:
         paths = json.load(handle)["platforms"]
+    override = paths_override or (PATHS_OVERRIDE_FILE if os.path.isfile(PATHS_OVERRIDE_FILE) else None)
+    if override and platform in paths:
+        with open(override, encoding="utf-8") as handle:
+            own = json.load(handle)
+        own = own.get("platforms", {}).get(platform, own)  # either the platform table or the bare {"classes": …}
+        merged = dict(paths[platform])
+        merged["classes"] = dict(merged.get("classes", {}), **own.get("classes", {}))
+        if own.get("extensions"):
+            merged["extensions"] = own["extensions"]
+        paths[platform] = merged
     if platform is None:
         raise SystemExit("check_rules.py: the project's platform is not known — set COAST_PLATFORM "
                          "(the shipped workflow does) or pass --platform <name>; expected one of " + ", ".join(sorted(tables)))
@@ -453,6 +478,7 @@ def main(argv=None):
     parser.add_argument("--staged", action="store_true")
     parser.add_argument("--files", nargs="+")
     parser.add_argument("--tree", action="store_true")
+    parser.add_argument("--paths-override", help="a project's own path-class bindings (default: .coast/paths.json when present)")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
@@ -461,7 +487,7 @@ def main(argv=None):
         parser.print_usage()
         print("check_rules.py: give exactly one of <base> <head|WORKTREE>, --staged, --files …, --tree")
         return 2
-    signatures, paths = load_tables(args.platform)
+    signatures, paths = load_tables(args.platform, args.paths_override)
     today = _dt.date.fromisoformat(args.today) if args.today else None
     scan = Scan(args.platform, signatures, paths, today)
 

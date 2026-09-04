@@ -27,7 +27,7 @@ home.
 - **DRY-2** Styling lives in one theme file (`Theme.swift`). Every colour, font,
   size, weight and spacing value is a token there; a second theme file is never
   created, and no styling literal is written into a feature file. [Up Coast
-  standard; check: scan:styling-literal, scan:second-theme-file]
+  standard; check: scan:styling-literal, ratchet:spacing-literal, scan:second-theme-file]
 - **DRY-3** Strings live in one catalog per locale (`Localizable.xcstrings`).
   Additions go through that one place, and an existing key is reused before a
   near-duplicate is added. [Up Coast standard; check:
@@ -107,7 +107,7 @@ How the design's values and components reach the code.
 - **DES-1** Every visual value is the design's exact token, used by the design's
   token name. A near-match is never inlined, and a value the design needs but
   has no token for is added to the theme as a token, not written at the use
-  site. [Up Coast standard; check: scan:styling-literal]
+  site. [Up Coast standard; check: scan:styling-literal, ratchet:spacing-literal]
 - **DES-2** A brand-colour or typeface swap is a one-file edit: nothing outside
   the theme file (`Theme.swift`) knows a colour, font or spacing value. [Up
   Coast standard; check: scan:second-theme-file]

@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""literals.py — the built-in user-facing-text check (signature ``ui-string-literal``, E1.2).
+
+A regex over one line cannot tell a string literal from a comment, skip an
+interpolation, or see what call the literal sits in. This module lexes the
+whole file the way Coast's copy guard does (Tests/CoastAppCoreTests/
+CoastCopyGuardTests.swift — the algorithm is ported, the skip contexts are
+its list plus the ones a customer app needs) and returns every literal that
+reads as words a person would see: it contains a letter outside any
+interpolation, and it looks like text rather than a key — a space, a
+capitalised word, or sentence punctuation. A semantic key
+(``vehicle.status.doNotDispatch``, ``save_button``) is never text.
+
+Per language: Swift (full lexer: nested block comments, ``\\(…)``
+interpolation, raw and multi-line strings), Kotlin (string literals in the
+Compose text slots and XML ``android:text``), TypeScript/JSX (JSX text
+between tags and the known text props), Python (message-shaped literals
+in response bodies and exceptions, outside the messages module).
+
+``hits(language, text, skip_suffixes) -> [(line, literal)]``.
+"""
+
+from __future__ import annotations
+
+import re
+
+TEXT_SHAPE = re.compile(r"\s|[.!?,:;]$|^[A-Z][a-z]")
+
+
+def looks_like_text(body):
+    """Words a person reads, not an identifier, key, symbol name or URL."""
+    stripped = body.strip()
+    if not stripped or not re.search(r"[A-Za-z]", stripped):
+        return False
+    if re.match(r"^[\w.\-/:%#@+]*$", stripped) and " " not in stripped:
+        # an identifier, a dotted key, a path, a URL — unless it is one capitalised English word
+        return bool(re.match(r"^[A-Z][a-z]+$", stripped))
+    if stripped.startswith(("http://", "https://", "/", "%", "#")):
+        return False
+    return TEXT_SHAPE.search(stripped) is not None
+
+
+# ---------------------------------------------------------------- Swift
+
+
+SWIFT_SKIP_SUFFIXES = (
+    "systemName:", "systemImage:", "string:", "==", "!=", "Contains(", "accessibilityIdentifier(",
+    "keyboardShortcut(", "named:", "forKey:", "contains(", "hasPrefix(", "hasSuffix(", "appendingPathComponent(",
+    "atPath:", "toFile:", "id:", "ID:", "referencedName:", "secretName:", "[",
+    "Image(", "Color(", "Font.custom(", "#Preview(", "Name(", "subsystem:", "category:", "identifier:",
+    "print(", ".info(", ".debug(", ".error(", ".warning(", ".notice(", ".fault(", ".trace(", ".log(",
+    "assert(", "precondition(", "fatalError(", "assertionFailure(", "NSLocalizedString(", "localized:",
+    "forResource:", "withExtension:", "ofType:", "rawValue:", "key:", "Key(", "userInfo:", "scheme:", "host:",
+    "path:", "url:", "URL(", "AppStorage(", "SceneStorage(", "UserDefaults(", "tag(", "Notification.Name(",
+    "bundle:", "tableName:", "comment:", "CodingKeys", "static let", "let key", "case ",
+)
+
+
+def swift_literals(src):
+    """[(line, body, text_before)] for every top-level string literal in Swift source, comments skipped."""
+    out = []
+    i, n = 0, len(src)
+    line = 1
+
+    def scan_string(j):
+        """src[j] opens a string (after any raw # prefix); returns the index past its close."""
+        hashes = 0
+        while j < n and src[j] == "#":
+            hashes += 1
+            j += 1
+        closing = ('"""' if src.startswith('"""', j) else '"') + "#" * hashes
+        j += 3 if closing.startswith('"""') else 1
+        escape = "\\" + "#" * hashes
+        while j < n:
+            if src.startswith(escape, j):
+                if src.startswith("(", j + len(escape)):
+                    j = skip_interpolation(j + len(escape))
+                    continue
+                j += len(escape) + 1
+                continue
+            if src.startswith(closing, j):
+                return j + len(closing)
+            j += 1
+        return n
+
+    def skip_interpolation(j):
+        depth = 0
+        while j < n:
+            c = src[j]
+            if c == '"' or (c == "#" and re.match(r'#+"', src[j:j + 8])):
+                j = scan_string(j)
+                continue
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+                if depth == 0:
+                    return j + 1
+            j += 1
+        return n
+
+    while i < n:
+        c = src[i]
+        if c == "\n":
+            line += 1
+            i += 1
+            continue
+        if c == "/" and src.startswith("//", i):
+            end = src.find("\n", i)
+            i = n if end < 0 else end
+            continue
+        if c == "/" and src.startswith("/*", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if src.startswith("/*", j):
+                    depth += 1
+                    j += 2
+                elif src.startswith("*/", j):
+                    depth -= 1
+                    j += 2
+                else:
+                    if src[j] == "\n":
+                        line += 1
+                    j += 1
+            i = j
+            continue
+        if c == '"' or (c == "#" and re.match(r'#+"', src[i:i + 8])):
+            start = i
+            end = scan_string(i)
+            raw = src[start:end]
+            body = raw.strip("#")
+            body = body[3:-3] if body.startswith('"""') else body[1:-1]
+            out.append((line, body, src[:start]))
+            line += raw.count("\n")
+            i = end
+            continue
+        i += 1
+    return out
+
+
+def swift_text_outside_interpolation(body):
+    text, i = [], 0
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            if body[i + 1] == "(":
+                depth, j = 0, i + 1
+                while j < len(body):
+                    if body[j] == "(":
+                        depth += 1
+                    elif body[j] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j += 1
+                i = j + 1
+                continue
+            i += 2
+            continue
+        text.append(body[i])
+        i += 1
+    return "".join(text)
+
+
+def swift_hits(src, skip_suffixes=SWIFT_SKIP_SUFFIXES):
+    hits = []
+    for line, body, before in swift_literals(src):
+        text = swift_text_outside_interpolation(body)
+        if not looks_like_text(text):
+            continue
+        trimmed = before.rstrip()
+        if any(trimmed.endswith(suffix) for suffix in skip_suffixes):
+            continue
+        last_line = trimmed.rsplit("\n", 1)[-1].strip()
+        if trimmed.endswith("=") and last_line.startswith("case "):
+            continue  # a raw-value enum case is an identifier
+        if last_line.startswith(("static let", "let ", "var ")) and "=" in last_line and re.search(r"\b(id|key|name|identifier|Key|ID)\s*(:\s*String)?\s*=\s*$", last_line):
+            continue
+        hits.append((line, text.strip()))
+    return hits
+
+
+# ---------------------------------------------------------------- Kotlin, TypeScript/JSX, Python (line shapes)
+
+
+KOTLIN_SLOTS = re.compile(r'(?:\bText\s*\(\s*|\b(?:text|title|label|placeholder|contentDescription|headline|supportingText|message)\s*=\s*)"((?:[^"\\]|\\.)*)"')
+XML_TEXT = re.compile(r'android:(?:text|hint|contentDescription|title|label)\s*=\s*"([^"@?][^"]*)"')
+JSX_TEXT = re.compile(r">\s*([^<>{}]*[A-Za-z][^<>{}]*?)\s*<")
+JSX_BARE_TEXT = re.compile(r"^\s*([A-Z][A-Za-z][^<>{}=;()]*)\s*$")
+JSX_PROPS = re.compile(r'\b(?:title|placeholder|aria-label|alt|label|helperText|description|accessibilityLabel)\s*=\s*"((?:[^"\\]|\\.)*)"')
+TS_CALL_TEXT = re.compile(r"""\b(?:Alert\.alert|alert|confirm|toast(?:\.\w+)?|showMessage|setError|setMessage)\s*\(\s*(['"`])((?:(?!\1).)*)\1""")
+PY_MESSAGE = re.compile(r"""(?:\b(?:detail|message|msg|error|title|description|text)\s*=\s*|["'](?:detail|message|msg|error|title|description|text)["']\s*:\s*)(['"])((?:(?!\1).)*)\1""")
+PY_RAISE = re.compile(r"""\braise\s+\w+(?:\.\w+)*\s*\(\s*(['"])((?:(?!\1).)*)\1""")
+COMMENT_LINE = re.compile(r"^\s*(//|#|\*|/\*)")
+
+
+def line_hits(text, patterns, comment=COMMENT_LINE, group=1):
+    hits = []
+    for number, line in enumerate(text.splitlines(), 1):
+        if comment.match(line):
+            continue
+        for pattern in patterns:
+            for match in pattern.finditer(line):
+                body = match.group(group if pattern.groups == 1 else pattern.groups)
+                if looks_like_text(body):
+                    hits.append((number, body.strip()))
+    return hits
+
+
+def kotlin_hits(src):
+    return line_hits(src, [KOTLIN_SLOTS])
+
+
+def xml_hits(src):
+    return line_hits(src, [XML_TEXT], comment=re.compile(r"^\s*<!--"))
+
+
+def tsx_hits(src):
+    hits = line_hits(src, [JSX_TEXT, JSX_PROPS, TS_CALL_TEXT])
+    for number, line in enumerate(src.splitlines(), 1):
+        match = JSX_BARE_TEXT.match(line)
+        if match and not COMMENT_LINE.match(line) and looks_like_text(match.group(1)):
+            if (number, match.group(1).strip()) not in hits:
+                hits.append((number, match.group(1).strip()))
+    return sorted(set(hits))
+
+
+def python_hits(src):
+    return line_hits(src, [PY_MESSAGE, PY_RAISE])
+
+
+LANGUAGES = {
+    ".swift": swift_hits, ".kt": kotlin_hits, ".xml": xml_hits,
+    ".tsx": tsx_hits, ".jsx": tsx_hits, ".ts": lambda src: line_hits(src, [TS_CALL_TEXT]), ".js": lambda src: line_hits(src, [TS_CALL_TEXT]),
+    ".py": python_hits,
+}
+
+
+def hits(path, src):
+    """[(line, literal)] of user-facing text literals in a file of a known language; [] otherwise."""
+    for extension, function in LANGUAGES.items():
+        if path.endswith(extension):
+            return function(src)
+    return []

@@ -304,6 +304,69 @@ class TreeRatchetAndAdvisoryTests(unittest.TestCase):
         self.assertNotIn("Theme/Theme.swift", out, "the bound theme file is the one home, not a second file")
 
 
+class WaveOneThroughTheRunnerTests(unittest.TestCase):
+    def setUp(self):
+        self.repo = Repo()
+        self.addCleanup(self.repo.cleanup)
+        self.base = sh(self.repo.path, "git", "rev-parse", "HEAD")
+
+    def test_a_literal_in_a_view_fails_and_the_same_words_in_a_model_do_not(self):
+        self.repo.write("Sources/App/Views/HomeView.swift", 'import SwiftUI\nstruct HomeView: View { var body: some View { Text("Save your changes now") } }\n')
+        self.repo.write("Sources/App/Prompts.swift", 'let prompt = "Write a plan for the feature below."\n')
+        head = self.repo.commit("copy")
+        code, out = self.repo.run(self.base, head, "--platform", "ios")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL rules Sources/App/Views/HomeView.swift:2:ui-string-literal: ", out)
+        self.assertIn("[L-1]", out)
+        self.assertNotIn("Prompts.swift", out)
+
+    def test_only_the_added_lines_of_a_view_count(self):
+        self.repo.write("Sources/App/Views/HomeView.swift", 'import SwiftUI\nstruct HomeView: View { var body: some View { Text("Old words nobody touched") } }\n')
+        base = self.repo.commit("legacy")
+        self.repo.write("Sources/App/Views/HomeView.swift", 'import SwiftUI\nimport Foundation\nstruct HomeView: View { var body: some View { Text("Old words nobody touched") } }\n')
+        head = self.repo.commit("import only")
+        self.assertEqual(self.repo.run(base, head, "--platform", "ios")[0], 0)
+
+    def test_the_theme_file_may_hold_colours_and_a_project_override_moves_it(self):
+        self.repo.write("Modules/Shared/Sources/Theme/Theme.swift", "enum Theme { static let accent = Color(red: 0.2, green: 0.4, blue: 0.9) }\n")
+        head = self.repo.commit("theme")
+        self.assertEqual(self.repo.run(self.base, head, "--platform", "ios")[0], 0)
+        self.repo.write("App/DesignSystem/Theme.swift", "enum Theme { static let accent = Color(red: 0.2, green: 0.4, blue: 0.9) }\n")
+        head = self.repo.commit("theme elsewhere")
+        code, out = self.repo.run(self.base, head, "--platform", "ios")
+        self.assertEqual(code, 1)
+        self.assertIn("styling-literal", out)
+        os.remove(os.path.join(self.repo.path, "Modules/Shared/Sources/Theme/Theme.swift"))  # or it is the second theme file
+        self.repo.write(".coast/paths.json", {"classes": {"theme": ["App/DesignSystem/Theme.swift"]}})
+        head = self.repo.commit("override")
+        code, out = self.repo.run(self.base, head, "--platform", "ios")
+        self.assertEqual(code, 0, out)
+
+    def test_a_second_theme_file_fails_once_per_file_on_the_tree(self):
+        self.repo.write("Modules/Shared/Sources/Theme/Theme.swift", "enum Theme {}\n")
+        self.repo.write("Modules/Home/Sources/HomeTheme.swift", "enum HomeTheme {\n  static let a = 1\n  static let b = 2\n}\n")
+        self.repo.commit("two")
+        code, out = self.repo.run("--tree", "--platform", "ios")
+        self.assertEqual(code, 1)
+        self.assertEqual(sum(1 for line in out.splitlines() if line.startswith("FAIL rules") and ":second-theme-file:" in line), 1)
+
+    def test_a_secret_file_fails_and_its_example_does_not(self):
+        self.repo.write(".env", "ANTHROPIC_API_KEY=sk-ant-not-really\n")
+        self.repo.write(".env.example", "ANTHROPIC_API_KEY=\n")
+        head = self.repo.commit("env")
+        code, out = self.repo.run(self.base, head, "--platform", "ios")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL secret-literal .env:1:secret-file:", out)
+        self.assertNotIn(".env.example", out)
+
+    def test_a_secret_literal_fails_in_any_file_including_tests(self):
+        self.repo.write("Tests/AppTests/KeyTests.swift", 'let k = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789"\n')
+        head = self.repo.commit("leak")
+        code, out = self.repo.run(self.base, head, "--platform", "ios")
+        self.assertEqual(code, 1)
+        self.assertIn(":secret-literal:", out)
+
+
 class ImportMatrixTests(unittest.TestCase):
     def test_a_feature_importing_a_feature_fails_through_the_runner(self):
         repo = Repo()
@@ -326,7 +389,7 @@ class PlantTests(unittest.TestCase):
         checked = 0
         for platform, entry in tables.items():
             for signature in entry["signatures"]:
-                if signature.get("kind") == "builtin":
+                if signature.get("scope") == "tree" and signature.get("kind") == "builtin":
                     continue
                 folder = os.path.join(PLANTS, platform)
                 names = os.listdir(folder) if os.path.isdir(folder) else []
@@ -334,10 +397,17 @@ class PlantTests(unittest.TestCase):
                 ok = [n for n in names if n.startswith(signature["id"] + ".pass")]
                 self.assertEqual(len(fail), 1, f"{platform}/{signature['id']} needs one fail plant")
                 self.assertEqual(len(ok), 1, f"{platform}/{signature['id']} needs one pass plant")
-                fail_lines = list(enumerate(cr.read_lines(os.path.join(folder, fail[0])), 1))
-                ok_lines = list(enumerate(cr.read_lines(os.path.join(folder, ok[0])), 1))
-                self.assertTrue(cr.signature_hits(signature, fail_lines), f"{platform}/{signature['id']}: the fail plant did not hit")
-                self.assertFalse(cr.signature_hits(signature, ok_lines), f"{platform}/{signature['id']}: the pass plant hit")
+                fail_path = os.path.join(folder, fail[0])
+                ok_path = os.path.join(folder, ok[0])
+                if signature.get("kind") == "builtin":
+                    import literals
+                    fail_hits = literals.hits(fail_path.replace(".fail", ""), open(fail_path, encoding="utf-8").read())
+                    ok_hits = literals.hits(ok_path.replace(".pass", ""), open(ok_path, encoding="utf-8").read())
+                else:
+                    fail_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(fail_path), 1)))
+                    ok_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(ok_path), 1)))
+                self.assertTrue(fail_hits, f"{platform}/{signature['id']}: the fail plant did not hit")
+                self.assertFalse(ok_hits, f"{platform}/{signature['id']}: the pass plant hit")
                 checked += 1
         self.assertGreaterEqual(checked, 52)
 
