@@ -1,0 +1,1 @@
+return render_template_string(body_from_request)

@@ -1,0 +1,1 @@
+<TextInput onSubmitEditing={() => deleteNote(id)} />

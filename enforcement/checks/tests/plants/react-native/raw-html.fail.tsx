@@ -1,0 +1,1 @@
+<WebView source={{ html: bodyFromServer }} />

@@ -449,6 +449,199 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift",
+            "**/*.plist"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "loadHTMLString\\(|documentType:\\s*\\.html|NSAttributedString\\.DocumentType\\.html",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\\\\\(|\"\\s*\\+)",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ENG-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?<![\\w.])u?sleep\\(|Thread\\.sleep\\(|DispatchSemaphore\\(|\\.wait\\(\\)|\\.wait\\(timeout:|RunLoop\\.(main|current)\\.run\\(|\\bDispatchGroup\\(\\)[^\\n]*\\.wait\\b",
+          "words": "a call that parks a thread and waits — long waits are async/await; nothing that blocks is reachable from the main actor"
+        },
+        {
+          "id": "layer-import",
+          "rule": "A-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(CoreData|SwiftData|GRDB|SQLite|SQLite3|RealmSwift|Realm|FMDB|Supabase|FirebaseFirestore|FirebaseDatabase|CloudKit|Alamofire)\\b",
+          "words": "a data or network framework imported into view code — screens display; data goes through the repository layer"
+        },
+        {
+          "id": "viewmodel-ui-import",
+          "rule": "A-1",
+          "group": "layer-import",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*ViewModel.swift",
+            "**/ViewModels/**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(SwiftUI|UIKit|AppKit)\\b",
+          "words": "a UI framework imported into a view model — view models prepare data and know nothing about the toolkit that draws it"
+        },
+        {
+          "id": "destructive-default-key",
+          "rule": "05 a-destructive-confirm-is-click-only",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib",
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "role:\\s*\\.destructive(?:(?!Button\\().){0,200}?\\.keyboardShortcut\\(\\.defaultAction\\)|\\.keyboardShortcut\\(\\.defaultAction\\)(?:(?!Button\\().){0,160}?role:\\s*\\.destructive",
+          "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action"
         }
       ]
     },
@@ -900,6 +1093,199 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift",
+            "**/*.plist"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "loadHTMLString\\(|documentType:\\s*\\.html|NSAttributedString\\.DocumentType\\.html",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\\\\\(|\"\\s*\\+)",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ENG-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?<![\\w.])u?sleep\\(|Thread\\.sleep\\(|DispatchSemaphore\\(|\\.wait\\(\\)|\\.wait\\(timeout:|RunLoop\\.(main|current)\\.run\\(|\\bDispatchGroup\\(\\)[^\\n]*\\.wait\\b",
+          "words": "a call that parks a thread and waits — long waits are async/await; nothing that blocks is reachable from the main actor"
+        },
+        {
+          "id": "layer-import",
+          "rule": "A-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(CoreData|SwiftData|GRDB|SQLite|SQLite3|RealmSwift|Realm|FMDB|Supabase|FirebaseFirestore|FirebaseDatabase|CloudKit|Alamofire)\\b",
+          "words": "a data or network framework imported into view code — screens display; data goes through the repository layer"
+        },
+        {
+          "id": "viewmodel-ui-import",
+          "rule": "A-1",
+          "group": "layer-import",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*ViewModel.swift",
+            "**/ViewModels/**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(SwiftUI|UIKit|AppKit)\\b",
+          "words": "a UI framework imported into a view model — view models prepare data and know nothing about the toolkit that draws it"
+        },
+        {
+          "id": "destructive-default-key",
+          "rule": "MAC-6",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib",
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "role:\\s*\\.destructive(?:(?!Button\\().){0,200}?\\.keyboardShortcut\\(\\.defaultAction\\)|\\.keyboardShortcut\\(\\.defaultAction\\)(?:(?!Button\\().){0,160}?role:\\s*\\.destructive",
+          "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action"
         }
       ]
     },
@@ -1271,6 +1657,228 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.xml"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Html(Compat)?\\.fromHtml\\(|\\.loadData\\(|\\.loadDataWithBaseURL\\(",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "exported-component",
+          "rule": "SEC-6",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/AndroidManifest.xml"
+          ],
+          "pattern": "android:exported=\"true\"(?![^>]*android:permission)[^>]*(?:/>|>(?:(?!android\\.intent\\.category\\.LAUNCHER).)*</(?:activity|service|receiver|provider)>)",
+          "words": "a component exported to other apps with no permission guarding it — components are private unless they must be reachable, and a reachable one names its permission (the launcher activity is the one exception the pattern already knows)"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\$\\{?\\w|\"\\s*\\+)",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ENG-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Thread\\.sleep\\(|SystemClock\\.sleep\\(|\\brunBlocking\\s*[({]|\\.get\\(\\s*\\d+\\s*,\\s*TimeUnit|\\bCountDownLatch\\(|\\bTasks\\.await\\(",
+          "words": "a call that parks a thread and waits — long waits are suspend functions on a dispatcher; nothing that blocks runs on Main"
+        },
+        {
+          "id": "layer-import",
+          "rule": "A-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "^\\s*import\\s+(androidx\\.room|android\\.database|io\\.realm|com\\.google\\.firebase\\.(firestore|database)|retrofit2|okhttp3|io\\.ktor\\.client|java\\.sql)\\b",
+          "words": "a data or network framework imported into view code — screens display; data goes through the repository layer"
+        },
+        {
+          "id": "viewmodel-ui-import",
+          "rule": "A-1",
+          "group": "layer-import",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*ViewModel.kt"
+          ],
+          "pattern": "^\\s*import\\s+(androidx\\.compose\\.(material|material3|ui|foundation)|android\\.widget\\.|android\\.view\\.)",
+          "words": "a UI framework imported into a view model — view models prepare data and know nothing about the toolkit that draws it"
+        },
+        {
+          "id": "destructive-default-key",
+          "rule": "05 a-destructive-confirm-is-click-only",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib",
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bon(Done|Go|Send)\\s*=\\s*\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\(",
+          "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action"
         }
       ]
     },
@@ -1633,6 +2241,196 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.plist",
+            "**/AndroidManifest.xml"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "source=\\{\\{\\s*html:\\s*(?![\\'\"`])(?=\\S)|\\bdangerouslySetInnerHTML\\b",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[`\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^`\"\\']*(\\$\\{|[`\"\\']\\s*\\+)",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ENG-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "Atomics\\.wait\\(|while\\s*\\(\\s*(Date\\.now\\(\\)|performance\\.now\\(\\)|\\+new Date)|\\.open\\([^)]*,\\s*false\\s*\\)|\\bdeasync\\b",
+          "words": "a busy wait or a synchronous request on the JavaScript thread — long waits are promises the thread does not sit on"
+        },
+        {
+          "id": "layer-import",
+          "rule": "A-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "from\\s+[\\'\"](@prisma/client|@supabase/supabase-js|firebase/(firestore|database)|knex|pg|mysql2|mongoose|typeorm|drizzle-orm|realm|@nozbe/watermelondb|expo-sqlite|react-native-sqlite-storage|better-sqlite3|sqlite3)[\\'\"]|require\\(\\s*[\\'\"](pg|mysql2|mongoose|knex|sqlite3|better-sqlite3)[\\'\"]\\s*\\)",
+          "words": "a data or network framework imported into view code — screens display; data goes through the repository layer"
+        },
+        {
+          "id": "destructive-default-key",
+          "rule": "05 a-destructive-confirm-is-click-only",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib",
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "onSubmitEditing=\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\(",
+          "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action"
         }
       ]
     },
@@ -2023,6 +2821,201 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html",
+            "**/*.vue",
+            "**/*.svelte"
+          ],
+          "pattern": "\\bdangerouslySetInnerHTML\\b|\\.(innerHTML|outerHTML)\\s*=|document\\.write(ln)?\\(|insertAdjacentHTML\\(|\\bv-html=|\\[innerHTML\\]=|\\{@html\\b",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[`\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^`\"\\']*(\\$\\{|[`\"\\']\\s*\\+)",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html",
+            "**/*.vue",
+            "**/*.svelte",
+            "**/*.astro"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ENG-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "source",
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "Atomics\\.wait\\(|while\\s*\\(\\s*(Date\\.now\\(\\)|performance\\.now\\(\\)|\\+new Date)|\\.open\\([^)]*,\\s*false\\s*\\)|\\bdeasync\\b|(?<![\\w.])(alert|confirm|prompt)\\(|window\\.(alert|confirm|prompt)\\(",
+          "words": "a busy wait, a synchronous request or a blocking dialog on the main thread — long waits are promises the thread does not sit on"
+        },
+        {
+          "id": "layer-import",
+          "rule": "A-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "from\\s+[\\'\"](@prisma/client|@supabase/supabase-js|firebase/(firestore|database)|knex|pg|mysql2|mongoose|typeorm|drizzle-orm|realm|@nozbe/watermelondb|expo-sqlite|react-native-sqlite-storage|better-sqlite3|sqlite3)[\\'\"]|require\\(\\s*[\\'\"](pg|mysql2|mongoose|knex|sqlite3|better-sqlite3)[\\'\"]\\s*\\)",
+          "words": "a data or network framework imported into view code — screens display; data goes through the repository layer"
+        },
+        {
+          "id": "destructive-default-key",
+          "rule": "05 a-destructive-confirm-is-click-only",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "ui",
+            "ui_lib",
+            "source"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(onSubmit|onKeyDown|onKeyPress|onKeyUp)=\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\(|autoFocus[^>]*\\b(delete|remove|destroy)\\w*[^>]*>|<button[^>]*\\b(delete|remove|destroy)\\w*[^>]*autoFocus",
+          "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action"
         }
       ]
     },
@@ -2136,6 +3129,275 @@
           "pattern": "[\\s\\S]",
           "once": true,
           "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control"
+        },
+        {
+          "id": "plaintext-http",
+          "rule": "SEC-1",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.toml",
+            "**/*.yaml",
+            "**/*.yml"
+          ],
+          "pattern": "^(?!.*(xmlns|DOCTYPE|w3\\.org|schemas\\.|purl\\.org|json-schema\\.org|apple\\.com/DTDs|ns\\.adobe\\.com|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|10\\.0\\.2\\.2|example\\.(com|org|net))).*\\bhttp://|usesCleartextTraffic=\"true\"|NSAllowsArbitraryLoads</key>\\s*<true",
+          "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home"
+        },
+        {
+          "id": "raw-html",
+          "rule": "SEC-2",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.jinja",
+            "**/*.jinja2",
+            "**/*.j2"
+          ],
+          "pattern": "\\bmark_safe\\(|\\bMarkup\\(|\\|\\s*safe\\b|autoescape\\s*=\\s*False|render_template_string\\(",
+          "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page"
+        },
+        {
+          "id": "dangerous-eval",
+          "rule": "SEC-5",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "(?<![\\w.])(eval|exec)\\(|\\bpickle\\.loads?\\(|\\bmarshal\\.loads?\\(|\\byaml\\.load\\((?!.*(SafeLoader|safe_load))|\\bshelve\\.open\\(",
+          "words": "input handed to eval, exec, pickle or an unsafe YAML loader — untrusted data is parsed by a parser that cannot run it"
+        },
+        {
+          "id": "shell-injection",
+          "rule": "SEC-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\bshell\\s*=\\s*True|\\bos\\.system\\(|\\bos\\.popen\\(|\\bsubprocess\\.(getoutput|getstatusoutput)\\(|\\bcommands\\.getoutput\\(",
+          "words": "a command run through the shell — subprocesses take an argument list, never a string the shell interprets"
+        },
+        {
+          "id": "sql-string-assembly",
+          "rule": "SEC-3",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\b[rR]?[fF][rR]?[\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b|[\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"\\']*[\"\\']\\s*(%|\\+|\\.format\\()",
+          "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text"
+        },
+        {
+          "id": "cdn-script",
+          "rule": "03 no-cdn-loaded-scripts",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.jinja",
+            "**/*.jinja2",
+            "**/*.j2"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://",
+          "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you"
+        },
+        {
+          "id": "blocking-call",
+          "rule": "ASYNC-1",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "words": "a blocking call inside an async function — file and network I/O and sleeps go through the loop's async forms or run_in_executor"
+        },
+        {
+          "id": "layer-import",
+          "rule": "ARCH-4",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests",
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/routes/**",
+            "**/routers/**",
+            "**/handlers/**",
+            "**/views/**",
+            "**/api/**",
+            "**/endpoints/**",
+            "**/controllers/**"
+          ],
+          "pattern": "^\\s*(from|import)\\s+(sqlalchemy|psycopg2?|asyncpg|pymongo|motor|sqlite3|aiosqlite|peewee|tortoise|databases|redis)\\b|\\.execute\\(\\s*[rRfF]?[\"\\']|\\bsession\\.query\\(",
+          "words": "database access inside a handler — handlers call the data-access layer; the query lives there"
+        },
+        {
+          "id": "hand-rolled-password-hash",
+          "rule": "00 native-platform-standard-first",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "hashlib\\.(md5|sha1|sha224|sha256|sha384|sha512)\\(.*(?i:password|passwd|pwd)",
+          "words": "a password hashed by hand with a general-purpose digest — the platform's password hasher (argon2/bcrypt through passlib, or the framework's make_password) owns it"
+        },
+        {
+          "id": "hand-rolled-query-parse",
+          "rule": "00 native-platform-standard-first",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\.split\\(\\s*[\"\\'](\\?|&|://|;\\s*charset)[\"\\']\\s*\\)",
+          "words": "a URL, query string or header taken apart by hand — urllib.parse and the framework's request object already own that"
+        },
+        {
+          "id": "hand-rolled-arg-parse",
+          "rule": "00 native-platform-standard-first",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "docs",
+            "plans",
+            "design_bundle",
+            "generated",
+            "governing",
+            "git"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\bsys\\.argv\\[\\d+\\]\\s*(==|in\\s*\\()|for\\s+\\w+\\s+in\\s+sys\\.argv",
+          "words": "command-line flags parsed by hand from sys.argv — argparse owns the flags, the help text and the errors"
         }
       ]
     }

@@ -301,15 +301,27 @@ def files_match(signature, path, extensions):
     return any(glob_matches(pattern, path) for pattern in patterns)
 
 
+def builtin_hits(signature, path, text):
+    """[(line, text)] of a built-in added-scope check over one file's whole text — the one dispatch
+    the scanner and the plant test both use (``ui-string-literal``: literals.py; the Python
+    ``blocking-call``: async_blocking.py)."""
+    if signature["id"] == "ui-string-literal":
+        import literals  # beside this file
+        return literals.hits(path, text)
+    if signature["id"] == "blocking-call":
+        import async_blocking  # beside this file
+        return async_blocking.hits(path, text)
+    return []
+
+
 def builtin_added_hits(signature, path, lines):
     """Hits of a built-in added-scope check: the whole file is lexed, only the added lines count."""
-    if signature["id"] == "ui-string-literal" and os.path.isfile(path):
-        import literals  # beside this file
-        with open(path, encoding="utf-8", errors="replace") as handle:
-            found = literals.hits(path, handle.read())
-        added = {number for number, _ in lines}
-        return [(number, text) for number, text in found if number in added]
-    return []
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        found = builtin_hits(signature, path, handle.read())
+    added = {number for number, _ in lines}
+    return [(number, text) for number, text in found if number in added]
 
 
 def class_applies(signature, path_class):

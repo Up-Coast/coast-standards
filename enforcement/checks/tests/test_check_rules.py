@@ -400,9 +400,8 @@ class PlantTests(unittest.TestCase):
                 fail_path = os.path.join(folder, fail[0])
                 ok_path = os.path.join(folder, ok[0])
                 if signature.get("kind") == "builtin":
-                    import literals
-                    fail_hits = literals.hits(fail_path.replace(".fail", ""), open(fail_path, encoding="utf-8").read())
-                    ok_hits = literals.hits(ok_path.replace(".pass", ""), open(ok_path, encoding="utf-8").read())
+                    fail_hits = cr.builtin_hits(signature, fail_path.replace(".fail", ""), open(fail_path, encoding="utf-8").read())
+                    ok_hits = cr.builtin_hits(signature, ok_path.replace(".pass", ""), open(ok_path, encoding="utf-8").read())
                 else:
                     fail_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(fail_path), 1)))
                     ok_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(ok_path), 1)))

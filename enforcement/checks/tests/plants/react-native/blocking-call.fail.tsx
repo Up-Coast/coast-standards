@@ -1,0 +1,1 @@
+while (Date.now() < until) {}
