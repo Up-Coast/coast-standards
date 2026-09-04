@@ -382,7 +382,7 @@ under half a day, M a day, L two or more.
 
 | Task | What | Size | Guard |
 |---|---|---|---|
-| E1.1 | `check_rules.py` runner: diff/worktree/staged/files modes, path classes from `paths.json`, severity `block/ratchet/advisory`, baseline file (`{id, count, deadline}` — past the deadline a ratchet becomes block), exceptions, the `FAIL` line format. Absorb `check_native_patterns.py` and `check_import_matrix.py` as signatures/sub-checks under the one runner without changing their behaviour. | L | `tests/`: one plant per signature per platform (a file that must FAIL, a file that must PASS), the native-patterns smoke re-pointed |
+| E1.1 | `check_rules.py` runner: diff/worktree/staged/files modes, path classes from `paths.json`, severity `block/ratchet/advisory`, baseline file (`{id, count, deadline}` — past the deadline a ratchet becomes block; default deadline 90 days from the day the baseline is written, movable only by a human, with who and why recorded), exceptions, the `FAIL` line format. Absorb `check_native_patterns.py` and `check_import_matrix.py` as signatures/sub-checks under the one runner without changing their behaviour. | L | `tests/`: one plant per signature per platform (a file that must FAIL, a file that must PASS), the native-patterns smoke re-pointed |
 | E1.2 | Signatures, wave 1 (the four Abbey named first): `ui-string-literal`, `styling-literal`, `second-theme-file`, `env-literal`, `secret-literal` — all five platforms + Python. | L | plants; run over Coast's own Sources and the three app repos, counts recorded as the first ratchet baselines |
 | E1.3 | Signatures, wave 2: security (`plaintext-http`, `raw-html`, `dangerous-eval`, `shell-injection`, `exported-component`, `sql-string-assembly`, `cdn-script`), `blocking-call`, `layer-import`, `destructive-default-key`. | M | plants |
 | E1.4 | Signatures, wave 3: localization (`manual-plural`, `ui-string-concat`, `baked-case`, `one-catalog-per-locale`, `english-key`), accessibility (`fixed-text-size`, `fixed-screen-size`), tests (`test-criterion-tag`, `hermetic-test`, `test-weakened`), `pii-in-log`, `inline-comment`, `retired-wording`, `type-size`. | M | plants |
@@ -424,58 +424,53 @@ under half a day, M a day, L two or more.
 - Compose `Text("literal")` as an Android Lint custom check if the scanner's
   Kotlin precision proves insufficient.
 
-## 7. What Abbey decides (each a recommended default; say no to any)
+## 7. The decisions (ALL DECIDED 2026-09-04 — build them, don't re-ask)
 
-1. **The scanner is stdlib Python with signature tables; Semgrep is not
-   adopted now.** Recommended, for the reasons in §3.
-2. **Existing repos adopt with ratchet baselines** (no rewrite day; the
-   count only goes down). Recommended.
-3. **Claude Code hooks are committed in every repo's `.claude/settings.json`**
-   and refuse governing edits, chained `cd`, infrastructure commands,
-   `--no-verify`, force pushes, and ending a turn with unpushed commits.
-   Recommended.
-4. **This repo is the home; Coast vendors it pinned.** Recommended (the
-   README already claims byte-for-byte parity; this makes it testable).
-5. **Order:** E0 → E1 → E2.3 (Coast dogfood) → E2.4 (her apps) → E3. Coast's
-   customer-facing half waits for the scanner to be proven on Coast's own
-   code first. Recommended.
-6. **The founder-facing number** ("rules held by a machine: N of M") is
-   shown from day one, even while N is small. Recommended — it is the
-   honest version of the promise.
+Every choice this design offered was put to Abbey on 2026-09-04 and taken
+as recommended — her words: *"You can record all of your suggestions as the
+way we will do things, they sound fine to me."* These are filed decisions,
+not proposals. A session does NOT re-ask them; it builds them. Each is
+restated in plain words so nobody has to reconstruct what was agreed.
 
-### Abbey's answers so far (2026-09-04, from the thread that filed this)
-
-- **3 (hooks committed in every repo): ACCEPTED** — "perfect".
-- **5 (order: standards E0 → E1 → Coast dogfood → her apps → Coast's
-  customer half): ACCEPTED** — "sounds good".
-- **2 (ratchet baselines): accepted with a condition.** Her question: *"is
-  there a checkpoint at which we can discover they haven't been doing it
-  and actually require a rewrite day?"* Answer filed as a design addition:
-  **every ratchet baseline carries a deadline; when the deadline passes the
-  check flips from ratchet to block** (the forced rewrite day). The Rules
-  tab and the session-start context show the count and the date. Added as
-  E1.1's requirement (baseline file: `{id, count, deadline}`) and to E3.7.
-- **1 (plain scanner, not Semgrep): OPEN.** She asked whether it is the
-  best option, not just the safe one. The answer given: yes for the rules
-  as they stand (every machine rule is a literal in the wrong file, which
-  line matching scoped by file kind holds precisely; no install anywhere;
-  the shape that already works in Coast); Semgrep is the right move only
-  when a rule needs code structure, and the design names that revisit
-  point. Put it to her again in plain words if she has not confirmed.
-- **4 ("vendors it pinned"): OPEN — the words were unclear to her.** Plain
-  version: Coast keeps its own copy of the check files inside the Coast
-  app (a founder's Mac has no standards repo), locked to one exact version
-  of this repo by checksum, with a Coast test that fails if the copy ever
-  differs. One home, one verified copy.
-- **6 (the founder-facing number): OPEN — the words were unclear to her.**
-  Plain version: each project's Rules tab shows "rules held by a machine:
-  12 of 60", the rest listed as rules a reviewer judges. The decision is
-  whether to show it from day one while it is low (recommended: yes, it is
-  the honest promise) or hide it until it looks good.
-- **Where the Coast task list lives: OPEN.** She asked whether it should
-  also be in this repo. Today: design here, Coast's numbered tasks in
-  Coast's plan folder (where "do the next Coast task" reads). If she
-  prefers both here, move `rules-enforcement-plan.md` and leave a pointer.
+1. **The scanner is plain Python with per-platform signature tables.**
+   Semgrep is not adopted now. Every rule a machine holds today is a literal
+   in the wrong file, which line matching scoped by file kind holds
+   precisely, with nothing to install on any Mac or CI runner. Semgrep
+   becomes the answer only when a rule genuinely needs code structure; §3
+   names that revisit point and it stays a deferred idea until then.
+2. **Existing repos adopt with ratchet baselines, and every baseline
+   carries a deadline.** No rewrite day on adoption; the count may only fall
+   or stay flat. When a baseline's deadline passes, that check flips from
+   ratchet to block — the forced rewrite day, so a repo can never quietly
+   sit on its debt forever. Her question that produced this: *"is there a
+   checkpoint at which we can discover they haven't been doing it and
+   actually require a rewrite day?"* The baseline file is
+   `{id, count, deadline}`; the Rules tab and the session-start context show
+   both the count and the date, so the deadline is never a surprise.
+   **The default deadline is 90 days from the day a baseline is written**,
+   and lowering the count resets nothing — only a human may move a date, and
+   moving one is recorded in the baseline file with who and why.
+3. **The Claude Code hooks are committed in every repo's
+   `.claude/settings.json`** and refuse: edits to the files that define the
+   checks, chained `cd` commands, infrastructure commands, `--no-verify`,
+   force pushes, and ending a turn with unpushed commits.
+4. **This repo is the home; Coast carries a pinned copy.** Plain words:
+   Coast keeps its own copy of the check files inside the Coast app, because
+   a founder's Mac has no standards repo. That copy is locked to one exact
+   version of this repo by checksum, and a Coast test fails if the copy ever
+   differs. One home, one verified copy, drift impossible.
+5. **The order is E0 → E1 → Coast dogfood (E2.3) → Abbey's own apps (E2.4)
+   → Coast's customer-facing half (E3).** Coast does not ship the scanner to
+   a customer before it is proven on Coast's own code.
+6. **The founder-facing number is shown from day one.** Each project's Rules
+   tab shows a line like "rules held by a machine: 12 of 60", with the rest
+   listed as rules a reviewer judges. Shown while the number is still low —
+   it is the honest version of the promise, and it is the number that should
+   visibly climb.
+7. **Where each document lives (asked in the same thread).** The design is
+   here, in this repo, and it is the only home for it. Coast's numbered task
+   list stays in Coast's own plan folder, because that is where a session
+   told "do the next Coast task" looks; it points here and restates nothing.
 
 ## 8. Limits of this document
 
