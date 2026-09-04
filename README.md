@@ -50,6 +50,13 @@ open-source BuilderOS skill set that Coast's build loop wraps.
    for Claude Code sessions is `skills/build-loop-claude-code/`.
 5. The numbered files in `rules/` are read in place — reference this repo's path from the
    project CLAUDE.md rather than copying them, so improvements land everywhere at once.
+6. Run `python3 enforcement/adopt.py <project-dir>` (from this repo; `--dry-run` first if
+   you like). It installs the checks under `Scripts/checks/`, the three git hooks under
+   `.githooks/` with `core.hooksPath` set, the platform's linter seeds, the ratchet and
+   jscpd baselines under `.coast/`, and the standards block in the project's `CLAUDE.md`
+   with the "held by a machine" number. Re-run it to take a newer version — it replaces
+   governed files, keeps anything you edited, and changes nothing when nothing changed.
+   The programs the hooks expect are listed in `enforcement/TOOLCHAIN.md`.
 
 ## Provenance
 

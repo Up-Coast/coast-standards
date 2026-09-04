@@ -1,9 +1,9 @@
 {
   "_comment": "The ratchet baseline for verify_rules.py on THIS repo's own corpus (enforcement/README.md, decision 2). The count may only fall; the verifier fails the commit when it rises, and fails when it falls until this number is lowered in the same commit. Past the deadline any gap fails. Only a person moves the deadline, and the move is recorded under 'moves' with who and why.",
   "id": "verify-rules-gaps",
-  "count": 87,
+  "count": 47,
   "written": "2026-09-04",
-  "by": "Fable (E1.4) — wave-3 signatures on every platform (localization, accessibility, the three test checks, the two ratchets, the two advisories, retired wording); 87 references name the doc-comment check, linter configs, tools and hooks that E1.5–E2.1 build",
+  "by": "Fable (E1.7 + E2.2, agent) — the git hooks exist: enforcement/hooks/pre-push names jscpd, warnings-as-errors and gh-ruleset for every platform, commit-msg holds attribution-trailer; the 47 references left name check_doc_comments.py, the linter configs and the Claude Code hook ids that E1.5, E1.6 and E2.1 build",
   "deadline": "2026-12-03",
   "moves": [
     {
