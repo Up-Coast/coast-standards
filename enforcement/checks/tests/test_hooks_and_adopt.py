@@ -155,6 +155,44 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("0 file(s) changed", second)
         self.assertNotIn("wrote", second.replace("would write", ""))
 
+    def test_adoption_installs_the_claude_session_hooks_and_keeps_other_settings(self):
+        self.project.write(".claude/settings.json", json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
+        code, _ = self.project.adopt()
+        self.assertEqual(code, 0)
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/hooks/claude-hook.py")))
+        settings = json.loads(self.project.read(".claude/settings.json"))
+        self.assertEqual(settings["permissions"], {"allow": ["Bash(ls:*)"]}, "the founder's own settings must survive")
+        self.assertIn("PreToolUse", settings["hooks"])
+        commands = json.dumps(settings["hooks"])
+        for hook_id in ("governing-edit", "chained-cd", "infra-command", "no-verify", "force-push",
+                        "scan-at-commit", "scan-on-edit", "unpushed-at-stop", "rules-at-start"):
+            self.assertIn(hook_id, commands, f"the settings file must wire {hook_id}")
+        self.assertIn("Scripts/hooks/claude-hook.py", commands)
+
+    def test_pre_push_builds_an_xcode_project_through_xcodebuild_with_warnings_as_errors(self):
+        # An xcodegen app: no Package.swift, an .xcodeproj, a stub xcodebuild on PATH that records its arguments.
+        os.remove(os.path.join(self.project.path, "Package.swift"))
+        os.makedirs(os.path.join(self.project.path, "App.xcodeproj"), exist_ok=True)
+        self.project.write(".coast/xcode-scheme", "App\n")
+        self.project.commit("xcode layout")
+        self.project.adopt()
+        stub_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, stub_dir, True)
+        record = os.path.join(stub_dir, "calls.txt")
+        stub = os.path.join(stub_dir, "xcodebuild")
+        with open(stub, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\necho \"$@\" >> " + json.dumps(record) + "\nexit 0\n")
+        os.chmod(stub, 0o755)
+        env = clean_env(PATH=stub_dir + os.pathsep + os.environ.get("PATH", ""))
+        code, out = self.project.hook("pre-push", "--seat", "build", env=env)
+        self.assertEqual(code, 0, out)
+        with open(record, encoding="utf-8") as handle:
+            calls = handle.read()
+        self.assertIn("build", calls)
+        self.assertIn("-scheme App", calls)
+        self.assertIn("SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", calls)
+        self.assertNotIn("swift build", out)
+
     def test_dry_run_writes_nothing(self):
         before = self.project.snapshot()
         code, out = self.project.adopt("--dry-run")

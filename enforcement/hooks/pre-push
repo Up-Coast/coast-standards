@@ -78,21 +78,63 @@ need() {  # a battery member that is not installed is a refusal, never a silent 
   fi
 }
 
+xcode_scheme() {  # .coast/xcode-scheme, else the first scheme xcodebuild lists
+  if [ -f .coast/xcode-scheme ]; then
+    tr -d '[:space:]' < .coast/xcode-scheme
+    return 0
+  fi
+  first=$(xcodebuild -list 2>/dev/null | awk '/Schemes:/{flag=1; next} flag && NF {print $1; exit}')
+  if [ -z "$first" ]; then
+    echo "FAIL pre-push .coast/xcode-scheme:0:scheme: no scheme found — write the scheme name to .coast/xcode-scheme" >&2
+    return 1
+  fi
+  echo "$first"
+}
+
+xcode_build_destination() {
+  if [ "$platform" = "macos" ]; then echo "platform=macOS"; else echo "generic/platform=iOS Simulator"; fi
+}
+
+xcode_test_destination() {
+  if [ "$platform" = "macos" ]; then echo "platform=macOS"; return; fi
+  name=$(xcrun simctl list devices available 2>/dev/null | awk -F'[()]' '/iPhone/ {sub(/^ +/, "", $1); print $1; exit}' | sed 's/ *$//')
+  echo "platform=iOS Simulator,name=${name:-iPhone 16}"
+}
+
 # ------------------------------------------------------------------ build → tests → lint → format
 case "$platform" in
   ios|macos)
-    if wants build; then
-      # warnings-as-errors: the Swift build fails on any warning.
-      run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+    if [ -f Package.swift ]; then
+      # A Swift package: build and test through SwiftPM.
+      if wants build; then
+        # warnings-as-errors: the Swift build fails on any warning.
+        run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+      fi
+      wants tests && run "tests" swift test
+    else
+      # An Xcode project or workspace (xcodegen apps): build and test through
+      # xcodebuild. The scheme is .coast/xcode-scheme, else the first scheme
+      # xcodebuild lists; the destination is a generic simulator for the
+      # build and the first available iPhone (or the Mac) for the tests.
+      need xcodebuild "install Xcode" || exit 1
+      scheme=$(xcode_scheme) || exit 1
+      if wants build; then
+        # warnings-as-errors: SWIFT_TREAT_WARNINGS_AS_ERRORS fails the build on any warning.
+        run "build (warnings-as-errors)" xcodebuild build -quiet -scheme "$scheme" \
+          -destination "$(xcode_build_destination)" SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+          CODE_SIGNING_ALLOWED=NO
+      fi
+      wants tests && run "tests" xcodebuild test -quiet -scheme "$scheme" \
+          -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO
     fi
-    wants tests && run "tests" swift test
     if wants lint; then
       need swiftlint "brew install swiftlint" || exit 1
       run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
     fi
     if wants format; then
       need swift-format "brew install swift-format" || exit 1
-      run "format (swift-format lint)" swift-format lint --strict --recursive Sources Tests
+      # every tracked Swift file, so an Xcode layout with no Sources/ folder is covered too
+      run "format (swift-format lint)" sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
     fi
     ;;
   android)

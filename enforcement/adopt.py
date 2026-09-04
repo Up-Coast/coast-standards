@@ -38,6 +38,10 @@ What it installs, and who owns each file afterwards:
   ``"clones": null`` with a note when jscpd is not installed. On a re-run a
   count that fell is lowered (dates kept); a count that rose is left as it
   is and reported — nothing here raises a baseline.
+* The Claude Code session layer (E2.1): ``Scripts/hooks/claude-hook.py``
+  (GOVERNED) and ``.claude/settings.json`` — its ``hooks`` key is governed and
+  rewritten from ``enforcement/hooks/claude-settings.json``; any other key
+  in an existing settings file is the founder's and kept.
 * ``git config core.hooksPath .githooks``.
 * A first-push secret scan (the first adoption, or ``--secret-scan``): the
   scanner's ``secret-literal`` group over every tracked file; findings are
@@ -73,6 +77,8 @@ BATTERY = os.path.join(CHECKS_DIR, "battery.json")
 
 PROJECT_CHECKS_DIR = "Scripts/checks"
 PROJECT_HOOKS_DIR = ".githooks"
+PROJECT_CLAUDE_HOOK = "Scripts/hooks/claude-hook.py"   # the path claude-settings.json's commands name
+PROJECT_CLAUDE_SETTINGS = ".claude/settings.json"
 HOOK_NAMES = ("pre-commit", "pre-push", "commit-msg")
 CHECKS_NOT_SHIPPED = {"verify_rules.py", "battery.json", "verify-baseline.json"}  # they read this repo, not a project
 PLATFORMS = ("ios", "macos", "android", "react-native", "web", "python")
@@ -258,6 +264,25 @@ class Adoption:
             self.put(f"{PROJECT_HOOKS_DIR}/{name}", read_bytes(source), executable=True)
         self.put(".coast/platform", (self.platform + "\n").encode("utf-8"))
         self.put(".coast/standards-version", (self.standards_commit + "\n").encode("utf-8"))
+        self.install_claude_hooks()
+
+    def install_claude_hooks(self):
+        """The Claude Code session layer (E2.1, decision 3): the one hook entry point, governed,
+        and the committed .claude/settings.json — its ``hooks`` key is governed and rewritten from
+        the shipped template; every other key in an existing settings file is the founder's and kept."""
+        entry = os.path.join(HOOKS_DIR, "claude-hook.py")
+        template = os.path.join(HOOKS_DIR, "claude-settings.json")
+        if not os.path.isfile(entry) or not os.path.isfile(template):
+            self.say("note", PROJECT_CLAUDE_SETTINGS, "the Claude Code hooks are not shipped by the standards repo yet")
+            return
+        self.put(PROJECT_CLAUDE_HOOK, read_bytes(entry), executable=True)
+        with open(template, encoding="utf-8") as handle:
+            shipped = json.load(handle)
+        existing = self.load_json(PROJECT_CLAUDE_SETTINGS) or {}
+        merged = dict(existing)
+        merged["hooks"] = shipped["hooks"]
+        merged["_comment"] = shipped.get("_comment", "")
+        self.put_json(PROJECT_CLAUDE_SETTINGS, merged)
 
     def install_seeds(self):
         battery = json.loads(read_bytes(BATTERY))
