@@ -1,0 +1,91 @@
+{
+  "_comment": "The committed .claude/settings.json every adopted repo carries (enforcement/README.md section 4.4, decision 3). One entry point, claude-hook.py, run with the hook's id; it reads the event JSON on stdin and exits 2 with the reason on stderr to refuse. Schema, matchers, the `if` field and the exit-code contract are the ones Anthropic documents at https://code.claude.com/docs/en/hooks (quoted in claude-hook.py's docstring). adopt.py installs claude-hook.py at Scripts/hooks/claude-hook.py, which is the path these commands name; the checks it runs live beside it at Scripts/checks/. Each statusMessage names the hook's id, which is how verify_rules.py resolves a rule's session:<id> reference.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" governing-edit",
+            "statusMessage": "rules: governing-edit",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" chained-cd",
+            "statusMessage": "rules: chained-cd",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" infra-command",
+            "statusMessage": "rules: infra-command",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" no-verify",
+            "statusMessage": "rules: no-verify",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" force-push",
+            "statusMessage": "rules: force-push",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-at-commit",
+            "if": "Bash(git commit *)",
+            "statusMessage": "rules: scan-at-commit (scanning the staged diff)",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-on-edit",
+            "statusMessage": "rules: scan-on-edit",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" unpushed-at-stop",
+            "statusMessage": "rules: unpushed-at-stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" rules-at-start",
+            "statusMessage": "rules: rules-at-start",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

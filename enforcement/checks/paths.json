@@ -34,7 +34,8 @@
           "docs/domain-rules.md",
           "docs/ai-features-rules.md",
           ".swiftlint.yml",
-          ".swiftformat"
+          ".swiftformat",
+          ".swift-format"
         ],
         "plans": [
           "plans/**"
@@ -129,7 +130,8 @@
           "docs/domain-rules.md",
           "docs/ai-features-rules.md",
           ".swiftlint.yml",
-          ".swiftformat"
+          ".swiftformat",
+          ".swift-format"
         ],
         "plans": [
           "plans/**"
