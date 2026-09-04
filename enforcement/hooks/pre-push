@@ -1,0 +1,324 @@
+#!/bin/sh
+# Up Coast standards — the project's pre-push hook: the full gate battery
+# for the platform (enforcement task E2.2; design enforcement/README.md
+# §4.4 and §5.3). Nothing is pushed unverified — a failure stays local.
+#
+# One script, a per-platform switch, one seat per check, each seat refusing
+# in its own lines and announced as `gate: <name>` (Coast's own hook shape):
+#
+#   build            with warnings-as-errors (tool:warnings-as-errors) —
+#                    swift build -Xswiftc -warnings-as-errors; gradle needs
+#                    allWarningsAsErrors in its build files; tsc --noEmit
+#                    under "strict"; eslint --max-warnings 0; Python tests
+#                    run with PYTHONWARNINGS=error
+#   tests            the platform's test runner
+#   lint / format    the shipped linter configs, format in check mode
+#   rules-scan       check_rules.py on the lines added since the remote,
+#                    then on the whole tree (tree signatures + ratchets)
+#   doc-comments     check_doc_comments.py --all (once E1.5 ships it)
+#   jscpd            tool:jscpd — duplicated code; refuses NEW clones against
+#                    the committed baseline .coast/jscpd-baseline.json
+#                    (`--baseline … --fail-on-new-clones`, jscpd 5.1.2, see
+#                    enforcement/TOOLCHAIN.md); past the baseline's deadline
+#                    any clone refuses (`--exit-code`, decision 2)
+#   gh-ruleset       tool:gh-ruleset — read-only, through `gh api`: the
+#                    default branch carries an active ruleset with
+#                    pull_request, deletion and non_fast_forward rules and
+#                    no bypass actors (rules/07 protected main). Skipped
+#                    with a plain-words note when gh is absent or offline.
+#
+# git calls this as `pre-push <remote> <url>` with the ref lines on stdin.
+# Run by hand as `pre-push --seat <name>[,<name>]` to run named seats
+# (tests use this; git never passes --seat, so it is no bypass).
+# The platform is one word in .coast/platform (or COAST_PLATFORM); checks
+# live under Scripts/checks/ (COAST_CHECKS_DIR overrides). JSCPD_BIN names
+# a jscpd binary when it is not on PATH. GOVERNING: agents never edit the
+# files that define their own checks.
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
+export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
+export SWT_SF_SYMBOLS_ENABLED=0   # Swift Testing's marks paste as plain text
+
+checks=${COAST_CHECKS_DIR:-Scripts/checks}
+platform=${COAST_PLATFORM:-}
+if [ -z "$platform" ] && [ -f .coast/platform ]; then
+  platform=$(tr -d '[:space:]' < .coast/platform)
+fi
+if [ -z "$platform" ]; then
+  echo "FAIL pre-push .coast/platform:0:platform: no platform named — write one word to .coast/platform, or run adopt.py" >&2
+  exit 1
+fi
+
+seats=all
+if [ "${1-}" = "--seat" ]; then
+  seats=${2:?--seat needs a name}
+fi
+
+wants() {
+  case ",$seats," in
+    *,all,*|*",$1,"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+run() {
+  name=$1; shift
+  printf 'gate: %s\n' "$name"
+  if ! "$@"; then
+    printf 'gate: %s failed — the push was refused. Fix what it printed, then push again.\n' "$name" >&2
+    exit 1
+  fi
+}
+
+need() {  # a battery member that is not installed is a refusal, never a silent pass
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "FAIL pre-push toolchain:0:$1: $1 is not installed — $2 (enforcement/TOOLCHAIN.md)" >&2
+    return 1
+  fi
+}
+
+# ------------------------------------------------------------------ build → tests → lint → format
+case "$platform" in
+  ios|macos)
+    if wants build; then
+      # warnings-as-errors: the Swift build fails on any warning.
+      run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+    fi
+    wants tests && run "tests" swift test
+    if wants lint; then
+      need swiftlint "brew install swiftlint" || exit 1
+      run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
+    fi
+    if wants format; then
+      need swift-format "brew install swift-format" || exit 1
+      run "format (swift-format lint)" swift-format lint --strict --recursive Sources Tests
+    fi
+    ;;
+  android)
+    if wants build; then
+      # warnings-as-errors: Kotlin's allWarningsAsErrors must be set in the build files.
+      if ! grep -rqs 'allWarningsAsErrors[[:space:]]*=[[:space:]]*true\|allWarningsAsErrors\.set(true)' --include='*.gradle' --include='*.gradle.kts' .; then
+        echo "FAIL pre-push build.gradle:0:warnings-as-errors: the Kotlin build does not set allWarningsAsErrors = true — add it to the module's kotlinOptions/compilerOptions" >&2
+        exit 1
+      fi
+      run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
+    elif wants tests; then
+      run "tests" ./gradlew --quiet test
+    fi
+    if wants lint; then
+      run "lint (detekt)" ./gradlew --quiet detekt
+    fi
+    if wants format; then
+      need ktlint "brew install ktlint" || exit 1
+      run "format (ktlint)" ktlint
+    fi
+    ;;
+  react-native|web)
+    if wants build; then
+      # warnings-as-errors: tsc under "strict": true reports every problem as
+      # an error, and eslint runs with --max-warnings 0 below.
+      if [ -f tsconfig.json ] && ! python3 -c 'import json,re,sys; t=open("tsconfig.json").read(); t=re.sub(r"//.*|/\*.*?\*/", "", t, flags=re.S); sys.exit(0 if json.loads(t).get("compilerOptions",{}).get("strict") is True else 1)'; then
+        echo "FAIL pre-push tsconfig.json:0:warnings-as-errors: compilerOptions.strict is not true — the shipped tsconfig seed sets it" >&2
+        exit 1
+      fi
+      run "typecheck (tsc --noEmit, warnings-as-errors)" npx --no-install tsc --noEmit
+      if python3 -c 'import json,sys; sys.exit(0 if "build" in json.load(open("package.json")).get("scripts",{}) else 1)' 2>/dev/null; then
+        run "build (npm run build)" npm run --silent build
+      fi
+    fi
+    wants tests && run "tests (npm test)" npm test --silent
+    wants lint && run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
+    wants format && run "format (prettier --check)" npx --no-install prettier --check .
+    ;;
+  python)
+    if wants tests; then
+      # warnings-as-errors: every Python warning fails the test run.
+      if [ -d tests ] || ls test_*.py >/dev/null 2>&1; then
+        if python3 -c 'import pytest' 2>/dev/null; then
+          run "tests (pytest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m pytest -q
+        else
+          run "tests (unittest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m unittest discover -q
+        fi
+      else
+        printf 'gate: tests — no tests directory found; nothing ran (add tests/ — rules/06)\n'
+      fi
+    fi
+    if wants lint; then
+      need ruff "pip install ruff" || exit 1
+      run "lint (ruff check)" ruff check .
+      need mypy "pip install mypy" || exit 1
+      run "types (mypy)" mypy .
+    fi
+    wants format && run "format (ruff format --check)" ruff format --check .
+    ;;
+  *)
+    echo "FAIL pre-push .coast/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2
+    exit 1
+    ;;
+esac
+
+# ------------------------------------------------------------------ the rules scanner
+if wants rules-scan; then
+  if [ ! -f "$checks/check_rules.py" ]; then
+    echo "FAIL pre-push $checks/check_rules.py:0:missing: the rules scanner is not installed — run enforcement/adopt.py" >&2
+    exit 1
+  fi
+  # The lines added since the remote: git hands the refs on stdin
+  # (<local ref> <local sha> <remote ref> <remote sha>). A ref the remote
+  # has never seen is compared with the empty tree, so every line counts.
+  empty_tree=$(git hash-object -t tree /dev/null)
+  bases=""
+  if [ "$seats" = all ] && [ ! -t 0 ]; then
+    while read -r _local_ref local_sha _remote_ref remote_sha; do
+      [ -z "${local_sha:-}" ] && continue
+      case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac  # a deletion
+      case "$remote_sha" in
+        0000000000000000000000000000000000000000|"") base=$(git merge-base HEAD "origin/HEAD" 2>/dev/null || echo "$empty_tree") ;;
+        *) base=$remote_sha ;;
+      esac
+      bases="$bases $base"
+    done
+  fi
+  [ -z "$bases" ] && bases=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree")
+  for base in $bases; do
+    run "rules-scan (added since $(git rev-parse --short "$base" 2>/dev/null || echo "$base"))" python3 "$checks/check_rules.py" "$base" HEAD --platform "$platform"
+  done
+  run "rules-scan (tree + ratchets)" python3 "$checks/check_rules.py" --tree --platform "$platform"
+fi
+
+if wants doc-comments; then
+  if [ -f "$checks/check_doc_comments.py" ]; then
+    run "doc-comments" python3 "$checks/check_doc_comments.py" --all
+  else
+    printf 'gate: doc-comments — not installed yet (check_doc_comments.py ships with E1.5); this seat is not held\n'
+  fi
+fi
+
+# ------------------------------------------------------------------ jscpd: no new duplicated code
+jscpd_seat() {
+  bin=${JSCPD_BIN:-}
+  if [ -z "$bin" ]; then
+    if command -v jscpd >/dev/null 2>&1; then bin=jscpd
+    elif npx --no-install jscpd --version >/dev/null 2>&1; then bin="npx --no-install jscpd"
+    fi
+  fi
+  if [ -z "$bin" ]; then
+    echo "FAIL pre-push toolchain:0:jscpd: jscpd is not installed — npm install -g jscpd@5.1.2 (enforcement/TOOLCHAIN.md), or set JSCPD_BIN" >&2
+    return 1
+  fi
+  baseline=.coast/jscpd-baseline.json
+  if [ ! -f "$baseline" ]; then
+    echo "FAIL pre-push $baseline:0:jscpd: no clone baseline — run enforcement/adopt.py with jscpd installed to write it" >&2
+    return 1
+  fi
+  verdict=$(python3 -c '
+import datetime, json, sys
+data = json.load(open(sys.argv[1]))
+if data.get("clones") is None:
+    print("unwritten"); sys.exit(0)
+deadline = data.get("deadline") or ""
+try:
+    past = datetime.date.fromisoformat(deadline) < datetime.date.today()
+except ValueError:
+    print("baddate"); sys.exit(0)
+print("past" if past else "open")
+' "$baseline")
+  case "$verdict" in
+    unwritten)
+      echo "FAIL pre-push $baseline:0:jscpd: the clone baseline was never written (jscpd was missing when adopt.py ran) — install jscpd and re-run adopt.py" >&2
+      return 1 ;;
+    baddate)
+      echo "FAIL pre-push $baseline:0:jscpd: the baseline deadline is not a date (YYYY-MM-DD)" >&2
+      return 1 ;;
+  esac
+  ignore='**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,**/*.min.js,**/*.lock,**/Package.resolved'
+  scratch=${TMPDIR:-/tmp}/coast-jscpd.$$
+  mkdir -p "$scratch"
+  if [ "$verdict" = past ]; then
+    printf 'jscpd: the baseline deadline has passed — every clone now refuses (decision 2)\n'
+    # shellcheck disable=SC2086
+    $bin . --min-tokens 50 --ignore "$ignore" --reporters json --output "$scratch" --exit-code --silent
+    status=$?
+  else
+    # shellcheck disable=SC2086
+    $bin . --min-tokens 50 --ignore "$ignore" --baseline "$baseline" --fail-on-new-clones --reporters json --output "$scratch" --silent
+    status=$?
+  fi
+  if [ $status -ne 0 ]; then
+    echo "FAIL pre-push $baseline:0:jscpd: new duplicated code (jscpd found clones not in the baseline) — extract the shared piece; the count may only fall [DRY-5]" >&2
+    rm -rf "$scratch"
+    return 1
+  fi
+  python3 -c '
+import json, sys
+report = json.load(open(sys.argv[1]))["statistics"]["total"]["clones"]
+base = json.load(open(sys.argv[2])).get("clones")
+if isinstance(base, int) and report < base:
+    print(f"jscpd: {report} clones in the tree, below the baseline of {base} — lower it by re-running adopt.py (the deadline does not move)")
+else:
+    print(f"jscpd: {report} clones in the tree, none new against the baseline of {base}")
+' "$scratch/jscpd-report.json" "$baseline"
+  rm -rf "$scratch"
+  return 0
+}
+wants jscpd && run "jscpd (no new clones)" jscpd_seat
+
+# ------------------------------------------------------------------ gh-ruleset: main is protected
+gh_ruleset_seat() {
+  if ! command -v gh >/dev/null 2>&1; then
+    printf 'gh-ruleset: gh is not installed, so the ruleset on the default branch was not checked (brew install gh)\n'
+    return 0
+  fi
+  # Read-only: gh repo view, then GET /repos/{owner}/{repo}/rulesets and
+  # each active ruleset. Anything gh cannot answer is a note, not a refusal;
+  # an answer with no qualifying ruleset is a refusal.
+  python3 -c '
+import json, subprocess, sys
+
+def gh(*args):
+    done = subprocess.run(["gh", *args], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise RuntimeError(done.stderr.strip())
+    return done.stdout
+
+try:
+    repo = gh("repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner").strip()
+except RuntimeError:
+    print("gh-ruleset: gh could not reach the repository (offline, not signed in, or no GitHub remote) — the ruleset was not checked")
+    sys.exit(0)
+try:
+    rulesets = json.loads(gh("api", f"repos/{repo}/rulesets"))
+except (RuntimeError, ValueError):
+    print(f"gh-ruleset: the rulesets API did not answer for {repo} (offline, or rulesets are not available on this plan) — not checked")
+    sys.exit(0)
+try:
+    branch = json.loads(gh("api", f"repos/{repo}")).get("default_branch", "main")
+except (RuntimeError, ValueError):
+    branch = "main"
+protected = False
+for summary in rulesets:
+    if summary.get("enforcement") != "active":
+        continue
+    try:
+        rs = json.loads(gh("api", f"repos/{repo}/rulesets/{summary['id']}"))
+    except (RuntimeError, ValueError, KeyError):
+        continue
+    include = rs.get("conditions", {}).get("ref_name", {}).get("include", [])
+    if not any(i in ("~DEFAULT_BRANCH", f"refs/heads/{branch}") for i in include):
+        continue
+    types = {r.get("type") for r in rs.get("rules", [])}
+    if {"pull_request", "deletion", "non_fast_forward"} <= types and not rs.get("bypass_actors"):
+        protected = True
+        if "required_status_checks" not in types:
+            print(f"gh-ruleset: ruleset {rs.get('name')!r} protects {branch} but requires no status checks (fine for a repo with no CI)")
+if protected:
+    print(f"gh-ruleset: {branch} of {repo} is protected by an active ruleset (PR required, no deletion, no force-push, no bypass)")
+    sys.exit(0)
+print(f"FAIL pre-push github:0:gh-ruleset: no active ruleset on {repo} protects {branch} with pull_request, deletion and non_fast_forward rules and an empty bypass list — add one (rules/07 protected main)", file=sys.stderr)
+sys.exit(1)
+'
+}
+wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
+
+printf 'gate: every check green\n'

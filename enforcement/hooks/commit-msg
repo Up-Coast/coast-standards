@@ -1,0 +1,46 @@
+#!/bin/sh
+# Up Coast standards — the project's commit-msg hook (enforcement task E2.2).
+#
+# Small on purpose. It holds the commit-message rules a machine can hold:
+#   - a subject line that exists and fits in 100 characters
+#     (rules/07: a commit message is a sentence a person can read in a log);
+#   - session:attribution-trailer (rules/09 "Commit trailers name the model
+#     that actually did the work"): a commit made from an agent session
+#     (Claude Code sets CLAUDECODE in the shell it runs) must carry a
+#     Co-Authored-By trailer naming the SPECIFIC Claude model, e.g.
+#       Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+#     and any Claude trailer, from any session, must name a model — a bare
+#     "Claude" or "Claude Code" is the mis-attribution the rule forbids.
+# It cannot know who typed a human's commit; it refuses only what is
+# provably wrong. Refusals print as FAIL lines. GOVERNING file.
+set -u
+file=$1
+if [ ! -f "$file" ]; then
+  echo "FAIL commit-msg $file:0:missing: no commit message file was given" >&2
+  exit 1
+fi
+
+# The subject: the first non-blank line that is not a comment.
+subject=$(grep -v '^#' "$file" | grep -m1 -v '^[[:space:]]*$' || true)
+if [ -z "$subject" ]; then
+  echo "FAIL commit-msg $file:1:empty-subject: the commit message has no subject line — say what changed and why, in plain words" >&2
+  exit 1
+fi
+length=$(printf '%s' "$subject" | wc -m | tr -d ' ')
+if [ "$length" -gt 100 ]; then
+  echo "FAIL commit-msg $file:1:subject-length: the subject line is $length characters; keep it to 100 and put the rest in the body" >&2
+  exit 1
+fi
+
+# session:attribution-trailer — the model that did the work is named.
+model_trailer='^Co-Authored-By: Claude [A-Z][A-Za-z]+ [0-9][0-9.]* <[^>]+>[[:space:]]*$'
+if grep -v '^#' "$file" | grep -q -i '^Co-Authored-By:[[:space:]]*Claude'; then
+  if ! grep -v '^#' "$file" | grep -E -q "$model_trailer"; then
+    echo "FAIL commit-msg $file:0:attribution-trailer: a Claude trailer must name the model that did the work, like 'Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' — 'Claude' or 'Claude Code' alone mis-attributes the commit" >&2
+    exit 1
+  fi
+elif [ -n "${CLAUDECODE:-}" ]; then
+  echo "FAIL commit-msg $file:0:attribution-trailer: this commit comes from an agent session but names no model — end the message with 'Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>' (rules/09)" >&2
+  exit 1
+fi
+exit 0

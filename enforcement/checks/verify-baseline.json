@@ -1,9 +1,9 @@
 {
   "_comment": "The ratchet baseline for verify_rules.py on THIS repo's own corpus (enforcement/README.md, decision 2). The count may only fall; the verifier fails the commit when it rises, and fails when it falls until this number is lowered in the same commit. Past the deadline any gap fails. Only a person moves the deadline, and the move is recorded under 'moves' with who and why.",
   "id": "verify-rules-gaps",
-  "count": 40,
+  "count": 0,
   "written": "2026-09-04",
-  "by": "Fable (E2.1, agent) — the Claude Code session layer: claude-hook.py and claude-settings.json name governing-edit, chained-cd, infra-command, no-verify, force-push, scan-at-commit, scan-on-edit, unpushed-at-stop and rules-at-start; 40 references still name the pre-push runner (tools) and the commit-msg hook that E2.2 builds",
+  "by": "Fable (E1.7 + E2.1 + E2.2 merged) — every reference resolves: the scanner and its built-ins, the linter configs, the pre-push runner with its tools, the commit-msg and Claude Code session hooks; the gap count is zero and the ratchet now only guards against a rise",
   "deadline": "2026-12-03",
   "moves": [
     {
