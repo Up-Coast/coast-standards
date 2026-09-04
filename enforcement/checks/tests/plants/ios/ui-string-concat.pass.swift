@@ -1,0 +1,1 @@
+Text("home.welcome \(name)")

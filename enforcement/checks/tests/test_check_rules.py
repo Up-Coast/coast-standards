@@ -243,7 +243,9 @@ class TreeRatchetAndAdvisoryTests(unittest.TestCase):
             {"id": "second-theme-file", "rule": "DRY-2", "severity": "block", "scope": "tree", "applies_to": ["source", "ui"],
              "files": ["**/*Theme.swift"], "pattern": r"struct \w*Theme\b", "words": "a second theme file"},
         ]}}})
-        self.repo.write("tables/paths.json", {"platforms": {"ios": json.load(open(cr.PATHS_FILE))["platforms"]["ios"]}})
+        with open(cr.PATHS_FILE, encoding="utf-8") as handle:
+            ios_paths = json.load(handle)["platforms"]["ios"]
+        self.repo.write("tables/paths.json", {"platforms": {"ios": ios_paths}})
         cr.SIGNATURES_FILE = os.path.join(self.repo.path, "tables/rules_signatures.json")
         cr.PATHS_FILE = os.path.join(self.repo.path, "tables/paths.json")
         self.addCleanup(self.restore)
@@ -400,8 +402,10 @@ class PlantTests(unittest.TestCase):
                 fail_path = os.path.join(folder, fail[0])
                 ok_path = os.path.join(folder, ok[0])
                 if signature.get("kind") == "builtin":
-                    fail_hits = cr.builtin_hits(signature, fail_path.replace(".fail", ""), open(fail_path, encoding="utf-8").read())
-                    ok_hits = cr.builtin_hits(signature, ok_path.replace(".pass", ""), open(ok_path, encoding="utf-8").read())
+                    with open(fail_path, encoding="utf-8") as handle:
+                        fail_hits = cr.builtin_hits(signature, fail_path.replace(".fail", ""), handle.read())
+                    with open(ok_path, encoding="utf-8") as handle:
+                        ok_hits = cr.builtin_hits(signature, ok_path.replace(".pass", ""), handle.read())
                 else:
                     fail_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(fail_path), 1)))
                     ok_hits = cr.signature_hits(signature, list(enumerate(cr.read_lines(ok_path), 1)))

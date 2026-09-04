@@ -1,0 +1,1 @@
+logger.debug("session refreshed")

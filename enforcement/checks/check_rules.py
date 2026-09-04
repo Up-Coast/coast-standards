@@ -311,17 +311,33 @@ def builtin_hits(signature, path, text):
     if signature["id"] == "blocking-call":
         import async_blocking  # beside this file
         return async_blocking.hits(path, text)
+    if signature["id"] == "test-criterion-tag":
+        import test_criteria  # beside this file
+        return test_criteria.hits(path, text)
+    if signature["id"] == "type-size":
+        import type_size  # beside this file
+        return type_size.hits(path, text)
     return []
 
 
 def builtin_added_hits(signature, path, lines):
-    """Hits of a built-in added-scope check: the whole file is lexed, only the added lines count."""
+    """Hits of a built-in added-scope check: the whole file is lexed, only the added lines count.
+    ``type-size`` is the exception: an oversized type is reported once, at the first added line
+    inside it, so that growing a type that is already too big is what surfaces."""
     if not os.path.isfile(path):
         return []
     with open(path, encoding="utf-8", errors="replace") as handle:
-        found = builtin_hits(signature, path, handle.read())
+        text = handle.read()
     added = {number for number, _ in lines}
-    return [(number, text) for number, text in found if number in added]
+    if signature["id"] == "type-size":
+        import type_size  # beside this file
+        hits = []
+        for start, end, words in type_size.spans(path, text):
+            inside = sorted(number for number in added if start <= number <= end)
+            if inside:
+                hits.append((inside[0], words))
+        return hits
+    return [(number, text) for number, text in builtin_hits(signature, path, text) if number in added]
 
 
 def class_applies(signature, path_class):

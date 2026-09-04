@@ -1,0 +1,2 @@
+@Test
+fun savingKeepsTheDraft() {}
