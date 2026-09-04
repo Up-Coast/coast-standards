@@ -382,7 +382,7 @@ under half a day, M a day, L two or more.
 
 | Task | What | Size | Guard |
 |---|---|---|---|
-| E1.1 | `check_rules.py` runner: diff/worktree/staged/files modes, path classes from `paths.json`, severity `block/ratchet/advisory`, baseline file, exceptions, the `FAIL` line format. Absorb `check_native_patterns.py` and `check_import_matrix.py` as signatures/sub-checks under the one runner without changing their behaviour. | L | `tests/`: one plant per signature per platform (a file that must FAIL, a file that must PASS), the native-patterns smoke re-pointed |
+| E1.1 | `check_rules.py` runner: diff/worktree/staged/files modes, path classes from `paths.json`, severity `block/ratchet/advisory`, baseline file (`{id, count, deadline}` — past the deadline a ratchet becomes block), exceptions, the `FAIL` line format. Absorb `check_native_patterns.py` and `check_import_matrix.py` as signatures/sub-checks under the one runner without changing their behaviour. | L | `tests/`: one plant per signature per platform (a file that must FAIL, a file that must PASS), the native-patterns smoke re-pointed |
 | E1.2 | Signatures, wave 1 (the four Abbey named first): `ui-string-literal`, `styling-literal`, `second-theme-file`, `env-literal`, `secret-literal` — all five platforms + Python. | L | plants; run over Coast's own Sources and the three app repos, counts recorded as the first ratchet baselines |
 | E1.3 | Signatures, wave 2: security (`plaintext-http`, `raw-html`, `dangerous-eval`, `shell-injection`, `exported-component`, `sql-string-assembly`, `cdn-script`), `blocking-call`, `layer-import`, `destructive-default-key`. | M | plants |
 | E1.4 | Signatures, wave 3: localization (`manual-plural`, `ui-string-concat`, `baked-case`, `one-catalog-per-locale`, `english-key`), accessibility (`fixed-text-size`, `fixed-screen-size`), tests (`test-criterion-tag`, `hermetic-test`, `test-weakened`), `pii-in-log`, `inline-comment`, `retired-wording`, `type-size`. | M | plants |
@@ -410,7 +410,7 @@ under half a day, M a day, L two or more.
 | E3.4 | Per-rule review rows in `review_agent.py` and the local review: schema, validation (missing rule, vacuous `touched: false`, evidence outside the diff), the "no rule's territory" sentence deleted. Machine-held rules carry the scanner's result instead of a verdict. | M |
 | E3.5 | Builder self-reports carry zero weight: a sweep of every reader of `submit_work` prose; any gate or ledger verdict that consumed it now reads check output or reviewer rows. Guard: a test that the coder's report text cannot flip any verdict. | M |
 | E3.6 | Fix tickets carry a `guard` field; the done state requires the fix diff to touch the named signature, linter config, or test. | S |
-| E3.7 | The Rules tab shows "held by a machine: N of M" and lists the review-only rules; Settings' rules update delivers the checks with the documents (version 8 words). | M |
+| E3.7 | The Rules tab shows "held by a machine: N of M", each ratchet's count and deadline, and lists the review-only rules; Settings' rules update delivers the checks with the documents (version 8 words). | M |
 | E3.8 | Android and Web toolchain rows: detekt, `gradlew lint`, the type-checked ESLint run, jscpd — installed through the required-programs table. | M |
 | E3.9 | The domain-rules reviewer's own catches feed signatures: a review `fail` on a machine-able rule files a "make this a signature" task automatically (the native-patterns loop, generalized). | S |
 
@@ -442,6 +442,40 @@ under half a day, M a day, L two or more.
 6. **The founder-facing number** ("rules held by a machine: N of M") is
    shown from day one, even while N is small. Recommended — it is the
    honest version of the promise.
+
+### Abbey's answers so far (2026-09-04, from the thread that filed this)
+
+- **3 (hooks committed in every repo): ACCEPTED** — "perfect".
+- **5 (order: standards E0 → E1 → Coast dogfood → her apps → Coast's
+  customer half): ACCEPTED** — "sounds good".
+- **2 (ratchet baselines): accepted with a condition.** Her question: *"is
+  there a checkpoint at which we can discover they haven't been doing it
+  and actually require a rewrite day?"* Answer filed as a design addition:
+  **every ratchet baseline carries a deadline; when the deadline passes the
+  check flips from ratchet to block** (the forced rewrite day). The Rules
+  tab and the session-start context show the count and the date. Added as
+  E1.1's requirement (baseline file: `{id, count, deadline}`) and to E3.7.
+- **1 (plain scanner, not Semgrep): OPEN.** She asked whether it is the
+  best option, not just the safe one. The answer given: yes for the rules
+  as they stand (every machine rule is a literal in the wrong file, which
+  line matching scoped by file kind holds precisely; no install anywhere;
+  the shape that already works in Coast); Semgrep is the right move only
+  when a rule needs code structure, and the design names that revisit
+  point. Put it to her again in plain words if she has not confirmed.
+- **4 ("vendors it pinned"): OPEN — the words were unclear to her.** Plain
+  version: Coast keeps its own copy of the check files inside the Coast
+  app (a founder's Mac has no standards repo), locked to one exact version
+  of this repo by checksum, with a Coast test that fails if the copy ever
+  differs. One home, one verified copy.
+- **6 (the founder-facing number): OPEN — the words were unclear to her.**
+  Plain version: each project's Rules tab shows "rules held by a machine:
+  12 of 60", the rest listed as rules a reviewer judges. The decision is
+  whether to show it from day one while it is low (recommended: yes, it is
+  the honest promise) or hide it until it looks good.
+- **Where the Coast task list lives: OPEN.** She asked whether it should
+  also be in this repo. Today: design here, Coast's numbered tasks in
+  Coast's plan folder (where "do the next Coast task" reads). If she
+  prefers both here, move `rules-enforcement-plan.md` and leave a pointer.
 
 ## 8. Limits of this document
 
