@@ -13,9 +13,9 @@ best thing to do here."*
 **To start a session on this work, say:** *"Read
 `~/Documents/Claude/Code/up-coast-standards/enforcement/README.md` and build
 the next enforcement task."* Every decision is taken (section 7) — a session
-builds, it never re-asks. The first task is E0.1, the parity checker, in
-THIS repo. Coast's own tasks wait until the scanner is proven on Coast's own
-code.
+builds, it never re-asks. Each task's row in section 6 says DONE when it is,
+with the commit; the next task is the first row that does not. Coast's own
+tasks wait until the scanner is proven on Coast's own code.
 
 This is the ONE home for the design. Coast's own task list for its half
 lives in the Coast repo (`the-engine-plans/the-engine/build-plans/rules-enforcement-plan.md`)
@@ -153,6 +153,54 @@ not run; a signature exists that no rule names. It prints the number:
 `rules held by a machine / rules total` per document. That test FAILS on
 the corpus as it stands today. That is the honest starting line, and making
 it pass is the first phase.
+
+**Built (E0.1, 2026-09-04) — what the verifier reads.** The full grammar and
+the resolution rules are the docstring of `enforcement/checks/verify_rules.py`,
+the one home; this is the shape:
+
+- **What is a rule.** A column-0 bullet that opens in bold (`- **…**`), with
+  the leading `PREFIX-n` as its id when there is one and a slug of its bold
+  title until E0.2 gives it one; or a leaf section of prose (a heading with
+  no bullet rules and no child headings) — the numbered files state many
+  rules that way. The H1 and any "Sources" section are not rules. On the
+  corpus as of 2026-09-04 this finds 558 rules across the 18 documents
+  (51 in the iOS document, matching the count in section 1).
+- **The tag.** The last square bracket in the rule that contains `check:`,
+  references separated by commas, every one of which must resolve:
+  `scan:<id>` / `ratchet:<id>` / `advisory:<id>` (a scanner signature, with
+  that severity), `<linter>:<rule>` or a bare `<linter>` (`swiftlint`,
+  `swiftformat`, `detekt`, `ktlint`, `androidlint`, `eslint`, `tsc`,
+  `prettier`, `ruff`, `mypy`), `tool:<name>`, `session:<id>`, `review`,
+  `process`, and `context` for a bullet that explains a rule and is not one
+  (left out of the total; it cannot share a tag with a check).
+- **What "resolves" means — files on disk, nothing else.** The manifest
+  `enforcement/checks/battery.json` names, per platform, the linters and
+  their config files, the tools and the runner file that invokes each, the
+  scanner, the signatures file and the session-hook files. A scanner id
+  must be in the signatures table of EVERY platform the document applies to
+  with the severity the tag claims; a linter rule must be named enabled in
+  the shipped config (the verifier reads SwiftLint and detekt YAML, ESLint
+  flat config, `lint.xml`, `tsconfig`, `mypy.ini` and `ruff.toml`, and does
+  NOT know any linter's default set — a config names the rule or the rule
+  is not held); a tool's runner must exist and mention it; a session id must
+  appear in a hook file. A manifest path that does not exist yet is a gap
+  the verifier reports, never a claim it believes.
+- **The bins it counts.** `machine` (every reference is a machine check —
+  the only bin the headline number counts), `partly` (a machine check and a
+  review/process/advisory reference share the rule), `advisory`, `review`,
+  `process`, and `open` (any gap). Output is one summary line per document,
+  `FAIL verify-rules <path>:<line>:<id>: <words>` per gap, the totals, and
+  exit 1 on any gap; `--json` for Coast's Rules tab (E3.7), `--document` +
+  `--platform` for one project's copy.
+- **This repo's own hook.** `.githooks/pre-commit` (installed per clone with
+  `git config core.hooksPath .githooks`) runs the verifier's tests, then the
+  verifier against `enforcement/checks/verify-baseline.json` — the ratchet
+  of decision 2 applied to this repo's own adoption: the commit is refused
+  when the gap count rises, refused when it falls until the baseline is
+  lowered in the same commit, and refused on any gap once the 90-day
+  deadline (2026-12-03) passes. Proven on the real corpus the day it was
+  built: a planted untagged rule was refused; a planted tag was refused
+  until the number came down.
 
 ### 4.2 The scanner
 
@@ -381,7 +429,7 @@ under half a day, M a day, L two or more.
 
 | Task | What | Size | Guard |
 |---|---|---|---|
-| E0.1 | `enforcement/checks/verify_rules.py`: parse every rule in `rules/platform/*.md` and the numbered files; require a `check:` tag; resolve each tag against a battery manifest per platform; print enforced/total. Runs in this repo's own CI-less hook. | M | its own tests on a fixture doc; it FAILS on today's corpus, and the failure list IS the gap inventory |
+| E0.1 | **DONE 2026-09-04 (Fable).** `enforcement/checks/verify_rules.py`: parse every rule in `rules/platform/*.md` and the numbered files; require a `check:` tag; resolve each tag against a battery manifest per platform; print enforced/total. Runs in this repo's own CI-less hook. The starting line it measured: **held by a machine 0 of 558**; 540 rules name no check, 18 name one in prose nothing runs (the old "deterministic check: …" brackets on A-7, C-1, C-2, C-3, C-5 and ARCH-8). Convention and resolution rules: §4.1 "Built". | M | 48 tests in `enforcement/checks/tests/` (fixture documents and configs: every grammar form, every config reader, every bin, both ratchet directions, and the real corpus against the committed baseline); it FAILS on today's corpus, and the failure list IS the gap inventory |
 | E0.2 | Tag every rule (§5) in the platform documents and the numbered files. No rule content changes yet — only the bin and the check name. Version stamp 8. | M | E0.1 green on tags; rules without a tag: zero |
 | E0.3 | Move the DRY block (00 §1), the L rules (04), the token rules (05), and 2d into every platform document as `DRY-*`, `L-*`, `DES-*` sections with checks named. Version 8's plain-words changes line. | M | E0.1 green; a test that every platform doc carries DRY-1..7, L-1..12, DES-1..4 |
 
@@ -486,4 +534,5 @@ Verified from the code and from each tool's own documentation on
 prompts, battery, hook and scaffold. Not verified: the precision of any
 signature on real code (that is what the plants and the ratchet baselines
 in E1 exist to measure), and Semgrep's free-engine per-language coverage
-(not itemised on a primary source). Nothing here has been built.
+(not itemised on a primary source). Built so far: E0.1 (section 6 marks
+each row DONE as it lands); everything else here is design.
