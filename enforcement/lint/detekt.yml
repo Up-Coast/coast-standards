@@ -1,0 +1,25 @@
+# detekt (detekt.dev/docs/introduction/configurations). Installed by Coast
+# beside .editorconfig (ktlint) and lint.xml (Android Lint); yours to edit.
+# This file layers on detekt's default set: run it with
+# `--build-upon-default-config` (Gradle: `buildUponDefaultConfig = true`), so
+# every default rule stays on and only what is written here changes. The rules
+# the review documents name are stated here on their own lines — never
+# inherited from the default set — so the verifier can read this file and know
+# each is on (enforcement/README.md section 5.2).
+build:
+  maxIssues: 0
+
+# C-3 (Android): no `!!` on a path that can be null at runtime.
+potential-bugs:
+  active: true
+  UnsafeCallOnNullableType:
+    active: true
+
+# A-3 (advisory): a type or module has one job. A class past 300 lines is
+# reported; the rule is advisory, so the battery treats detekt's report as a
+# warning here (the project's severity for this rule set is not raised).
+complexity:
+  active: true
+  LargeClass:
+    active: true
+    threshold: 300

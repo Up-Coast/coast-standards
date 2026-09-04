@@ -27,6 +27,15 @@ sys.path.insert(0, CHECKS_DIR)
 
 import check_rules as cr  # noqa: E402
 
+# A git hook hands its children GIT_DIR and GIT_INDEX_FILE (always, in a linked
+# worktree). The throwaway repositories below must never see them, or every
+# `git` call here — and the scanner's own, run in-process — lands in the hook's
+# repository instead: this file once committed its fixtures onto the branch
+# being committed. Dropped once, for the whole test process.
+for _name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+              "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX", "GIT_NAMESPACE"):
+    os.environ.pop(_name, None)
+
 SCRIM = 'struct StatusPanel { var scrim: some View { Color.black.opacity(0.4) } }\n'
 CLEAN = 'struct StatusPanel: View { var body: some View { Text(Copy.title) } }\n'
 
