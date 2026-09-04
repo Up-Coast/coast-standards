@@ -11,6 +11,12 @@ interpolation, and it looks like text rather than a key — a space, a
 capitalised word, or sentence punctuation. A semantic key
 (``vehicle.status.doNotDispatch``, ``save_button``) is never text.
 
+Tuned (E1.2, 2026-09-04) against Coast's copy guard on Coast's own Views and
+ViewModels: both report zero there — the Swift skip contexts are the guard's
+list plus the customer-app ones, and the pass plant
+(``tests/plants/ios/ui-string-literal.pass.swift``) carries every one of
+those contexts so the parity cannot silently regress.
+
 Per language: Swift (full lexer: nested block comments, ``\\(…)``
 interpolation, raw and multi-line strings), Kotlin (string literals in the
 Compose text slots and XML ``android:text``), TypeScript/JSX (JSX text
@@ -25,12 +31,18 @@ from __future__ import annotations
 import re
 
 TEXT_SHAPE = re.compile(r"\s|[.!?,:;]$|^[A-Z][a-z]")
+# A statement handed to a database is never words on a screen (tuned on Coast's
+# own tree, E1.2: the SQL in a store file whose name ends in "…Review.swift").
+SQL_STATEMENT = re.compile(r"^(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|PRAGMA|WITH|VACUUM|BEGIN|COMMIT|ROLLBACK|EXPLAIN|REPLACE)\b", re.IGNORECASE)
+SQL_CLAUSE = re.compile(r"\b(FROM|INTO|SET|TABLE|INDEX|VALUES|WHERE|TRANSACTION|VIEW|TRIGGER)\b", re.IGNORECASE)
 
 
 def looks_like_text(body):
-    """Words a person reads, not an identifier, key, symbol name or URL."""
+    """Words a person reads, not an identifier, key, symbol name, URL or SQL."""
     stripped = body.strip()
     if not stripped or not re.search(r"[A-Za-z]", stripped):
+        return False
+    if SQL_STATEMENT.match(stripped) and SQL_CLAUSE.search(stripped):
         return False
     if re.match(r"^[\w.\-/:%#@+]*$", stripped) and " " not in stripped:
         # an identifier, a dotted key, a path, a URL — unless it is one capitalised English word
