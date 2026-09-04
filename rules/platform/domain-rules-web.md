@@ -14,6 +14,112 @@ tests), a single checkable statement, and the guide it comes from in
 brackets. Keep new rules checkable — a reviewer must be able to answer
 "does this change break the rule — yes or no?"
 
+## Keep it DRY (DRY) — the rule above every other rule
+
+Every piece of knowledge has exactly one home, and everything else uses that
+home.
+
+- **DRY-1** Design components are created once and reused. Before any view,
+  component or helper is created, an existing one (or a composition of existing
+  ones) is checked for; a near-duplicate of an existing component is a review
+  failure, and every new component states why nothing existing fit. [Up Coast
+  standard; check: review]
+- **DRY-2** Styling lives in one theme file (`theme.ts` or the tokens
+  stylesheet). Every colour, font, size, weight and spacing value is a token
+  there; a second theme file is never created, and no styling literal is written
+  into a feature file. [Up Coast standard; check: scan:styling-literal,
+  scan:second-theme-file]
+- **DRY-3** Strings live in one catalog per locale (`locales/<lang>/…`).
+  Additions go through that one place, and an existing key is reused before a
+  near-duplicate is added. [Up Coast standard; check:
+  scan:one-catalog-per-locale]
+- **DRY-4** Error messages have one home, like strings: no error text is
+  assembled at the site that throws it or shows it. [Up Coast standard; check:
+  scan:ui-string-literal]
+- **DRY-5** Cross-cutting behaviour — gestures, animations, formatting,
+  validation — has one home and is called from there, never re-implemented
+  locally. [Up Coast standard; check: tool:jscpd, review]
+- **DRY-6** Every derived value — a total, a score, a status, a rounding — is
+  computed in one place and reused, never recomputed slightly differently in two
+  places. [Up Coast standard; check: tool:jscpd, review]
+- **DRY-7** One name per thing, everywhere: the vocabulary is chosen once, and
+  no synonym is introduced for something that already has a name. [Up Coast
+  standard; check: review]
+
+## Strings and localization (L)
+
+The product is built localizable from the first commit, whether or not a second
+language is scheduled; retrofitting string externalization is expensive, doing
+it from day one is free.
+
+- **L-1** No hardcoded user-facing text, anywhere. Every user-visible string —
+  labels, error messages, empty states, loading text, tooltips, accessibility
+  labels, titles, notification copy, units — lives in the string catalog under a
+  named key, and a guard check fails the build on any bare user-facing literal
+  in view code. [Up Coast standard; check: scan:ui-string-literal]
+- **L-2** One catalog home per locale (`locales/<lang>/…`). The strings surface
+  is the sole authority: additions go through one place, and reuse comes first —
+  when an existing key already carries the needed text, that key is used instead
+  of a near-duplicate. [Up Coast standard; check: scan:one-catalog-per-locale]
+- **L-3** Keys are semantic, not English: `vehicle.status.doNotDispatch`, not
+  `do_not_dispatch_text`. The key names the meaning, so a translation can
+  diverge from the English phrasing. [Up Coast standard; check:
+  scan:english-key]
+- **L-4** Sentences are never built by concatenation. Text with values in it
+  uses the i18n library's interpolation with named placeholders (ICU
+  MessageFormat); word order differs across languages, and a template with
+  placeholders is itself a catalog entry. [Up Coast standard; check:
+  scan:ui-string-concat]
+- **L-5** Plurals go through the platform's plural system (the i18n library's
+  plural rules (CLDR categories)), never an `if count == 1` in code. [Up Coast
+  standard; check: scan:manual-plural]
+- **L-6** Dates, numbers and currency are formatted by locale-aware formatters
+  (`Intl.NumberFormat` / `Intl.DateTimeFormat`), never by string templates. [Up
+  Coast standard; check: review]
+- **L-7** Layouts tolerate about 30% text expansion: no fixed-width text
+  container that clips, tested with a long-string locale (German),
+  pseudo-localization and, when in scope, right-to-left. [Up Coast standard;
+  check: review]
+- **L-8** Localization plumbing is emitted and managed by tooling (the i18n
+  tooling), never hand-authored: the content is written by hand, the plumbing is
+  not. [Up Coast standard; check: review]
+- **L-9** Domain vocabulary translates with approval: safety-critical or
+  client-owned terms (status tiers, legal words) get approved translations
+  treated as verbatim, listed in a glossary file per project, and an agent never
+  freelances them. [Up Coast standard; check: review]
+- **L-10** Text that reaches the UI from a database or an API (descriptions,
+  reference data) is part of the localization surface: either the source
+  provides per-locale fields, or the UI maps stable codes to catalog keys.
+  "Strings from the backend don't count" is never assumed. [Up Coast standard;
+  check: review]
+- **L-11** The language choice is user-visible, instant and persistent:
+  switching locale never discards anything the user typed, and the choice
+  persists (profile, local storage or URL, as the product dictates). [Up Coast
+  standard; check: review]
+- **L-12** All-caps and letter-spacing effects are applied at render time (CSS
+  `text-transform` at render time), never baked into the stored string — casing
+  rules differ per language, and some scripts have no case at all. [Up Coast
+  standard; check: scan:baked-case]
+
+## Design tokens and components (DES)
+
+How the design's values and components reach the code.
+
+- **DES-1** Every visual value is the design's exact token, used by the design's
+  token name. A near-match is never inlined, and a value the design needs but
+  has no token for is added to the theme as a token, not written at the use
+  site. [Up Coast standard; check: scan:styling-literal]
+- **DES-2** A brand-colour or typeface swap is a one-file edit: nothing outside
+  the theme file (`theme.ts` or the tokens stylesheet) knows a colour, font or
+  spacing value. [Up Coast standard; check: scan:second-theme-file]
+- **DES-3** A new component is justified in writing: the plan or pull request
+  names the existing components that were checked and says why none fit, and the
+  builder and the approver of a component are different reviews. [Up Coast
+  standard; check: review]
+- **DES-4** When the project has a design-system spec, every UI change is
+  checked against it: no hardcoded value bypasses the tokens, and a pattern that
+  implies a missing token adds the token rather than inlining a value. [Up Coast
+  standard; check: review]
 ## Money and payments (PAY)
 
 - **PAY-1** Money amounts are stored and calculated with decimal-safe
@@ -257,6 +363,8 @@ brackets. Keep new rules checkable — a reviewer must be able to answer
 
 ## Sources
 
+- **Up Coast engineering standards** — the DRY, strings and design-token rules
+  (DRY, L, DES) are Up Coast's own standing rules, applied to every project it builds.
 The rules above are written in this project's own words; the guides they
 are sourced from (for provenance and further reading):
 

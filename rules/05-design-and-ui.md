@@ -9,20 +9,13 @@ by `design-system`. These are the standing rules on top.
 
 ## Tokens and components
 
-- **All visual values come from the design's tokens.** Never invent colors, type sizes, or
-  spacing; never inline a near-match — use the exact token value and keep the design's token
-  name. When a needed value has no token, request/add the token; never inline a literal.
-  [check: scan:styling-literal]
-- **One theme file**, created at project start; a second can never be created. A brand-color
-  swap must be a one-file edit. [check: scan:second-theme-file]
-- **Components are created once and reused.** Check for an existing component (or a
-  composition) before creating one; justify any new component by saying why nothing existing
-  fit. Builder and approver of a component are different reviews.
-  [check: review]
-- **If the project has a design system spec, every UI change is checked against it** — no
-  hardcoded values that bypass tokens. When a needed pattern implies a token the system
-  doesn't have, flag it as a new pattern to add — never invent a value inline.
-  [BuilderOS; check: review]
+The checkable rules — **DES-1 to DES-4**, beside **DRY-1 and DRY-2** — live in every app
+platform rules document (`rules/platform/domain-rules-<platform>.md`, a project's
+`docs/domain-rules.md`), each with the check that holds it named: every visual value is the
+design's exact token (DES-1), a brand swap is a one-file edit (DES-2), a new component is
+justified in writing (DES-3), and every UI change is checked against the design-system spec
+when there is one (DES-4). They live there, not here, so a project has exactly one rules
+document and one counted number. [check: context]
 
 ## Reading design mocks (Abbey's drawing conventions)
 

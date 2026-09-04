@@ -8,32 +8,16 @@ one higher on this list wins.
 Every piece of knowledge has exactly ONE home, and everything else uses that home.
 (Abbey, 2026-08-20: "The project MUST STAY DRY. This is a rule above all other rules.")
 
-Concretely, on every project:
-
-- **Design components are created ONE time and reused.** Before creating any component,
-  check whether an existing one (or a composition of existing ones) covers the need.
-  "Use the existing one" is a valid and expected outcome; creating a near-duplicate is a
-  review failure. New helper/component/template creation must be justified — say why an
-  existing one wasn't reused. (Coast D34) [check: review]
-- **Styling lives in ONE theme file.** All colors, fonts, sizes, weights, and spacing are
-  tokens in a single theme file; a second theme file can never be created; styling is never
-  written into a feature file. Never invent a value or a near-match — use the design's exact
-  token, or request a new token; never inline a literal. (Coast D15, D35, D101)
-  [check: scan:styling-literal, scan:second-theme-file]
-- **Strings live in ONE catalog per locale** — see rule 2.
-  [check: scan:one-catalog-per-locale]
-- **Error messages are abstracted** to one place, like strings.
-  [check: scan:ui-string-literal]
-- **Cross-cutting behavior (gestures, animations, formatting) has one home** and is used,
-  never re-implemented locally. (Coast D15) [check: tool:jscpd, review]
-- **Every derived value is computed in one place and reused** — never recomputed slightly
-  differently in two places (totals, scores, statuses, rounding). (Coast PAY-3, generalized)
-  [check: tool:jscpd, review]
-- **One name per thing, everywhere.** Pick the vocabulary once; never introduce a synonym
-  for something that already has a name. (Coast D107) [check: review]
-
-Enforcement: reviews grep the diff for inlined strings, styling literals, and duplicated
-logic, and fail the change when they find them.
+The concrete, checkable rules are **DRY-1 to DRY-7 in every platform rules document**
+(`rules/platform/domain-rules-<platform>.md`, copied into a project as its
+`docs/domain-rules.md`), each with the check that holds it named: components are created
+once and reused (DRY-1, Coast D34), styling lives in one theme file and is never inlined
+(DRY-2, Coast D15/D35/D101), strings live in one catalog per locale (DRY-3, Coast D36 —
+see rule 2), error messages have one home (DRY-4), cross-cutting behaviour has one home
+(DRY-5, Coast D15), every derived value is computed in one place (DRY-6, Coast PAY-3
+generalized), and one name per thing (DRY-7, Coast D107). They live there, not here, so a
+project has exactly one rules document to read and one place the number is counted.
+[check: context]
 
 ## 2. User-facing text is never hardcoded — always, from day one
 

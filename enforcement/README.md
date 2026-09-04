@@ -318,9 +318,11 @@ wall.
 
 ## 5. Every rule, its bin, its check
 
-The ids below are the shipped platform documents' ids where one exists; the
-numbered files' rules that have no id today get one in E2 (prefixed `DRY-`,
-`L-`, `DES-`, `GIT-`, `ENV-`, `SES-`). "all" means every app platform;
+The ids below are the shipped platform documents' ids where one exists. The
+DRY, L and DES rules got theirs in E0.3 (they live in the platform documents
+now); the numbered files' remaining rules are named by the parser's slug of
+their bold title (E0.1 convention) — ids such as `GIT-`, `ENV-`, `SES-` are
+not needed for the count and are not planned. "all" means every app platform;
 platform-specific notes follow the id. Severity `block` unless marked
 `ratchet` or `advisory`.
 
@@ -432,7 +434,7 @@ under half a day, M a day, L two or more.
 |---|---|---|---|
 | E0.1 | **DONE 2026-09-04 (Fable).** `enforcement/checks/verify_rules.py`: parse every rule in `rules/platform/*.md` and the numbered files; require a `check:` tag; resolve each tag against a battery manifest per platform; print enforced/total. Runs in this repo's own CI-less hook. The starting line it measured: **held by a machine 0 of 558**; 540 rules name no check, 18 name one in prose nothing runs (the old "deterministic check: …" brackets on A-7, C-1, C-2, C-3, C-5 and ARCH-8). Convention and resolution rules: §4.1 "Built". | M | 48 tests in `enforcement/checks/tests/` (fixture documents and configs: every grammar form, every config reader, every bin, both ratchet directions, and the real corpus against the committed baseline); it FAILS on today's corpus, and the failure list IS the gap inventory |
 | E0.2 | **DONE 2026-09-04 (Fable).** Tag every rule (§5) in the platform documents and the numbered files. No rule content changes yet — only the bin and the check name. Version stamp 8. The 18 legacy "deterministic check: …" brackets became formal tags (A-7's explanation of the approved-deviations mechanism stayed as rule text). After tagging: 551 counted rules (7 explanatory bullets are `context`), 270 reviewer, 89 process, 192 waiting on checks E1/E2 build; gap count 558 → 395, every remaining gap a check that does not exist yet. | M | E0.1 green on tags; rules without a tag: zero — proven: `verify_rules.py` reports no "no check tag" and no "unknown check" |
-| E0.3 | Move the DRY block (00 §1), the L rules (04), the token rules (05), and 2d into every platform document as `DRY-*`, `L-*`, `DES-*` sections with checks named. Version 8's plain-words changes line. | M | E0.1 green; a test that every platform doc carries DRY-1..7, L-1..12, DES-1..4 |
+| E0.3 | **DONE 2026-09-04 (Fable).** Move the DRY block (00 §1), the L rules (04), the token rules (05), and 2d into every platform document as `DRY-*`, `L-*`, `DES-*` sections with checks named. Version 8's plain-words changes line. Done as: DRY-1..7, L-1..12 and DES-1..4 in the five app documents (the Python document keeps its own ARCH-6 and OBS-4; "all" means the app platforms); 2d was already C-5/ARCH-8 in every document; 00 §1, 04 and 05 now point at the ids instead of restating them, so each rule has one home. The gap count rose 395 → 489 because the 92 new rules name checks E1/E2 build — recorded as a move in the baseline file with the reason, never silent. The version-8 plain-words line lives in Coast's `RulesCorpus.changes`. | M | E0.1 green; `tests/test_corpus_sections.py`: every app platform doc carries DRY-1..7, L-1..12, DES-1..4 with checks, the Python doc keeps its equivalents, the numbered files no longer restate them |
 
 ### Phase E1 — the scanner (this repo)
 

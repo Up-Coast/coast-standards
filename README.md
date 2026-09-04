@@ -17,8 +17,8 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/01-working-style.md` | How agents work with Abbey: communication, verification, reporting, decisions |
 | `rules/02-architecture-and-code.md` | Layering, SRP, naming, the DRY mechanics (all types); MVVM, reactive state and responsive layout (apps only) |
 | `rules/03-security-owasp.md` | OWASP-derived security rules + sensitive-code handling |
-| `rules/04-localization.md` | String externalization and localization — **apps and frontends only** |
-| `rules/05-design-and-ui.md` | Design tokens, component reuse, reading design mocks, copy rules, accessibility — **apps and frontends only** |
+| `rules/04-localization.md` | Why every app is built localizable from day one, and the Canadian defaults — **apps and frontends only**. The twelve checkable rules (L-1..L-12) live in each platform file since corpus version 8. |
+| `rules/05-design-and-ui.md` | Reading design mocks, interaction rulings, copy rules, accessibility — **apps and frontends only**. The checkable token and component rules (DES-1..4, DRY-1..2) live in each platform file since corpus version 8. |
 | `rules/06-testing.md` | Test types, TDD, false-passing patterns, what "coverage" means |
 | `rules/07-documentation-git-process.md` | Docs, diagrams, decision logs, git and PR discipline |
 | `rules/08-auditing-and-completeness.md` | How to audit: rebuild the list from the code, never review the list; audit the product's claims, not just its specs; **the case log of real audit misses and the mechanical check each one produces**. Read before any audit or "what's left" pass, and add to it whenever an audit misses something. |
@@ -26,7 +26,7 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/10-development-environment.md` | Atomic commands and permission prompts, disk hygiene, the cost of branch switching |
 | `rules/types/backend-service.md` | The reasoning layer for services with no screen: layering without a UI, API contracts, async/workers, operability, data safety |
 | `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
-| `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. |
+| `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
 | `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
 | `enforcement/` | **The design and build plan for making these rules enforced by machines** — the scanner, the linter configs, the git hooks, the Claude Code hooks, and `adopt.py` for any project (filed 2026-09-03). Read `enforcement/README.md` before touching any rule's check. Built so far: `enforcement/checks/verify_rules.py`, which prints the honest number per document ("held by a machine N of M") and fails when a rule names no check or names one nothing runs. |
 | `.githooks/` | This repo's own pre-commit hook: the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
