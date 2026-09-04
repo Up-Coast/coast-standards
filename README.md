@@ -28,6 +28,7 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
 | `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. |
 | `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
+| `enforcement/` | **The design and build plan for making these rules enforced by machines** — the scanner, the linter configs, the git hooks, the Claude Code hooks, and `adopt.py` for any project (filed 2026-09-03). Read `enforcement/README.md` before touching any rule's check. |
 | `examples/` | Reference snapshots of real engagements — not rules, just what a project actually delivered, kept for scoping future client work by rule of thumb |
 | `skills/` | The BuilderOS skills (BuildGreatProducts/builder-os, MIT), vendored verbatim |
 | `skills-lock.json` | Pins each vendored skill to its source commit + SHA-256, matching Coast's pattern |
