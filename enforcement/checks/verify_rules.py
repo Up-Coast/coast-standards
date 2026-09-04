@@ -427,7 +427,12 @@ class Battery:
             return None
         if isinstance(entries, dict):
             entries = entries.get("signatures", [])
-        return {entry["id"]: entry.get("severity", "block") for entry in entries}
+        table = {entry["id"]: entry.get("severity", "block") for entry in entries}
+        for entry in entries:  # a group name stands for every signature it holds (e.g. native-pattern)
+            group = entry.get("group")
+            if group and group not in table:
+                table[group] = entry.get("severity", "block")
+        return table
 
     def session_texts(self):
         texts = []
@@ -511,11 +516,13 @@ class Battery:
         if not self.signatures:
             return []
         unnamed = []
-        for platform in self.signatures.get("platforms", {}):
-            table = self.signature_table(platform) or {}
-            for signature_id in table:
-                if signature_id not in named_by_platform.get(platform, set()):
-                    unnamed.append((platform, signature_id))
+        for platform, entries in self.signatures.get("platforms", {}).items():
+            if isinstance(entries, dict):
+                entries = entries.get("signatures", [])
+            named = named_by_platform.get(platform, set())
+            for entry in entries:
+                if entry["id"] not in named and entry.get("group") not in named:
+                    unnamed.append((platform, entry["id"]))
         return unnamed
 
 

@@ -1,0 +1,1 @@
+.navigationTitle(Copy.title)

@@ -336,6 +336,16 @@ class ResolutionTests(unittest.TestCase):
         gaps, _ = self.gaps_of("X-1")
         self.assertEqual(gaps, ["scan:one: no signature 'one' in the android table"])
 
+    def test_a_group_name_resolves_and_covers_its_members(self):
+        self.doc("- **A-7** [check: scan:native-pattern]\n")
+        self.fx.write("enforcement/checks/check_rules.py", "#!/usr/bin/env python3\n")
+        self.fx.write("enforcement/checks/rules_signatures.json", {"platforms": {"ios": {"signatures": [
+            {"id": "scrim-modal", "group": "native-pattern", "severity": "block", "pattern": "x"},
+            {"id": "custom-tab-bar", "group": "native-pattern", "severity": "block", "pattern": "y"}]}}})
+        report = self.fx.run()
+        self.assertEqual(rule(report["documents"][0], "A-7")["gaps"], [])
+        self.assertEqual(report["gaps"], [], "members of a named group are not unnamed signatures")
+
     def test_unnamed_signature_is_a_gap(self):
         self.doc("- **X-1** Text. [check: scan:one]\n")
         self.fx.signatures({"ios": {"one": "block", "orphan": "block"}})

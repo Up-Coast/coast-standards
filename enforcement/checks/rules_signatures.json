@@ -1,0 +1,1085 @@
+{
+  "_comment": "Per-platform signature tables the scanner (check_rules.py) runs and verify_rules.py resolves rule tags against. Fields: id (stable; approved deviations and exceptions cite it), rule (the rule id it holds), group (optional: several signatures held by one rule tag, e.g. native-pattern), severity block|ratchet|advisory, scope added|tree, applies_to / excludes (path classes from paths.json; '*' = every class), files (optional glob list; default = the platform's extensions), pattern (regex over a line, and over the file's added lines joined without whitespace), paired (optional second regex that must also match), words (the failure's plain words). kind 'builtin' names a check implemented in code rather than a regex.",
+  "platforms": {
+    "ios": {
+      "signatures": [
+        {
+          "id": "appkit-reach-through",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(NSWindow|NSApplication|NSApp)\\b",
+          "words": "raw NSWindow/NSApplication reach-through from SwiftUI — window behavior belongs to SwiftUI's scene and window APIs"
+        },
+        {
+          "id": "representable-window-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bNSViewRepresentable\\b",
+          "words": "an NSViewRepresentable touching .window — a bridge view reaching into the hosting window's chrome",
+          "paired": "\\.window\\b"
+        },
+        {
+          "id": "window-chrome-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(standardWindowButton|styleMask|makeKeyAndOrderFront|titlebarAppearsTransparent)\\b",
+          "words": "window-chrome override (standardWindowButton/styleMask/makeKeyAndOrderFront/titlebarAppearsTransparent) — replaces the platform's window controls"
+        },
+        {
+          "id": "hidden-window-toolbar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.toolbar\\(\\s*\\.hidden\\s*,\\s*for:\\s*\\.windowToolbar\\s*\\)",
+          "words": "hiding the window toolbar (.toolbar(.hidden, for: .windowToolbar)) — removes the native title bar and traffic lights"
+        },
+        {
+          "id": "hand-rolled-router",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\benum\\s+\\w*Route\\w*\\b",
+          "words": "a hand-rolled Route enum in place of NavigationStack — navigation belongs to the platform's navigation container"
+        },
+        {
+          "id": "scrim-modal",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\.black\\.opacity\\(",
+          "words": "a full-screen scrim/dimming overlay used as a modal — modals belong to .sheet/.popover/.alert"
+        },
+        {
+          "id": "nsevent-key-monitor",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "NSEvent\\s*\\.\\s*add(Local|Global)MonitorForEvents",
+          "words": "an NSEvent key monitor — key handling belongs to the platform's focus and command system"
+        },
+        {
+          "id": "focus-key-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(@FocusState\\b|\\.focused\\()",
+          "words": "focus APIs used to override key handling — the platform's command/shortcut system owns keys",
+          "paired": "(\\.onKeyPress\\(|keyDown|NSEvent)"
+        },
+        {
+          "id": "custom-title-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.windowStyle\\(\\s*\\.hiddenTitleBar\\s*\\)|\\b(struct|class)\\s+\\w*(TitleBar|HeaderBar)\\w*\\b",
+          "words": "a custom header/title bar in a hidden-title-bar window — the window's native title bar and toolbar own the header; if the platform provides the feature, use the feature"
+        },
+        {
+          "id": "custom-tab-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*TabBar\\w*\\b",
+          "words": "a hand-built tab bar — tab navigation belongs to TabView, even when every piece of the substitute is a native control"
+        },
+        {
+          "id": "hand-rolled-search-field",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bmagnifyingglass\\b",
+          "words": "a hand-rolled search field (a TextField dressed with the search icon) — search belongs to .searchable",
+          "paired": "TextField\\("
+        },
+        {
+          "id": "custom-sidebar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.listStyle\\(\\s*\\.sidebar\\s*\\)|SidebarListStyle\\(",
+          "words": "a hand-styled sidebar list — sidebars belong to NavigationSplitView, which provides the sidebar column and its styling itself"
+        },
+        {
+          "id": "hand-drawn-progress",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*(ProgressBar|Spinner|LoadingIndicator|ActivityIndicator)\\w*\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to ProgressView"
+        },
+        {
+          "id": "custom-picker-control",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+Custom\\w*(Picker|Slider|Stepper|Toggle)\\w*\\b",
+          "words": "a custom-built control where the platform provides one (Picker/Slider/Stepper/Toggle) — use the native control"
+        },
+        {
+          "id": "import-matrix",
+          "rule": "A-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    },
+    "macos": {
+      "signatures": [
+        {
+          "id": "appkit-reach-through",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(NSWindow|NSApplication|NSApp)\\b",
+          "words": "raw NSWindow/NSApplication reach-through from SwiftUI — window behavior belongs to SwiftUI's scene and window APIs"
+        },
+        {
+          "id": "representable-window-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bNSViewRepresentable\\b",
+          "words": "an NSViewRepresentable touching .window — a bridge view reaching into the hosting window's chrome",
+          "paired": "\\.window\\b"
+        },
+        {
+          "id": "window-chrome-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(standardWindowButton|styleMask|makeKeyAndOrderFront|titlebarAppearsTransparent)\\b",
+          "words": "window-chrome override (standardWindowButton/styleMask/makeKeyAndOrderFront/titlebarAppearsTransparent) — replaces the platform's window controls"
+        },
+        {
+          "id": "hidden-window-toolbar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.toolbar\\(\\s*\\.hidden\\s*,\\s*for:\\s*\\.windowToolbar\\s*\\)",
+          "words": "hiding the window toolbar (.toolbar(.hidden, for: .windowToolbar)) — removes the native title bar and traffic lights"
+        },
+        {
+          "id": "hand-rolled-router",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\benum\\s+\\w*Route\\w*\\b",
+          "words": "a hand-rolled Route enum in place of NavigationStack — navigation belongs to the platform's navigation container"
+        },
+        {
+          "id": "scrim-modal",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\.black\\.opacity\\(",
+          "words": "a full-screen scrim/dimming overlay used as a modal — modals belong to .sheet/.popover/.alert"
+        },
+        {
+          "id": "nsevent-key-monitor",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "NSEvent\\s*\\.\\s*add(Local|Global)MonitorForEvents",
+          "words": "an NSEvent key monitor — key handling belongs to the platform's focus and command system"
+        },
+        {
+          "id": "focus-key-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(@FocusState\\b|\\.focused\\()",
+          "words": "focus APIs used to override key handling — the platform's command/shortcut system owns keys",
+          "paired": "(\\.onKeyPress\\(|keyDown|NSEvent)"
+        },
+        {
+          "id": "custom-title-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.windowStyle\\(\\s*\\.hiddenTitleBar\\s*\\)|\\b(struct|class)\\s+\\w*(TitleBar|HeaderBar)\\w*\\b",
+          "words": "a custom header/title bar in a hidden-title-bar window — the window's native title bar and toolbar own the header; if the platform provides the feature, use the feature"
+        },
+        {
+          "id": "custom-tab-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*TabBar\\w*\\b",
+          "words": "a hand-built tab bar — tab navigation belongs to TabView, even when every piece of the substitute is a native control"
+        },
+        {
+          "id": "hand-rolled-search-field",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bmagnifyingglass\\b",
+          "words": "a hand-rolled search field (a TextField dressed with the search icon) — search belongs to .searchable",
+          "paired": "TextField\\("
+        },
+        {
+          "id": "custom-sidebar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.listStyle\\(\\s*\\.sidebar\\s*\\)|SidebarListStyle\\(",
+          "words": "a hand-styled sidebar list — sidebars belong to NavigationSplitView, which provides the sidebar column and its styling itself"
+        },
+        {
+          "id": "hand-drawn-progress",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*(ProgressBar|Spinner|LoadingIndicator|ActivityIndicator)\\w*\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to ProgressView"
+        },
+        {
+          "id": "custom-picker-control",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+Custom\\w*(Picker|Slider|Stepper|Toggle)\\w*\\b",
+          "words": "a custom-built control where the platform provides one (Picker/Slider/Stepper/Toggle) — use the native control"
+        },
+        {
+          "id": "import-matrix",
+          "rule": "A-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    },
+    "android": {
+      "signatures": [
+        {
+          "id": "androidview-bridge",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bAndroidView\\s*\\(",
+          "words": "an AndroidView bridge into the View system from Compose — Compose's own components own the UI; a new bridge needs approval"
+        },
+        {
+          "id": "window-flags-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "(setDecorFitsSystemWindows|WindowManager\\.LayoutParams|window\\.(setFlags|addFlags))",
+          "words": "a window-flags override — insets and system bars belong to the platform's edge-to-edge and WindowInsets APIs"
+        },
+        {
+          "id": "on-back-pressed-override",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "override\\s+fun\\s+onBackPressed\\s*\\(",
+          "words": "overriding onBackPressed — back handling belongs to BackHandler / OnBackPressedDispatcher"
+        },
+        {
+          "id": "scrim-modal",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Color\\.Black\\.copy\\(\\s*alpha",
+          "words": "a dimming overlay used as a modal — dialogs and sheets belong to Dialog / ModalBottomSheet"
+        },
+        {
+          "id": "hand-rolled-navigator",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bwhen\\s*\\(\\s*\\w*(screen|Screen|route|Route)\\w*\\s*\\)",
+          "words": "a hand-rolled screen switch over mutable state — navigation belongs to the Navigation component (NavHost)",
+          "paired": "\\bmutableStateOf\\b"
+        },
+        {
+          "id": "custom-tab-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+\\w*(TabBar|BottomBar)\\w*\\s*\\(",
+          "words": "a hand-built tab bar — tabs belong to NavigationBar / TabRow"
+        },
+        {
+          "id": "hand-drawn-progress",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+\\w*(ProgressBar|Spinner|LoadingIndicator)\\w*\\s*\\(",
+          "words": "a hand-drawn progress indicator — progress belongs to CircularProgressIndicator / LinearProgressIndicator"
+        },
+        {
+          "id": "reflection-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\b(Class\\.forName|getDeclaredMethod|getDeclaredField)\\s*\\(",
+          "words": "reflection into platform internals — use the platform's public API"
+        },
+        {
+          "id": "custom-picker-control",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+Custom\\w*(Picker|Slider|Switch|Checkbox)\\w*\\s*\\(",
+          "words": "a custom-built control where the platform provides one (DatePicker/Slider/Switch/Checkbox) — use the native control"
+        },
+        {
+          "id": "import-matrix",
+          "rule": "A-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    },
+    "react-native": {
+      "signatures": [
+        {
+          "id": "native-module-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(NativeModules|requireNativeComponent|TurboModuleRegistry)\\b",
+          "words": "a direct native-module reach-through — a platform feature React Native already exposes is used through its own API; a new native bridge needs approval"
+        },
+        {
+          "id": "uimanager-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(UIManager\\.|findNodeHandle\\s*\\(|setNativeProps\\s*\\()",
+          "words": "direct view manipulation (UIManager / findNodeHandle / setNativeProps) — the view belongs to React's render"
+        },
+        {
+          "id": "hand-rolled-navigator",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Navigator|Router)\\b",
+          "words": "a hand-rolled navigator holding the current screen in state — navigation belongs to React Navigation",
+          "paired": "\\buseState\\b"
+        },
+        {
+          "id": "scrim-modal",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "rgba\\(\\s*0\\s*,\\s*0\\s*,\\s*0\\s*,",
+          "words": "an absolute-positioned dimming overlay used as a modal — modals belong to Modal",
+          "paired": "position:\\s*['\"]absolute['\"]"
+        },
+        {
+          "id": "custom-tab-bar",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*TabBar\\b",
+          "words": "a hand-built tab bar — tabs belong to the tab navigator"
+        },
+        {
+          "id": "hand-drawn-progress",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Spinner|ProgressBar|LoadingIndicator)\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to ActivityIndicator"
+        },
+        {
+          "id": "dangerous-navigation-state",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\bdangerouslyGetState\\s*\\(|\\bdangerouslyGetParent\\s*\\(",
+          "words": "reaching into navigation internals — use the navigation hooks"
+        },
+        {
+          "id": "import-matrix",
+          "rule": "A-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    },
+    "web": {
+      "signatures": [
+        {
+          "id": "dom-reach-through",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\bdocument\\.(getElementById|querySelector|querySelectorAll)\\s*\\(",
+          "words": "a direct DOM query from component code — the framework's refs and state own the DOM"
+        },
+        {
+          "id": "inner-html-write",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "(\\bdangerouslySetInnerHTML\\b|\\.innerHTML\\s*=)",
+          "words": "writing raw HTML into the page — content belongs to the framework's rendering (and raw HTML is an injection surface)"
+        },
+        {
+          "id": "div-as-button",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "role=[\"']button[\"']",
+          "words": "an element acting as a button — use <button>, which the platform makes focusable and keyboard-operable"
+        },
+        {
+          "id": "scrim-modal",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "rgba\\(\\s*0\\s*,\\s*0\\s*,\\s*0\\s*,",
+          "words": "a fixed dimming overlay used as a modal — dialogs belong to <dialog> (showModal)",
+          "paired": "position:\\s*['\"]?fixed"
+        },
+        {
+          "id": "history-reach",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\bhistory\\.(pushState|replaceState)\\s*\\(",
+          "words": "writing browser history by hand — routes belong to the app's router"
+        },
+        {
+          "id": "positive-tabindex",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "tabIndex\\s*=\\s*\\{?\\s*[1-9]|tabindex=[\"'][1-9]",
+          "words": "a positive tabindex — focus order belongs to document order"
+        },
+        {
+          "id": "custom-select",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Dropdown|CustomSelect)\\b",
+          "words": "a hand-built dropdown — a choice belongs to <select> (or the platform's popover)"
+        },
+        {
+          "id": "hand-drawn-progress",
+          "rule": "A-7",
+          "group": "native-pattern",
+          "severity": "block",
+          "scope": "added",
+          "applies_to": [
+            "*"
+          ],
+          "excludes": [
+            "tests"
+          ],
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Spinner|ProgressBar|LoadingIndicator)\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to <progress>"
+        },
+        {
+          "id": "import-matrix",
+          "rule": "A-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    },
+    "python": {
+      "signatures": [
+        {
+          "id": "import-matrix",
+          "rule": "ARCH-2",
+          "kind": "builtin",
+          "severity": "block",
+          "scope": "tree",
+          "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side"
+        }
+      ]
+    }
+  }
+}

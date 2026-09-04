@@ -1,0 +1,1 @@
+window.styleMask.insert(.fullSizeContentView)

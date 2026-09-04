@@ -1,0 +1,1 @@
+CircularProgressIndicator(progress = { fraction })
