@@ -191,6 +191,7 @@ class Adoption:
             self.measure_tools = "build,format,lint,tests" if self.first_adoption else ""
         self.seeds = self.load_json(".coast/seeds.json") or {}
         self.standards_commit = self.standards_version()
+        self.rules_document = None   # the document the number is counted from, once install_seeds decides
 
     # -- small helpers
 
@@ -336,8 +337,10 @@ class Adoption:
         A copy at the current version that differs is a founder's edit, and is left alone."""
         relative = "docs/domain-rules.md"
         full = self.path(relative)
+        shipped_path = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
         if not os.path.isfile(full):
             self.put_seed(relative, shipped, replace_when_unedited=False)
+            self.rules_document = shipped_path
             return
         current = read_bytes(full)
         if current == shipped:
@@ -350,12 +353,14 @@ class Adoption:
             self.put(relative, shipped, governed=False)
             self.say("note", relative, f"corpus version {have} → {want}; the copy it replaced is {kept}, "
                                        "so anything you wrote in it is still there")
+            # count from the document that will be there, so a --dry-run reports the real number
+            self.rules_document = shipped_path
             return
         self.say("kept (founder-edited)", relative, "differs from the shipped seed at the same corpus version; not touched")
 
     def rules_number(self):
         """verify_rules.py on the project's rules document (the corpus document when it has none)."""
-        document = self.path("docs/domain-rules.md")
+        document = self.rules_document or self.path("docs/domain-rules.md")
         if not os.path.isfile(document):
             document = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
         done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "verify_rules.py"), "--document", document,
