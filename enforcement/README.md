@@ -216,7 +216,10 @@ the one home; this is the shape:
   already has every one of these bindings in `PathClasses.swift`; they
   move to the JSON so the scanner and Coast read one table.
 - Scans ADDED lines of the diff for `block` signatures (a legacy line
-  nobody touched is not this change's fault); scans the whole tree for
+  nobody touched is not this change's fault; on the first push after
+  adoption the push hook starts the diff at the adoption commit, so lines
+  committed before the checks existed are legacy too — found on Coast, where
+  the other lane's commits landed between the measurement and the push); scans the whole tree for
   `ratchet` signatures and compares the count to `.coast/ratchet-baseline.json`
   (GOVERNING; the baseline may be lowered by a human, never raised); prints
   `advisory` counts without failing. The whole-tree pass belongs to the push

@@ -362,7 +362,16 @@ if wants rules-scan; then
     done
   fi
   [ -z "$bases" ] && bases=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree")
+  # The first push after adoption carries commits written before the checks existed. Lines
+  # added before the commit that adopted (the one that added .coast/platform) are legacy and
+  # belong to the baselines; the scan starts at the adoption commit. Found on Coast, where the
+  # other lane's commits landed between the measurement and the push.
+  since_adoption() {
+    adopted=$(git log --diff-filter=A --format=%H --reverse "$1..HEAD" -- .coast/platform 2>/dev/null | head -n 1)
+    if [ -n "$adopted" ]; then git rev-parse "$adopted^" 2>/dev/null || echo "$1"; else echo "$1"; fi
+  }
   for base in $bases; do
+    base=$(since_adoption "$base")
     run "rules-scan (added since $(git rev-parse --short "$base" 2>/dev/null || echo "$base"))" python3 "$checks/check_rules.py" "$base" HEAD --platform "$platform"
   done
   run "rules-scan (tree + ratchets)" python3 "$checks/check_rules.py" --tree --platform "$platform"

@@ -466,6 +466,27 @@ class HookTests(unittest.TestCase):
         self.assertIn(":jscpd:", out)
         self.assertIn("the push was refused", out)
 
+    def test_the_first_push_after_adoption_holds_only_lines_from_the_adoption_on(self):
+        # A literal committed BEFORE the adoption is legacy; one committed after is refused.
+        # The "remote" is a ref at the pre-adoption commit (a real push would meet the installed hook).
+        sh(self.project.path, "git", "remote", "add", "origin", self.project.path)
+        sh(self.project.path, "git", "update-ref", "refs/remotes/origin/main", "HEAD")
+        sh(self.project.path, "git", "branch", "-q", "--set-upstream-to=origin/main")
+        self.addCleanup(sh, self.project.path, "git", "remote", "remove", "origin")
+        # The literal is committed alone, before the adoption files (still untracked here) are.
+        self.project.write("Sources/App/Views/OldView.swift", PLANTED_VIEW.replace("HomeView", "OldView"))
+        sh(self.project.path, "git", "add", "Sources/App/Views/OldView.swift")
+        sh(self.project.path, "git", "-c", "core.hooksPath=.git/hooks", "commit", "-q", "-m", "before the checks existed")
+        self.project.commit("adopt")
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertEqual(code, 0, out)
+        self.project.write("Sources/App/Views/NewView.swift", PLANTED_VIEW.replace("HomeView", "NewView"))
+        self.project.commit("after")
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertEqual(code, 1, out)
+        self.assertIn("NewView.swift", out)
+        self.assertNotIn("OldView.swift", out)
+
     def test_pre_push_rules_scan_seat_runs_the_scanner_on_the_tree(self):
         code, out = self.project.hook("pre-push", "--seat", "rules-scan")
         self.assertEqual(code, 0, out)
