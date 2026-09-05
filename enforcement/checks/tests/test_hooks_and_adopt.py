@@ -206,7 +206,7 @@ class AdoptTests(unittest.TestCase):
         os.remove(record)
         code, out = self.project.hook("pre-push", "--seat", "tests", env=env)
         self.assertEqual(code, 0, out)
-        self.assertIn("OK ratchet tests-missing: 1 in the tree, equal to the baseline", out)
+        self.assertIn("OK ratchet tests-missing: 1 reported, equal to the baseline", out)
         with open(record, encoding="utf-8") as handle:
             self.assertNotIn(" test ", " " + handle.read().replace("-list -json", "") + " ", "no test action ran")
 
@@ -263,7 +263,7 @@ class AdoptTests(unittest.TestCase):
         code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="2", **overrides))
         self.assertEqual(code, 0, out)
         self.assertIn("gate: build (warnings ratchet", out)
-        self.assertIn("OK ratchet build-warnings: 2 in the tree, equal to the baseline", out)
+        self.assertIn("OK ratchet build-warnings: 2 reported, equal to the baseline", out)
         with open(record, encoding="utf-8") as handle:
             self.assertIn("swift package describe", handle.read(), "a ratcheted build recompiles the package's own targets")
         with open(record, encoding="utf-8") as handle:
@@ -273,6 +273,12 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("FAIL ratchet .coast/ratchet-baseline.json:0:build-warnings:", out)
         self.assertIn("[C-4]", out)
         self.assertIn("the push was refused", out)
+        # A FALL passes: a build prints warnings only for what it recompiles, so a smaller
+        # number is an improvement or a warm build — never a reason to refuse a push.
+        code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="0", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("below the baseline of 2", out)
+        self.assertIn("lower the baseline", out)
 
     def test_adopt_measure_tools_writes_the_tool_baselines_from_what_the_tools_report(self):
         overrides, _ = self._stub_tools()

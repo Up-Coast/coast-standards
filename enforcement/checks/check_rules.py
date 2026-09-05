@@ -323,17 +323,48 @@ def tool_ratchet_rule(signature_id, platform):
 
 
 def judge_tool_ratchet(signature_id, count, platform, today):
-    """Print the ratchet line (and the FAIL line on a refusal) for a tool's count; the exit code."""
+    """Print the ratchet line (and the FAIL line on a refusal) for a tool's count; the exit code.
+
+    A tool's count is NOT the deterministic tree count a scanner ratchet judges: a build
+    prints warnings only for what it recompiles, so the number depends on the build's state
+    as much as on the code. The rule is "zero NEW warnings" (C-4), so only a RISE refuses.
+    A count below the baseline passes with a note offering to lower it — it is an
+    improvement or a warm build, and neither is a reason to refuse a push. (Two real
+    refusals produced this: keto-tracker measured 22 and rebuilt to 0, Coast measured 270
+    and rebuilt to 0 while another session held the build directory warm.)
+    """
     if signature_id not in TOOL_RATCHETS:
         print(f"check_rules.py: unknown tool ratchet '{signature_id}' (one of {', '.join(sorted(TOOL_RATCHETS))})")
         return 2
     rule = tool_ratchet_rule(signature_id, platform)
-    ok, words = ratchet_verdict(signature_id, count, load_baselines(), today or _dt.date.today())
-    print(f"{'OK' if ok else 'FAIL'} ratchet {signature_id}: {words} [{rule}]")
-    if ok:
+    entry = load_baselines().get(signature_id)
+    baseline = entry.get("count", 0) if entry else 0
+    deadline = entry.get("deadline") if entry else None
+    today = today or _dt.date.today()
+    if deadline:
+        try:
+            past = today > _dt.date.fromisoformat(deadline)
+        except ValueError:
+            print(f"FAIL ratchet {signature_id}: the baseline deadline '{deadline}' is not a date (YYYY-MM-DD) [{rule}]")
+            return 1
+        if past and count > 0:
+            print(f"FAIL ratchet {signature_id}: {count} reported and the baseline deadline {deadline} has passed "
+                  f"— this check is now blocking [{rule}]")
+            print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
+            return 1
+    if count > baseline:
+        print(f"FAIL ratchet {signature_id}: {count} reported, above the baseline of {baseline} "
+              f"— a change added one; the count may only fall [{rule}]")
+        print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
+        return 1
+    if count < baseline:
+        print(f"OK ratchet {signature_id}: {count} reported, below the baseline of {baseline} "
+              f"— nothing new; lower the baseline with adopt.py --measure-tools when the tree is quiet"
+              + (f"; deadline {deadline}" if deadline else "") + f" [{rule}]")
         return 0
-    print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
-    return 1
+    print(f"OK ratchet {signature_id}: {count} reported, equal to the baseline"
+          + (f"; deadline {deadline}" if deadline else "") + f" [{rule}]")
+    return 0
 
 
 # ---------------------------------------------------------------- matching

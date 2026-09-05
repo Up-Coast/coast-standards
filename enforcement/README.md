@@ -251,9 +251,14 @@ the one home; this is the shape:
   only for what it recompiles (found on keto-tracker's first push: measured 22,
   rebuilt 0, refused as a fall); SwiftPM drops the package's own targets' build
   products first, xcodebuild runs `clean build` — and hands the count to
-  `check_rules.py --ratchet <id> --count <n>`, which judges it with the one ratchet verdict: above the
-  baseline refuses, below it refuses until the baseline is lowered, past
-  the deadline anything above zero refuses. With no entry the seat is
+  `check_rules.py --ratchet <id> --count <n>`, which judges it as a TOOL ratchet, not a scanner one: above the
+  baseline refuses, past the deadline anything above zero refuses, but BELOW
+  the baseline passes with a note. A scanner counts a tree deterministically,
+  so a fall there must be recorded; a build prints warnings only for what it
+  recompiles, so a smaller number is an improvement or a warm build and
+  neither is a reason to refuse a push (keto-tracker measured 22 and rebuilt
+  to 0; Coast measured 270 and rebuilt to 0 while another session held its
+  build directory warm — both pushes were refused for nothing). With no entry the seat is
   strict (`-warnings-as-errors`, `swift-format lint --strict`, `swiftlint
   --strict`), so a fresh
   repository is held at zero from its first push; a count of zero at
