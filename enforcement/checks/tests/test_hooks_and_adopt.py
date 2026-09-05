@@ -458,6 +458,11 @@ class HookTests(unittest.TestCase):
         code, out = self.project.hook("pre-push", "--seat", "jscpd", env=env)
         self.assertEqual(code, 0, out)
         self.assertIn("gate: jscpd (no new clones)", out)
+        # A repeated block in a plan or a note is not duplicated code: not a clone.
+        self.project.write("docs/plan.md", "## Steps\n" + "\n".join(f"- step {i}: compute the value, add it to the total, log it" for i in range(20)) + "\n")
+        self.project.write("docs/notes.md", "## Steps again\n" + "\n".join(f"- step {i}: compute the value, add it to the total, log it" for i in range(20)) + "\n")
+        code, out = self.project.hook("pre-push", "--seat", "jscpd", env=env)
+        self.assertEqual(code, 0, out)
         # A copied 24-line block is a new clone: refused in the seat's own line.
         self.project.write("Sources/App/Two.swift", "import Foundation\nfunc two(input: Int) -> Int {\n    var total = 0\n" + BLOCK + "    return total\n}\n")
         code, out = self.project.hook("pre-push", "--seat", "jscpd", env=env)

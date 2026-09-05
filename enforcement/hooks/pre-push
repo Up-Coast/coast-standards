@@ -424,7 +424,8 @@ print("past" if past else "open")
       echo "FAIL pre-push $baseline:0:jscpd: the baseline deadline is not a date (YYYY-MM-DD)" >&2
       return 1 ;;
   esac
-  ignore='**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,**/*.min.js,**/*.lock,**/Package.resolved'
+  # code only — keep in step with JSCPD_IGNORE in enforcement/adopt.py
+  ignore='**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,**/*.min.js,**/*.lock,**/Package.resolved,**/*.md,**/*.markdown,**/*.txt,**/*.json,**/*.jsonl,**/*.yml,**/*.yaml,**/*.toml,**/*.html,**/*.svg,**/*.xml,**/*.plist,**/*.strings,**/*.xcstrings,**/*.stringsdict'
   scratch=${TMPDIR:-/tmp}/coast-jscpd.$$
   mkdir -p "$scratch"
   if [ "$verdict" = past ]; then

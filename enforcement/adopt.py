@@ -93,9 +93,13 @@ PLATFORMS = ("ios", "macos", "android", "react-native", "web", "python")
 RATCHET_DAYS = 90
 JSCPD_PIN = "5.1.2"
 JSCPD_MIN_TOKENS = "50"
+# Code only: DRY-5 is about duplicated code, and a plan, a transcript or a data file
+# repeats itself on purpose (a handoff note on Coast read as ten new clones).
+# Keep in step with the `ignore=` line of enforcement/hooks/pre-push.
 JSCPD_IGNORE = ("**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,"
                 "**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,"
-                "**/*.min.js,**/*.lock,**/Package.resolved")
+                "**/*.min.js,**/*.lock,**/Package.resolved,"
+                "**/*.md,**/*.markdown,**/*.txt,**/*.json,**/*.jsonl,**/*.yml,**/*.yaml,**/*.toml,**/*.html,**/*.svg,**/*.xml,**/*.plist,**/*.strings,**/*.xcstrings,**/*.stringsdict")
 BLOCK_BEGIN = "<!-- up-coast-standards: begin"
 BLOCK_END = "<!-- up-coast-standards: end -->"
 SECRET_IDS = {"secret-literal", "secret-file"}
