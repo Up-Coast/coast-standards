@@ -68,6 +68,12 @@ use the framework's own mechanism rather than inventing one that fights it.
 For a backend that means the framework's dependency injection, its migration
 system, its validation layer, its task queue — not a hand-rolled substitute.
 
+**The checks travel with the rules.** Every rule in every file names the check that
+holds it (`[check: …]`), and `enforcement/adopt.py` installs the same scanner, hooks and
+linter configs whatever the type; the platform file decides which signatures apply (the
+Python file for types B and C, the app file for A). The "held by a machine N of M" line
+in a project's `CLAUDE.md` is computed from that project's own `docs/domain-rules.md`.
+
 **Security applies everywhere, but the weight shifts.** For an app, the
 emphasis is storage, transport, and platform permissions. For a backend it is
 authorization on every endpoint, injection, and secrets. Read

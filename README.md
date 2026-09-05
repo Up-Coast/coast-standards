@@ -28,7 +28,7 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
 | `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
 | `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
-| `enforcement/` | **The design and build plan for making these rules enforced by machines** — the scanner, the linter configs, the git hooks, the Claude Code hooks, and `adopt.py` for any project (filed 2026-09-03). Read `enforcement/README.md` before touching any rule's check. Built so far: `enforcement/checks/verify_rules.py`, which prints the honest number per document ("held by a machine N of M") and fails when a rule names no check or names one nothing runs. |
+| `enforcement/` | **How these rules are held by machines** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("held by a machine N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and Abbey's three app repositories (September 2026). |
 | `.githooks/` | This repo's own pre-commit hook: the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
 | `examples/` | Reference snapshots of real engagements — not rules, just what a project actually delivered, kept for scoping future client work by rule of thumb |
 | `skills/` | The BuilderOS skills (BuildGreatProducts/builder-os, MIT), vendored verbatim |
@@ -50,13 +50,45 @@ open-source BuilderOS skill set that Coast's build loop wraps.
    for Claude Code sessions is `skills/build-loop-claude-code/`.
 5. The numbered files in `rules/` are read in place — reference this repo's path from the
    project CLAUDE.md rather than copying them, so improvements land everywhere at once.
-6. Run `python3 enforcement/adopt.py <project-dir>` (from this repo; `--dry-run` first if
-   you like). It installs the checks under `Scripts/checks/`, the three git hooks under
-   `.githooks/` with `core.hooksPath` set, the platform's linter seeds, the ratchet and
-   jscpd baselines under `.coast/`, and the standards block in the project's `CLAUDE.md`
-   with the "held by a machine" number. Re-run it to take a newer version — it replaces
-   governed files, keeps anything you edited, and changes nothing when nothing changed.
-   The programs the hooks expect are listed in `enforcement/TOOLCHAIN.md`.
+6. Run `python3 enforcement/adopt.py <project-dir> --measure-tools` (from this repo;
+   `--dry-run` first if you like). It installs the checks under `Scripts/checks/`, the
+   three git hooks under `.githooks/` with `core.hooksPath` set, the Claude Code session
+   hooks (`Scripts/hooks/claude-hook.py` and `.claude/settings.json`), the platform's
+   linter seeds, `docs/domain-rules.md` when the project has none, the baselines under
+   `.coast/`, and the standards block in the project's `CLAUDE.md` with the "held by a
+   machine" number. `--measure-tools` builds the project once so an existing repository's
+   warnings, formatter and linter findings — and a missing test target — start as
+   baselines instead of refusing the first push. Re-run it to take a newer version — it
+   replaces governed files, keeps anything you edited, lowers a baseline that fell, and
+   changes nothing when nothing changed. The programs the hooks expect are listed in
+   `enforcement/TOOLCHAIN.md`.
+
+## How enforcement works, in one screen
+
+Every rule in `rules/` ends with a `[check: …]` tag naming what holds it, and the tag
+puts the rule in one of five bins — **machine** (a check refuses the change: the scanner,
+the linter with the shipped config, a tool the push gate runs, a hook), **partly** (a
+machine check and a reviewer share it), **advisory** (the scanner reports it, nothing
+fails), **reviewer** (only a mind can judge it; every review returns a row per rule with
+evidence), **process** (held by the pipeline or by a person). `verify_rules.py` counts the
+bins and fails the commit when a rule names no check or names one nothing runs; the
+corpus stands at **held by a machine 170 of 643** (4 September 2026), and each project's
+own number comes from its `docs/domain-rules.md`.
+
+What refuses, and where: `.githooks/pre-commit` (the scanner on the staged diff — added
+lines only, in seconds), `.githooks/commit-msg` (a subject under 100 characters; an agent
+session's commit names its model), `.githooks/pre-push` (build, tests, lint, format, the
+scanner on everything added since the remote and on the whole tree, the doc-comment count,
+jscpd, the protected-main ruleset), and the Claude Code hooks in `.claude/settings.json`
+(no edits to the files that define the checks, no `cd X && …` chains, no infrastructure
+commands, no `--no-verify` or force-push, the staged scan before a commit, the scanner on
+every edited file, no ending a turn with unpushed work).
+
+An existing repository adopts without a rewrite day: the counts of what it already
+violates — the scanner's ratchets, the build's warnings, the formatter's and linter's
+findings, a missing test target — are written once to `.coast/ratchet-baseline.json` with
+a 90-day deadline. A change may lower a count, never raise it; past the deadline the check
+blocks. Never `--no-verify`; the governed files are not an agent's to edit.
 
 ## Provenance
 

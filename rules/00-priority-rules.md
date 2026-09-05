@@ -83,11 +83,12 @@ assumption gets fixed at one call site and survives at seven others, so the "fix
 keeps returning. Origin: `origin/main` was hardcoded across eight files in Coast; the
 repo's real default branch was different; nothing could build.
 
-Enforcement: reviews grep the diff for known environment literals (branch names like
-"main"/"master", absolute paths, hardcoded hosts and ports) exactly as they grep for
-inlined strings and styling literals — and the shipped per-platform rules files carry
-this as a checkable rule (C-5 / ARCH-8), so customer-project reviewers enforce it too.
-[check: scan:env-literal]
+Enforcement: the rules scanner's `env-literal` signature (`Scripts/checks/check_rules.py`,
+installed by `enforcement/adopt.py`) refuses a known environment literal — a branch name
+like "main"/"master", an absolute path, a hardcoded host or port — on any added line, at
+commit and at push, the same way `ui-string-literal` and `styling-literal` refuse inlined
+copy and styling; the shipped per-platform rules files carry it as a checkable rule
+(C-5 / ARCH-8), so it holds in customer projects too. [check: scan:env-literal]
 
 ## 3. OWASP rules are followed
 

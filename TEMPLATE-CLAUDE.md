@@ -20,6 +20,11 @@ This project's checkable rule corpus lives at `docs/domain-rules.md` (seeded fro
 `rules/platform/domain-rules-<PLATFORM>.md`). Reviews check every change against exactly
 that file.
 
+The enforcement block — what the git and Claude Code hooks refuse, the "rules held by a
+machine N of M" number, the governing files — is written and kept current by
+`enforcement/adopt.py` between `up-coast-standards: begin` / `end` markers; do not write
+it by hand, and edit this file outside those markers only.
+
 ## This project
 
 - **What it is:** <one paragraph>
