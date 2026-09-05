@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
 from contextlib import redirect_stdout
@@ -497,6 +498,32 @@ class HookTests(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("NewView.swift", out)
         self.assertNotIn("OldView.swift", out)
+
+    def test_two_pushes_in_one_checkout_are_serialised_and_a_stale_lock_is_broken(self):
+        # A held lock makes the second push wait rather than build alongside the first.
+        lock = os.path.join(self.project.path, ".git", "coast-push.lock")
+        os.makedirs(lock, exist_ok=True)
+        with open(os.path.join(lock, "started"), "w") as handle:
+            handle.write(str(int(time.time())))
+        waiting = subprocess.Popen(["sh", os.path.join(self.project.path, ".githooks", "pre-push"), "origin", "x"],
+                                   cwd=self.project.path, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=clean_env())
+        time.sleep(3)
+        self.assertIsNone(waiting.poll(), "the second push must wait for the lock, not run alongside the first")
+        waiting.kill()
+        self.assertIn("another push is running in this checkout", waiting.communicate()[0])
+        shutil.rmtree(lock, ignore_errors=True)
+        # A lock left behind by a dead push is broken, not waited on for ever.
+        os.makedirs(lock, exist_ok=True)
+        with open(os.path.join(lock, "started"), "w") as handle:
+            handle.write(str(int(time.time()) - 7200))
+        stale = subprocess.Popen(["sh", os.path.join(self.project.path, ".githooks", "pre-push"), "origin", "x"],
+                                 cwd=self.project.path, stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=clean_env())
+        time.sleep(3)
+        stale.kill()
+        self.assertIn("breaking a push lock left behind", stale.communicate()[0])
+        shutil.rmtree(lock, ignore_errors=True)
 
     def test_pre_push_rules_scan_seat_runs_the_scanner_on_the_tree(self):
         code, out = self.project.hook("pre-push", "--seat", "rules-scan")

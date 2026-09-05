@@ -183,6 +183,12 @@ class Adoption:
         self.lines = []
         self.changed = 0
         self.first_adoption = not os.path.isfile(self.path(".coast/platform"))
+        if self.measure_tools is None:
+            # A first adoption always measures. An existing repository has warnings, lint
+            # findings and formatter findings already; without their baselines its first
+            # push meets a strict toolchain and refuses everything, which is not a choice
+            # anyone should have to make — it is just what adopting an existing repo means.
+            self.measure_tools = "build,format,lint,tests" if self.first_adoption else ""
         self.seeds = self.load_json(".coast/seeds.json") or {}
         self.standards_commit = self.standards_version()
 
@@ -311,9 +317,41 @@ class Adoption:
             self.put_seed(dest, read_bytes(source))
         rules_doc = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
         if os.path.isfile(rules_doc):
-            self.put_seed("docs/domain-rules.md", read_bytes(rules_doc), replace_when_unedited=False)
+            self.put_rules_document(read_bytes(rules_doc))
         else:
             self.say("note", "docs/domain-rules.md", f"no rules document for {self.platform} in the standards repo")
+
+    @staticmethod
+    def corpus_version(data):
+        """The `<!-- coast-rules-version: N -->` stamp on the document's first line, or None."""
+        found = re.search(rb"coast-rules-version:\s*(\d+)", data[:400])
+        return int(found.group(1)) if found else None
+
+    def put_rules_document(self, shipped):
+        """docs/domain-rules.md is founder-owned, and it is also VERSIONED. A copy carrying an
+        older corpus version is not a founder's edit to preserve — it is last year's rule book,
+        and leaving it means the project's rules name checks that do not exist yet (ccm-replacement
+        sat at version 7 with three check tags, so its number read 0 of 54). An older stamp is
+        upgraded and the copy it replaces is written beside it, so nothing a founder wrote is lost.
+        A copy at the current version that differs is a founder's edit, and is left alone."""
+        relative = "docs/domain-rules.md"
+        full = self.path(relative)
+        if not os.path.isfile(full):
+            self.put_seed(relative, shipped, replace_when_unedited=False)
+            return
+        current = read_bytes(full)
+        if current == shipped:
+            self.say("unchanged", relative, "seed")
+            return
+        have, want = self.corpus_version(current), self.corpus_version(shipped)
+        if have is not None and want is not None and have < want:
+            kept = f"docs/domain-rules.v{have}.md"
+            self.put(kept, current, governed=False)
+            self.put(relative, shipped, governed=False)
+            self.say("note", relative, f"corpus version {have} → {want}; the copy it replaced is {kept}, "
+                                       "so anything you wrote in it is still there")
+            return
+        self.say("kept (founder-edited)", relative, "differs from the shipped seed at the same corpus version; not touched")
 
     def rules_number(self):
         """verify_rules.py on the project's rules document (the corpus document when it has none)."""
@@ -365,17 +403,27 @@ class Adoption:
         found = sorted(set(re.findall(r"^FAIL rules (\S+?):\d+:second-theme-file:", done.stdout, re.M)))
         if not found:
             return
+        # The theme is the project's design-token home, not whichever path sorts first
+        # (ccm-replacement's tokens live in src/styles/, and alphabetical order picked
+        # src/lib/email/tokens.ts). Rank by where a token file actually lives, then bind
+        # EVERY token file in that folder: tokens.css and tokens.ts beside each other are
+        # one token set in two formats, not a second theme.
+        found.sort(key=lambda path: (-self.theme_rank(path), path))
         theme = found[0]
         folder = os.path.dirname(theme)
-        classes = {"theme": [theme]}
+        siblings = [f for f in found if os.path.dirname(f) == folder] if folder else [theme]
+        classes = {"theme": siblings}
         if folder:
             classes["ui_lib"] = [folder + "/**"]
         self.put_json(".coast/paths.json", {
             "_comment": "This project's own path-class bindings, merged over the platform's defaults (enforcement/README.md section 4.2). Written once by adopt.py from the theme file it found; a founder edits it from here.",
             "platforms": {self.platform: {"classes": classes}}})
-        self.say("note", ".coast/paths.json", f"bound the theme file {theme}" + (f" (the folder {folder}/ is the UI library)" if folder else ""))
-        if len(found) > 1:
-            self.say("note", ".coast/paths.json", "other theme-shaped files still refuse as second theme files: " + ", ".join(found[1:]))
+        self.say("note", ".coast/paths.json", "bound the theme " + ", ".join(siblings)
+                 + (f" (the folder {folder}/ is the UI library)" if folder else ""))
+        elsewhere = [f for f in found if f not in siblings]
+        if elsewhere:
+            self.say("note", ".coast/paths.json", "theme-shaped files outside that folder still refuse as second theme files: "
+                     + ", ".join(elsewhere))
 
     def measure_tool_counts(self):
         """The counts the pre-push tools report in --measure mode (the installed hook is the one
@@ -400,6 +448,20 @@ class Adoption:
         held = {e.get("id") for e in existing.get("baselines", []) if isinstance(e, dict)}
         # a count of zero writes nothing (the seat stays strict) unless an entry exists to lower
         return {k: v for k, v in counts.items() if v > 0 or k in held}
+
+    @staticmethod
+    def theme_rank(path):
+        """How much a path looks like the project's design-token home. Higher wins."""
+        lowered = path.lower()
+        score = 0
+        for weight, marker in enumerate(("/styles/", "/style/", "/theme/", "/themes/", "/designsystem/",
+                                         "/design-system/", "/design/", "/tokens/")):
+            if marker in lowered:
+                score = max(score, 20 - weight)
+        name = os.path.basename(lowered)
+        if name.startswith(("tokens.", "theme.", "colors.", "palette.")):
+            score += 5
+        return score
 
     def write_ratchet_baseline(self):
         done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--tree", "--platform", self.platform,
@@ -531,9 +593,9 @@ def main(argv=None):
     parser.add_argument("--secret-scan", action="store_true", help="run the tracked-tree secret scan even after the first adoption")
     parser.add_argument("--jscpd-bin", help="a jscpd binary to use (default: JSCPD_BIN, PATH, then npx --no-install)")
     parser.add_argument("--measure-tools", nargs="?", const="build,format,lint,tests", metavar="SEATS",
-                        help="run the pre-push seats in counting mode and write their counts as baselines (build-warnings, "
-                             "format-findings, lint-findings, tests-missing); SEATS narrows it, e.g. --measure-tools format,lint "
-                             "to re-measure without the build; slow without it — it builds the project")
+                        help="re-measure the tool baselines (build-warnings, format-findings, lint-findings, tests-missing). "
+                             "A FIRST adoption measures them anyway; this forces it on a later run. SEATS narrows the work, "
+                             "e.g. --measure-tools format,lint to re-measure without building")
     args = parser.parse_args(argv)
 
     project = os.path.abspath(args.project)

@@ -83,6 +83,60 @@ wants() {
   esac
 }
 
+# ---------------------------------------------------------------- one gate at a time
+# Two sessions sharing one checkout ran their gates at the same time and hurt each other
+# twice over: their incremental builds crossed (a warning count read 0 because the other
+# build had just made everything current), and the slower push spent twenty-five minutes
+# only to be rejected by a ref lock the faster one had taken. The gate is serialised per
+# checkout with a lock directory, which mkdir creates atomically. After the wait the hook
+# checks whether the remote moved: if it did, it says so in seconds instead of building
+# for half an hour and losing the race again.
+lock="$(git rev-parse --git-common-dir)/coast-push.lock"
+
+release_push_lock() { rm -rf "$lock"; }
+
+take_push_lock() {
+  waited=0
+  while ! mkdir "$lock" 2>/dev/null; do
+    started=$(cat "$lock/started" 2>/dev/null || echo 0)
+    age=$(( $(date +%s) - started ))
+    if [ "$started" -eq 0 ] || [ "$age" -gt 3600 ]; then
+      printf 'gate: breaking a push lock left behind (%ss old)\n' "$age"
+      rm -rf "$lock"
+      continue
+    fi
+    [ "$waited" -eq 0 ] && printf 'gate: another push is running in this checkout — waiting for it to finish\n'
+    sleep 10
+    waited=$(( waited + 10 ))
+    if [ "$waited" -gt 2700 ]; then
+      echo "FAIL pre-push $lock:0:push-lock: another push has held this checkout for 45 minutes — check that it is still alive, then push again" >&2
+      return 1
+    fi
+  done
+  date +%s > "$lock/started"
+  trap 'release_push_lock' EXIT INT TERM
+  [ "$waited" -gt 0 ] && printf 'gate: the other push finished after %ss; starting this one\n' "$waited"
+  return 0
+}
+
+remote_still_ours() {
+  upstream=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
+  git fetch -q origin 2>/dev/null || return 0
+  moved=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
+  [ "$moved" = "$upstream" ] && return 0
+  if git merge-base --is-ancestor "$moved" HEAD 2>/dev/null; then
+    printf 'gate: the remote moved while this push waited, and this branch already contains it\n'
+    return 0
+  fi
+  echo "FAIL pre-push origin:0:remote-moved: the remote moved while this push waited — fetch and rebase, then push again. Nothing was built, so nothing was wasted." >&2
+  return 1
+}
+
+if [ "$seats" = all ]; then
+  take_push_lock || exit 1
+  remote_still_ours || exit 1
+fi
+
 run() {
   name=$1; shift
   printf 'gate: %s\n' "$name"

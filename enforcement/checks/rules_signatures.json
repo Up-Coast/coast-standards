@@ -412,7 +412,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {
@@ -1449,7 +1449,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {
@@ -2406,7 +2406,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {
@@ -3398,7 +3398,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {
@@ -4416,7 +4416,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {
@@ -5168,7 +5168,7 @@
           "files": [
             "**/*"
           ],
-          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])",
           "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source"
         },
         {

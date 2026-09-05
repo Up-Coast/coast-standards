@@ -573,6 +573,48 @@ restated in plain words so nobody has to reconstruct what was agreed.
    list stays in Coast's own plan folder, because that is where a session
    told "do the next Coast task" looks; it points here and restates nothing.
 
+### 4.7 What adopting an existing repository must not ask the founder
+
+Four things were offered to Abbey as decisions on 2026-09-05 and were not
+decisions at all — they were defects in `adopt.py`, and her answer was to fix
+them. Recorded because the pattern will recur: **if adoption produces a
+question whose answer is always the same, the answer belongs in the code.**
+
+- **Measuring is not optional.** An existing repository has warnings, linter
+  and formatter findings already. A first adoption now measures them and
+  writes their baselines without being asked; `--measure-tools` only forces a
+  re-measure later.
+- **A rules document at an older corpus version is not a founder's edit.** It
+  is last year's rule book, and keeping it means the project's rules name
+  checks that do not exist (ccm-replacement sat at version 7 with three check
+  tags, so its number read "0 of 54"). An older version stamp is upgraded and
+  the copy it replaced is written beside it as `docs/domain-rules.v<N>.md`, so
+  nothing a founder wrote is lost. A document at the CURRENT version that
+  differs is a founder's edit and is left alone.
+- **The theme is the design-token home, not whichever path sorts first.**
+  Candidates are ranked by where token files actually live (`styles/`,
+  `theme/`, `design-system/`, `tokens/`) and by name, and every token file in
+  the winning folder is bound — `tokens.css` and `tokens.ts` side by side are
+  one token set in two formats, not a second theme.
+- **An obvious test fake is not a secret.** A value beginning `test-`, `fake_`,
+  `dummy.`, `sample-`, `stub-` and the like is excused. A value shaped like a
+  real credential (`sk-ant-…`, `ghp_…`, `AKIA…`, a PEM header) is still
+  reported wherever it appears, including in tests, because that shape is
+  worth a human's glance every time.
+
+### 4.8 One gate at a time per checkout
+
+Two sessions sharing one working tree ran their gates concurrently and hurt
+each other twice: their incremental builds crossed, so a warning count read
+zero because the other build had just made everything current, and the slower
+push spent twenty-five minutes only to be rejected by a ref lock the faster
+one had taken. `pre-push` now serialises on a lock directory in the common git
+dir (`mkdir` is atomic; a lock with no start time, or older than an hour, is
+broken). After the wait it re-fetches: if the remote moved and this branch does
+not already contain it, the hook says so in seconds instead of building for
+half an hour and losing the race again. A `--seat` or `--measure` run takes no
+lock, so the tests are unaffected.
+
 ## 8. Limits of this document
 
 Verified from the code and from each tool's own documentation on
