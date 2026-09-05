@@ -307,6 +307,9 @@ TOOL_RATCHETS = {
     "format-findings": {
         "words": "formatter findings in the tree — a change added one; the count may only fall, and past the deadline the format check refuses any finding",
         "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+    "lint-findings": {
+        "words": "linter findings in the tree — a change added one; the count may only fall, and past the deadline the linter runs strict",
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
 }
 
 
@@ -549,7 +552,7 @@ def main(argv=None):
     parser.add_argument("--files", nargs="+")
     parser.add_argument("--tree", action="store_true")
     parser.add_argument("--paths-override", help="a project's own path-class bindings (default: .coast/paths.json when present)")
-    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings or format-findings (with --count)")
+    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings or lint-findings (with --count)")
     parser.add_argument("--count", type=int, help="the count the tool produced (with --ratchet)")
     parser.add_argument("--has-baseline", metavar="ID", help="exit 0 when the ratchet baseline carries an entry for ID, else 1")
     parser.add_argument("--today", help=argparse.SUPPRESS)

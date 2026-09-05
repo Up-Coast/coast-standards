@@ -19,8 +19,8 @@
 #                    past the deadline the switch comes back (decision 2)
 #   tests            the platform's test runner
 #   lint / format    the shipped linter configs, format in check mode; the
-#                    Swift formatter's findings ratchet the same way under a
-#                    `format-findings` entry
+#                    Swift linter's and formatter's findings ratchet the same
+#                    way under `lint-findings` / `format-findings` entries
 #   rules-scan       check_rules.py on the lines added since the remote,
 #                    then on the whole tree (tree signatures + ratchets)
 #   doc-comments     held on ADDED lines by the rules-scan seat (the scanner's
@@ -114,7 +114,7 @@ judge() {  # <id> <count>
 count_warnings() {  # <log> — distinct `file:line:col: warning:` lines
   grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: ' "$1" | sort -u | wc -l | tr -d ' '
 }
-count_format_findings() {  # <log> — swift-format's `file:line:col: warning|error:` lines
+count_format_findings() {  # <log> — swift-format's and swiftlint's `file:line:col: warning|error:` lines
   grep -cE '^[^ ]+:[0-9]+:[0-9]+: (warning|error): ' "$1" | tr -d ' '
 }
 # <id> <counter> <command…>: run the tool into a log, echo the log, count, judge.
@@ -194,7 +194,11 @@ case "$platform" in
     fi
     if wants lint; then
       need swiftlint "brew install swiftlint" || exit 1
-      run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
+      if ratcheted lint-findings; then
+        run "lint (findings ratchet)" ratcheted_run lint-findings count_format_findings swiftlint lint --quiet
+      else
+        run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
+      fi
     fi
     if wants format; then
       need swift-format "brew install swift-format" || exit 1

@@ -216,7 +216,8 @@ class AdoptTests(unittest.TestCase):
         self.addCleanup(shutil.rmtree, stub_dir, True)
         record = os.path.join(stub_dir, "calls.txt")
         for name, var, kind in (("swift", "STUB_WARNINGS", "warning: stubbed warning"),
-                                ("swift-format", "STUB_FINDINGS", "warning: [Indentation] stubbed finding")):
+                                ("swift-format", "STUB_FINDINGS", "warning: [Indentation] stubbed finding"),
+                                ("swiftlint", "STUB_LINT", "error: Identifier Name Violation: stubbed")):
             with open(os.path.join(stub_dir, name), "w", encoding="utf-8") as handle:
                 handle.write("#!/bin/sh\necho \"" + name + " $@\" >> " + json.dumps(record) + "\n"
                              "i=0\nwhile [ $i -lt ${" + var + ":-0} ]; do\n"
@@ -256,15 +257,23 @@ class AdoptTests(unittest.TestCase):
 
     def test_adopt_measure_tools_writes_the_tool_baselines_from_what_the_tools_report(self):
         overrides, _ = self._stub_tools()
-        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="2", STUB_FINDINGS="3")):
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="2", STUB_FINDINGS="3", STUB_LINT="4")):
             code, out = self.project.adopt("--measure-tools")
         self.assertEqual(code, 0, out)
         entries = self._baseline_entries()
         self.assertEqual((entries["build-warnings"]["count"], entries["build-warnings"]["deadline"]), (2, "2026-12-03"))
         self.assertEqual(entries["format-findings"]["count"], 3)
+        self.assertEqual(entries["lint-findings"]["count"], 4)
         self.assertIn("build-warnings measured 2", out)
+        # Under its entry the lint seat counts instead of running strict; one more finding refuses.
+        code, out = self.project.hook("pre-push", "--seat", "lint", env=clean_env(STUB_LINT="4", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: lint (findings ratchet)", out)
+        code, out = self.project.hook("pre-push", "--seat", "lint", env=clean_env(STUB_LINT="5", **overrides))
+        self.assertEqual(code, 1, out)
+        self.assertIn(":lint-findings:", out)
         # A re-measure that fell lowers the count; one that rose is not raised.
-        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="5")):
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="5", STUB_LINT="4")):
             code, out = self.project.adopt("--measure-tools")
         self.assertEqual(code, 0, out)
         entries = self._baseline_entries()
@@ -274,7 +283,7 @@ class AdoptTests(unittest.TestCase):
         # A clean project writes no tool entry at all: its seats stay strict.
         fresh = Project()
         self.addCleanup(fresh.cleanup)
-        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="0")):
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="0", STUB_LINT="0")):
             code, out = fresh.adopt("--measure-tools")
         self.assertEqual(code, 0, out)
         ids = {e["id"] for e in json.loads(fresh.read(".coast/ratchet-baseline.json"))["baselines"]}

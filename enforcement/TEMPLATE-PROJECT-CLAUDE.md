@@ -38,8 +38,8 @@ yours to edit:
   and the protected-main ruleset.
 - `.coast/ratchet-baseline.json` — the legacy counts the ratchet checks
   may only lower (the scanner's ratchets, and on a repository that came
-  with warnings or formatter findings, `build-warnings` and
-  `format-findings`); each carries a deadline after which the check blocks.
+  with warnings, linter or formatter findings, `build-warnings`,
+  `lint-findings` and `format-findings`); each carries a deadline after which the check blocks.
 - `.coast/platform`, `.coast/paths.json` (when present), `Scripts/checks/`.
 
 Never `--no-verify`. Never edit the files above. When a check is wrong,
