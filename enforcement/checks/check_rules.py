@@ -14,11 +14,12 @@ Usage::
 
     check_rules.py <base> <head> --platform <p>      # lines added between two commits
     check_rules.py <base> WORKTREE --platform <p>    # tracked changes since base + every untracked file
-    check_rules.py --staged --platform <p>           # the index (a pre-commit hook)
-    check_rules.py --files a b c --platform <p>      # whole files (an editor hook; every line is new)
+    check_rules.py --staged --platform <p>           # the index (a pre-commit hook); no ratchets, tree signatures on those files only
+    check_rules.py --files a b c --platform <p>      # whole files (an editor hook; every line is new); the same scope
     check_rules.py --tree --platform <p>             # no diff: only the tree-scope and ratchet signatures
     check_rules.py --ratchet <id> --count <n> --platform <p>   # a tool's count judged as a ratchet (build-warnings, format-findings)
     check_rules.py --has-baseline <id>               # exit 0 when .coast/ratchet-baseline.json carries an entry for <id>
+    … --only <id>[,<id>]                             # run only the named signatures (adopt.py's first-push secret scan)
 
 The platform also comes from ``COAST_PLATFORM``. Run from the repository
 root. Exit 0 = pass; any failure prints
@@ -310,6 +311,9 @@ TOOL_RATCHETS = {
     "lint-findings": {
         "words": "linter findings in the tree — a change added one; the count may only fall, and past the deadline the linter runs strict",
         "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+    "tests-missing": {
+        "words": "the project has no test target — tests come first (rules/06); add one and re-run adopt.py to lower this to zero; past the deadline the push refuses until a test target exists",
+        "rules": {"python": "06 tests-first"}, "rule": "06 tests-first"},
 }
 
 
@@ -469,13 +473,20 @@ class Scan:
                 for number, _ in hits:
                     self.fail(self.check_name(signature), path, number, signature["id"], signature["words"], signature["rule"])
 
-    def scan_tree(self, include_untracked, head):
+    def scan_tree(self, include_untracked, head, only=None):
+        """The tree-scope signatures and the ratchets. With ``only`` (the staged or named files of a
+        commit-time or editor-time scan) the tree-scope block signatures run over those files alone and
+        the ratchets are not judged at all — a count over the whole tree is the push's business, and
+        judging it at every commit and every edit made a large repository wait half a minute each time."""
         tree_signatures = [s for s in self.signatures if s.get("kind") != "builtin"
                            and (s.get("scope") == "tree" or s.get("severity") == "ratchet")]
         builtins = [s for s in self.signatures if s.get("kind") == "builtin" and s.get("scope") == "tree"]
+        if only is not None:
+            tree_signatures = [s for s in tree_signatures if s.get("severity") != "ratchet"]
+            builtins = []
         if not tree_signatures and not builtins:
             return
-        files = tree_files(include_untracked) if tree_signatures else []
+        files = (list(only) if only is not None else tree_files(include_untracked)) if tree_signatures else []
         baselines = load_baselines() if any(s.get("severity") == "ratchet" for s in tree_signatures) else {}
         contents = {}
         for signature in tree_signatures:
@@ -552,7 +563,8 @@ def main(argv=None):
     parser.add_argument("--files", nargs="+")
     parser.add_argument("--tree", action="store_true")
     parser.add_argument("--paths-override", help="a project's own path-class bindings (default: .coast/paths.json when present)")
-    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings or lint-findings (with --count)")
+    parser.add_argument("--only", metavar="ID[,ID]", help="run only these signature ids (adopt.py's first-push secret scan uses it; not a bypass — git never passes it)")
+    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings, lint-findings or tests-missing (with --count)")
     parser.add_argument("--count", type=int, help="the count the tool produced (with --ratchet)")
     parser.add_argument("--has-baseline", metavar="ID", help="exit 0 when the ratchet baseline carries an entry for ID, else 1")
     parser.add_argument("--today", help=argparse.SUPPRESS)
@@ -569,6 +581,13 @@ def main(argv=None):
         today = _dt.date.fromisoformat(args.today) if args.today else None
         return judge_tool_ratchet(args.ratchet, args.count, args.platform, today)
     signatures, paths = load_tables(args.platform, args.paths_override)
+    if args.only:
+        wanted = set(args.only.split(","))
+        signatures = [sig for sig in signatures if sig.get("id") in wanted]
+        missing = wanted - {sig.get("id") for sig in signatures}
+        if missing:
+            print(f"check_rules.py: --only names signatures the {args.platform} table does not have: {', '.join(sorted(missing))}")
+            return 2
     today = _dt.date.fromisoformat(args.today) if args.today else None
     scan = Scan(args.platform, signatures, paths, today)
 
@@ -592,7 +611,7 @@ def main(argv=None):
         return 0
 
     scan.scan_added(changed, head)
-    scan.scan_tree(include_untracked, head)
+    scan.scan_tree(include_untracked, head, only=[path for path, _ in changed] if (args.staged or args.files) else None)
 
     for check, path, line, signature_id, words, rule in scan.advisories:
         print(f"ADVISORY {check} {path}:{line}:{signature_id}: {words} [{rule}]")

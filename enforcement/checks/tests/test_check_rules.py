@@ -290,6 +290,20 @@ class TreeRatchetAndAdvisoryTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("the baseline deadline 2026-12-03 has passed — this check is now blocking", out)
 
+    def test_staged_and_files_modes_leave_the_ratchets_to_the_push(self):
+        # Two ratchet hits in the tree and no baseline: --tree refuses, but a commit-time or
+        # editor-time scan judges only the lines and files it was given.
+        self.repo.write("Sources/App/A.swift", "// one\nlet a = 1\n")
+        self.repo.write("Sources/App/B.swift", "// two\nlet b = 2\n")
+        sh(self.repo.path, "git", "add", "-A")
+        code, out = self.repo.run("--tree", "--platform", "ios")
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet inline-comment", out)
+        code, out = self.repo.run("--staged", "--platform", "ios")
+        self.assertNotIn("ratchet", out)
+        code, out = self.repo.run("--files", "Sources/App/A.swift", "--platform", "ios")
+        self.assertNotIn("ratchet", out)
+
     def test_a_ratchet_with_no_baseline_entry_allows_nothing(self):
         self.repo.write("Sources/App/A.swift", "// one\n")
         self.repo.commit("one comment")

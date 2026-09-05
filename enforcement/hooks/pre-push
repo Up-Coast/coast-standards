@@ -17,7 +17,10 @@
 #                    switch and its warning count is a RATCHET: the rule is
 #                    "zero NEW warnings" (C-4), the count may only fall, and
 #                    past the deadline the switch comes back (decision 2)
-#   tests            the platform's test runner
+#   tests            the platform's test runner; an app adopted with no test
+#                    target at all carries a `tests-missing` entry (count 1,
+#                    with the deadline) instead of failing every push — the
+#                    real tests run the day a target exists (decision 2)
 #   lint / format    the shipped linter configs, format in check mode; the
 #                    Swift linter's and formatter's findings ratchet the same
 #                    way under `lint-findings` / `format-findings` entries
@@ -133,6 +136,30 @@ ratcheted_run() {
   judge "$id" "${n:-0}"
 }
 
+tests_missing() {  # 1 when the project has no test target at all, else 0 (the tests-missing baseline)
+  if [ -f Package.swift ]; then
+    swift package describe --type json 2>/dev/null | python3 -c 'import json,sys
+d = json.load(sys.stdin); sys.exit(0 if any(t.get("type") == "test" for t in d.get("targets", [])) else 1)' && echo 0 || echo 1
+  else
+    xcodebuild -list -json 2>/dev/null | python3 -c 'import json,sys
+d = json.load(sys.stdin); names = (d.get("project") or d.get("workspace") or {}).get("targets", [])
+sys.exit(0 if any(n.endswith(("Tests", "UITests")) for n in names) else 1)' && echo 0 || echo 1
+  fi
+}
+# <command…>: the tests seat. An existing app with no test target at all cannot pass
+# a test run; under a tests-missing entry (adopt.py --measure-tools wrote it, with the
+# deadline) the seat judges that instead, and runs the real tests the day a target exists.
+tests_seat() {
+  if ratcheted tests-missing; then
+    missing=$(tests_missing)
+    if [ "$missing" = 1 ] || [ "$measure" = 1 ]; then
+      judge tests-missing "$missing"
+      return $?
+    fi
+  fi
+  "$@"
+}
+
 xcode_scheme() {  # .coast/xcode-scheme, else the first scheme xcodebuild lists
   if [ -f .coast/xcode-scheme ]; then
     tr -d '[:space:]' < .coast/xcode-scheme
@@ -169,7 +196,7 @@ case "$platform" in
           run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
         fi
       fi
-      wants tests && run "tests" swift test
+      wants tests && run "tests" tests_seat swift test
     else
       # An Xcode project or workspace (xcodegen apps): build and test through
       # xcodebuild. The scheme is .coast/xcode-scheme, else the first scheme
@@ -189,7 +216,7 @@ case "$platform" in
             CODE_SIGNING_ALLOWED=NO
         fi
       fi
-      wants tests && run "tests" xcodebuild test -quiet -scheme "$scheme" \
+      wants tests && run "tests" tests_seat xcodebuild test -quiet -scheme "$scheme" \
           -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO
     fi
     if wants lint; then

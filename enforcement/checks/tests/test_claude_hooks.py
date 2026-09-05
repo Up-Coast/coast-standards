@@ -266,6 +266,16 @@ class ScanAtCommit(HookCase):
         self.repo.stage("Sources/App/HomeView.swift", CLEAN_VIEW)
         self.assertPassed(self.repo.bash("scan-at-commit", 'git commit -m "add home"'))
 
+    def test_a_commit_pointed_at_another_repository_is_not_scanned_here(self):
+        # The planted literal is staged HERE; a `git -C <elsewhere> commit` is that repository's business.
+        self.repo.stage("Sources/App/HomeView.swift", LITERAL_VIEW)
+        elsewhere = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, elsewhere, True)
+        subprocess.run(["git", "init", "-q", elsewhere], check=True)
+        self.assertPassed(self.repo.bash("scan-at-commit", f'git -C {elsewhere} commit -m "over there"'))
+        result = self.repo.bash("scan-at-commit", 'git commit -m "here"')
+        self.assertEqual(result.returncode, 2, "the same planted literal still refuses a commit in this repository")
+
     def test_a_command_that_is_not_a_commit_is_not_scanned(self):
         self.repo.stage("Sources/App/HomeView.swift", LITERAL_VIEW)
         self.assertPassed(self.repo.bash("scan-at-commit", "git status"))

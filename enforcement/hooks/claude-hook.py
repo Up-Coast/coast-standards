@@ -370,19 +370,43 @@ def force_push(event):
     return PASS
 
 
-def runs_git_commit(command):
+def git_commit_directories(command):
+    """One entry per `git commit` in the command: the directory git was pointed at with -C, else None."""
+    found = []
     for segment in segments(command):
         program, args = program_and_args(words(segment))
-        if program == "git" and git_subcommand(args)[0] == "commit":
-            return True
-    return False
+        if program != "git" or git_subcommand(args)[0] != "commit":
+            continue
+        directory = None
+        for index, token in enumerate(args[:-1]):
+            if token == "-C":
+                directory = os.path.join(directory, args[index + 1]) if directory else args[index + 1]
+        found.append(directory)
+    return found
+
+
+def runs_git_commit(command):
+    return bool(git_commit_directories(command))
 
 
 def scan_at_commit(event):
-    if not runs_git_commit(command_of(event)):
+    directories = git_commit_directories(command_of(event))
+    if not directories:
         return PASS
+    # A commit pointed at another repository (`git -C <dir> commit`) is that repository's business:
+    # its own installed checks scan it, and a repository with none is not scanned by ours.
     root = repo_root(event)
+    target = directories[-1]
     checks = checks_dir(root)
+    if target:
+        base = event.get("cwd") or os.getcwd()
+        pointed = run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(base, os.path.expanduser(target)))
+        pointed_root = pointed.stdout.strip() if pointed.returncode == 0 else None
+        if pointed_root and os.path.realpath(pointed_root) != os.path.realpath(root or ""):
+            root = pointed_root
+            checks = os.path.join(root, "Scripts", "checks")
+            if not os.path.isfile(os.path.join(checks, "check_rules.py")):
+                return PASS
     if not root or not checks:
         return PASS
     platform, _ = platform_of(root)

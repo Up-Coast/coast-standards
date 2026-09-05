@@ -219,7 +219,12 @@ the one home; this is the shape:
   nobody touched is not this change's fault); scans the whole tree for
   `ratchet` signatures and compares the count to `.coast/ratchet-baseline.json`
   (GOVERNING; the baseline may be lowered by a human, never raised); prints
-  `advisory` counts without failing.
+  `advisory` counts without failing. The whole-tree pass belongs to the push
+  (`--tree` and the diff modes): a commit-time (`--staged`) or editor-time
+  (`--files`) scan runs the tree-scope block signatures over the touched
+  files only and judges no ratchet — found on Coast's own adoption, where
+  every commit and every edit was waiting half a minute for a scan of
+  2,400 files, and was refused outright before the baseline existed.
 - Exceptions: Coast's plan-approved deviations (the native-patterns
   mechanism, unchanged) and, for repos without a plan, an
   `exceptions` list in the governing rules file — `{id, path, reason,
@@ -234,7 +239,10 @@ the one home; this is the shape:
   in counting mode (`pre-push --measure build,format,lint`, which prints
   `MEASURE <id> <count>` instead of judging) and records the build's
   distinct warnings as `build-warnings`, the formatter's findings as
-  `format-findings` and the linter's as `lint-findings` in the same
+  `format-findings`, the linter's as `lint-findings` and, for an app with
+  no test target at all, `tests-missing` (count 1: the tests seat judges
+  that entry instead of a test action the project does not have, and runs
+  the real tests the day a target exists) in the same
   `.coast/ratchet-baseline.json`, with the same 90-day deadline. From then on the seat runs the tool without its
   strict switch and hands the count to `check_rules.py --ratchet <id>
   --count <n>`, which judges it with the one ratchet verdict: above the

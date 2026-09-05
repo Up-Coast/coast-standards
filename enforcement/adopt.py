@@ -35,9 +35,10 @@ What it installs, and who owns each file afterwards:
   deadline 90 days from the day it was written and never moved here):
   ``.coast/ratchet-baseline.json`` from the scanner's current tree counts
   (``check_rules.py --tree``) and, with ``--measure-tools``, from the tools
-  the pre-push battery runs (``.githooks/pre-push --measure build,format,lint``:
+  the pre-push battery runs (``.githooks/pre-push --measure build,format,lint,tests``:
   the build's distinct warnings as ``build-warnings``, the formatter's
-  findings as ``format-findings``, the linter's as ``lint-findings`` — the rule is "zero NEW warnings", so a
+  findings as ``format-findings``, the linter's as ``lint-findings``, and
+  ``tests-missing`` 1 for a project with no test target at all — the rule is "zero NEW warnings", so a
   repository that already carries some ratchets them down instead of being
   refused wholesale; a count of zero writes nothing and the seat stays
   strict); ``.coast/jscpd-baseline.json`` from jscpd's
@@ -384,7 +385,7 @@ class Adoption:
         env = dict(os.environ, COAST_CHECKS_DIR=self.path(PROJECT_CHECKS_DIR))
         for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX"):
             env.pop(name, None)
-        done = subprocess.run(["sh", hook, "--measure", "build,format,lint"], cwd=self.project, capture_output=True, text=True, env=env)
+        done = subprocess.run(["sh", hook, "--measure", "build,format,lint,tests"], cwd=self.project, capture_output=True, text=True, env=env)
         counts = {m.group(1): int(m.group(2)) for m in re.finditer(r"^MEASURE (\S+) (\d+)$", done.stdout, re.M)}
         if done.returncode != 0:
             failed = [line for line in (done.stdout + done.stderr).splitlines() if line.startswith(("FAIL ", "gate: ")) and "failed" in line]
@@ -490,7 +491,8 @@ class Adoption:
         for start in range(0, len(files), 400):
             chunk = files[start:start + 400]
             done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--platform", self.platform,
-                                   "--files", *chunk], cwd=self.project, capture_output=True, text=True)
+                                   "--only", ",".join(sorted(SECRET_IDS)), "--files", *chunk],
+                                  cwd=self.project, capture_output=True, text=True)
             for line in done.stdout.splitlines():
                 if line.startswith("FAIL ") and any(f":{sid}:" in line for sid in SECRET_IDS):
                     findings.append(line)

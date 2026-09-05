@@ -182,7 +182,8 @@ class AdoptTests(unittest.TestCase):
         record = os.path.join(stub_dir, "calls.txt")
         stub = os.path.join(stub_dir, "xcodebuild")
         with open(stub, "w", encoding="utf-8") as handle:
-            handle.write("#!/bin/sh\necho \"$@\" >> " + json.dumps(record) + "\nexit 0\n")
+            handle.write("#!/bin/sh\necho \"$@\" >> " + json.dumps(record) + "\n"
+                         "if [ \"$1\" = -list ]; then echo '{\"project\": {\"targets\": [\"App\"]}}'; fi\nexit 0\n")
         os.chmod(stub, 0o755)
         env = clean_env(PATH=stub_dir + os.pathsep + os.environ.get("PATH", ""))
         code, out = self.project.hook("pre-push", "--seat", "build", env=env)
@@ -193,6 +194,21 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("-scheme App", calls)
         self.assertIn("SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", calls)
         self.assertNotIn("swift build", out)
+        # No test target at all: measured as tests-missing 1, held with the deadline, and the
+        # seat judges that instead of running a test action the project does not have.
+        code, out = self.project.hook("pre-push", "--measure", "tests", env=env)
+        self.assertEqual(code, 0, out)
+        self.assertIn("MEASURE tests-missing 1", out)
+        with unittest.mock.patch.dict(os.environ, {"PATH": env["PATH"]}):
+            code, out = self.project.adopt("--measure-tools")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self._baseline_entries()["tests-missing"]["count"], 1)
+        os.remove(record)
+        code, out = self.project.hook("pre-push", "--seat", "tests", env=env)
+        self.assertEqual(code, 0, out)
+        self.assertIn("OK ratchet tests-missing: 1 in the tree, equal to the baseline", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertNotIn(" test ", " " + handle.read().replace("-list -json", "") + " ", "no test action ran")
 
     def test_adoption_binds_an_existing_theme_file_so_it_is_not_a_second_theme(self):
         self.project.write("Sources/App/DesignSystem/Theme.swift", "import SwiftUI\nenum Theme { static let accent = Color.accentColor }\n")
@@ -220,6 +236,7 @@ class AdoptTests(unittest.TestCase):
                                 ("swiftlint", "STUB_LINT", "error: Identifier Name Violation: stubbed")):
             with open(os.path.join(stub_dir, name), "w", encoding="utf-8") as handle:
                 handle.write("#!/bin/sh\necho \"" + name + " $@\" >> " + json.dumps(record) + "\n"
+                             "if [ \"$1\" = package ]; then echo '{\"targets\": [{\"name\": \"AppTests\", \"type\": \"test\"}]}'; exit 0; fi\n"
                              "i=0\nwhile [ $i -lt ${" + var + ":-0} ]; do\n"
                              "  echo \"Sources/App/One.swift:$((i+1)):5: " + kind + " $i\"\n  i=$((i+1))\ndone\nexit 0\n")
             os.chmod(os.path.join(stub_dir, name), 0o755)
