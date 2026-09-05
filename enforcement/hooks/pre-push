@@ -162,6 +162,24 @@ d = json.load(sys.stdin); names = (d.get("project") or d.get("workspace") or {})
 sys.exit(0 if any(n.endswith(("Tests", "UITests")) for n in names) else 1)' && echo 0 || echo 1
   fi
 }
+# <scheme>: the iOS/macOS test run. The iPhone simulator first; when xcodebuild can see
+# no simulator at all (Dayletter on Abbey's Mac: only "Any iOS Simulator Device" and
+# "My Mac, Designed for iPad" were listed, every real device unmatched), the same tests
+# run on the Mac's Designed-for-iPad destination, which needs no simulator to boot.
+xcode_tests() {
+  scheme=$1
+  log=$(mktemp "${TMPDIR:-/tmp}/coast-tests.XXXXXX") || return 1
+  xcodebuild test -quiet -scheme "$scheme" -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+  status=$?
+  if [ $status -ne 0 ] && [ "$platform" = ios ] && grep -q 'Unable to find a device matching the provided destination' "$log"; then
+    printf 'tests: no iOS simulator matched, so the tests run on the Mac (Designed for iPad)\n'
+    xcodebuild test -quiet -scheme "$scheme" -destination 'platform=macOS,variant=Designed for [iPad,iPhone]' CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+    status=$?
+  fi
+  cat "$log"
+  rm -f "$log"
+  return $status
+}
 # <command…>: the tests seat. An existing app with no test target at all cannot pass
 # a test run; under a tests-missing entry (adopt.py --measure-tools wrote it, with the
 # deadline) the seat judges that instead, and runs the real tests the day a target exists.
@@ -254,8 +272,7 @@ case "$platform" in
             CODE_SIGNING_ALLOWED=NO
         fi
       fi
-      wants tests && run "tests" tests_seat xcodebuild test -quiet -scheme "$scheme" \
-          -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO
+      wants tests && run "tests" tests_seat xcode_tests "$scheme"
     fi
     if wants lint; then
       need swiftlint "brew install swiftlint" || exit 1
