@@ -195,8 +195,29 @@ xcode_build_destination() {
 
 xcode_test_destination() {
   if [ "$platform" = "macos" ]; then echo "platform=macOS"; return; fi
-  name=$(xcrun simctl list devices available 2>/dev/null | awk -F'[()]' '/iPhone/ {sub(/^ +/, "", $1); print $1; exit}' | sed 's/ *$//')
-  echo "platform=iOS Simulator,name=${name:-iPhone 16}"
+  # The iPhone simulator on the NEWEST installed iOS runtime, by id: a device on an older
+  # runtime than the app's deployment target is invisible to xcodebuild (Dayletter, iOS 26,
+  # with iPhone 16 on iOS 18 — "no available devices matched the request").
+  udid=$(xcrun simctl list devices available -j 2>/dev/null | python3 -c 'import json, sys
+devices = json.load(sys.stdin)["devices"]
+def version(runtime):
+    tail = runtime.rsplit("iOS-", 1)[-1] if "iOS-" in runtime else ""
+    return tuple(int(part) for part in tail.split("-") if part.isdigit())
+best = None
+for runtime, entries in devices.items():
+    if "iOS" not in runtime:
+        continue
+    for device in entries:
+        if "iPhone" in device.get("name", "") and device.get("isAvailable", True):
+            key = (version(runtime), device["name"])
+            if best is None or key > best[0]:
+                best = (key, device["udid"])
+print(best[1] if best else "")' 2>/dev/null)
+  if [ -n "$udid" ]; then
+    echo "platform=iOS Simulator,id=$udid"
+  else
+    echo "platform=iOS Simulator,name=iPhone 16"
+  fi
 }
 
 # ------------------------------------------------------------------ build → tests → lint → format
