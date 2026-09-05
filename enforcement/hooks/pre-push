@@ -114,6 +114,22 @@ judge() {  # <id> <count>
   fi
   python3 "$checks/check_rules.py" --ratchet "$1" --count "$2" --platform "$platform"
 }
+# A warning count is only comparable with the baseline on a FULL build: an incremental
+# build prints warnings only for the files it recompiles, so it would read as a fall
+# (refused: "lower the baseline") or hide a rise. Ratcheted builds therefore recompile
+# everything of the project's own — SwiftPM drops the package's own targets' build
+# products (dependencies stay built), xcodebuild runs `clean build`.
+own_targets_rebuild() {
+  names=$(swift package describe --type json 2>/dev/null | python3 -c 'import json, sys
+print(" ".join(t["name"] for t in json.load(sys.stdin).get("targets", [])))' 2>/dev/null) || names=""
+  if [ -z "$names" ]; then
+    swift package clean >/dev/null 2>&1
+    return 0
+  fi
+  for name in $names; do
+    rm -rf ".build/debug/$name.build"
+  done
+}
 count_warnings() {  # <log> — distinct `file:line:col: warning:` lines
   grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: ' "$1" | sort -u | wc -l | tr -d ' '
 }
@@ -190,7 +206,8 @@ case "$platform" in
       # A Swift package: build and test through SwiftPM.
       if wants build; then
         if ratcheted build-warnings; then
-          run "build (warnings ratchet)" ratcheted_run build-warnings count_warnings swift build
+          own_targets_rebuild
+          run "build (warnings ratchet, the package's own targets rebuilt)" ratcheted_run build-warnings count_warnings swift build
         else
           # warnings-as-errors: the Swift build fails on any warning.
           run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
@@ -206,8 +223,8 @@ case "$platform" in
       scheme=$(xcode_scheme) || exit 1
       if wants build; then
         if ratcheted build-warnings; then
-          run "build (warnings ratchet)" ratcheted_run build-warnings count_warnings \
-            xcodebuild build -quiet -scheme "$scheme" -destination "$(xcode_build_destination)" \
+          run "build (warnings ratchet, clean build)" ratcheted_run build-warnings count_warnings \
+            xcodebuild clean build -quiet -scheme "$scheme" -destination "$(xcode_build_destination)" \
             CODE_SIGNING_ALLOWED=NO
         else
           # warnings-as-errors: SWIFT_TREAT_WARNINGS_AS_ERRORS fails the build on any warning.

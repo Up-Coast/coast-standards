@@ -262,8 +262,10 @@ class AdoptTests(unittest.TestCase):
         os.remove(record)
         code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="2", **overrides))
         self.assertEqual(code, 0, out)
-        self.assertIn("gate: build (warnings ratchet)", out)
+        self.assertIn("gate: build (warnings ratchet", out)
         self.assertIn("OK ratchet build-warnings: 2 in the tree, equal to the baseline", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertIn("swift package describe", handle.read(), "a ratcheted build recompiles the package's own targets")
         with open(record, encoding="utf-8") as handle:
             self.assertNotIn("-warnings-as-errors", handle.read())
         code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="3", **overrides))

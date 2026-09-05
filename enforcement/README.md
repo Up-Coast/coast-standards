@@ -244,8 +244,11 @@ the one home; this is the shape:
   that entry instead of a test action the project does not have, and runs
   the real tests the day a target exists) in the same
   `.coast/ratchet-baseline.json`, with the same 90-day deadline. From then on the seat runs the tool without its
-  strict switch and hands the count to `check_rules.py --ratchet <id>
-  --count <n>`, which judges it with the one ratchet verdict: above the
+  strict switch — on a FULL build, since an incremental build prints warnings
+  only for what it recompiles (found on keto-tracker's first push: measured 22,
+  rebuilt 0, refused as a fall); SwiftPM drops the package's own targets' build
+  products first, xcodebuild runs `clean build` — and hands the count to
+  `check_rules.py --ratchet <id> --count <n>`, which judges it with the one ratchet verdict: above the
   baseline refuses, below it refuses until the baseline is lowered, past
   the deadline anything above zero refuses. With no entry the seat is
   strict (`-warnings-as-errors`, `swift-format lint --strict`, `swiftlint
