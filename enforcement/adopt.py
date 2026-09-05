@@ -7,7 +7,7 @@ Run from anywhere::
     python3 enforcement/adopt.py <project-dir> [--platform <p>] [--dry-run]
                                  [--by <name>] [--today YYYY-MM-DD]
                                  [--secret-scan] [--jscpd-bin <path>]
-                                 [--measure-tools]
+                                 [--measure-tools [build,format,lint,tests]]
 
 What it installs, and who owns each file afterwards:
 
@@ -167,7 +167,7 @@ def detect_platform(project):
 
 
 class Adoption:
-    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan, measure_tools=False):
+    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan, measure_tools=None):
         self.project = project
         self.platform = platform
         self.dry_run = dry_run
@@ -385,7 +385,7 @@ class Adoption:
         env = dict(os.environ, COAST_CHECKS_DIR=self.path(PROJECT_CHECKS_DIR))
         for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX"):
             env.pop(name, None)
-        done = subprocess.run(["sh", hook, "--measure", "build,format,lint,tests"], cwd=self.project, capture_output=True, text=True, env=env)
+        done = subprocess.run(["sh", hook, "--measure", self.measure_tools], cwd=self.project, capture_output=True, text=True, env=env)
         counts = {m.group(1): int(m.group(2)) for m in re.finditer(r"^MEASURE (\S+) (\d+)$", done.stdout, re.M)}
         if done.returncode != 0:
             failed = [line for line in (done.stdout + done.stderr).splitlines() if line.startswith(("FAIL ", "gate: ")) and "failed" in line]
@@ -526,8 +526,10 @@ def main(argv=None):
     parser.add_argument("--today", help=argparse.SUPPRESS)
     parser.add_argument("--secret-scan", action="store_true", help="run the tracked-tree secret scan even after the first adoption")
     parser.add_argument("--jscpd-bin", help="a jscpd binary to use (default: JSCPD_BIN, PATH, then npx --no-install)")
-    parser.add_argument("--measure-tools", action="store_true",
-                        help="run the build and format seats in counting mode and write their counts as ratchet baselines (build-warnings, format-findings); slow — it builds the project")
+    parser.add_argument("--measure-tools", nargs="?", const="build,format,lint,tests", metavar="SEATS",
+                        help="run the pre-push seats in counting mode and write their counts as baselines (build-warnings, "
+                             "format-findings, lint-findings, tests-missing); SEATS narrows it, e.g. --measure-tools format,lint "
+                             "to re-measure without the build; slow without it — it builds the project")
     args = parser.parse_args(argv)
 
     project = os.path.abspath(args.project)
