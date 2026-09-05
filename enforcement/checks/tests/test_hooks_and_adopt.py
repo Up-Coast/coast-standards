@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stdout
 
 CHECKS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -192,6 +193,104 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("-scheme App", calls)
         self.assertIn("SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", calls)
         self.assertNotIn("swift build", out)
+
+    def test_adoption_binds_an_existing_theme_file_so_it_is_not_a_second_theme(self):
+        self.project.write("Sources/App/DesignSystem/Theme.swift", "import SwiftUI\nenum Theme { static let accent = Color.accentColor }\n")
+        self.project.commit("a theme")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        bindings = json.loads(self.project.read(".coast/paths.json"))
+        self.assertEqual(bindings["platforms"]["ios"]["classes"]["theme"], ["Sources/App/DesignSystem/Theme.swift"])
+        self.assertEqual(bindings["platforms"]["ios"]["classes"]["ui_lib"], ["Sources/App/DesignSystem/**"])
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertNotIn("second-theme-file", out)
+        # bound once: a re-adopt leaves the founder's file alone
+        self.project.write(".coast/paths.json", json.dumps({"platforms": {"ios": {"classes": {"theme": ["Elsewhere.swift"]}}}}))
+        self.project.adopt()
+        self.assertIn("Elsewhere.swift", self.project.read(".coast/paths.json"))
+
+    def _stub_tools(self):
+        """A `swift` and a `swift-format` on PATH that print STUB_WARNINGS / STUB_FINDINGS distinct
+        finding lines and record their arguments; returns (env overrides, the calls file)."""
+        stub_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, stub_dir, True)
+        record = os.path.join(stub_dir, "calls.txt")
+        for name, var, kind in (("swift", "STUB_WARNINGS", "warning: stubbed warning"),
+                                ("swift-format", "STUB_FINDINGS", "warning: [Indentation] stubbed finding")):
+            with open(os.path.join(stub_dir, name), "w", encoding="utf-8") as handle:
+                handle.write("#!/bin/sh\necho \"" + name + " $@\" >> " + json.dumps(record) + "\n"
+                             "i=0\nwhile [ $i -lt ${" + var + ":-0} ]; do\n"
+                             "  echo \"Sources/App/One.swift:$((i+1)):5: " + kind + " $i\"\n  i=$((i+1))\ndone\nexit 0\n")
+            os.chmod(os.path.join(stub_dir, name), 0o755)
+        return {"PATH": stub_dir + os.pathsep + os.environ.get("PATH", "")}, record
+
+    def _baseline_entries(self):
+        return {e["id"]: e for e in json.loads(self.project.read(".coast/ratchet-baseline.json"))["baselines"]}
+
+    def test_pre_push_build_seat_is_strict_without_a_baseline_and_a_ratchet_under_one(self):
+        overrides, record = self._stub_tools()
+        self.project.adopt()
+        # No build-warnings entry: the build runs with warnings as errors.
+        code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="1", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: build (warnings-as-errors)", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertIn("-warnings-as-errors", handle.read())
+        # Under an entry of 2 the same build is a ratchet: 2 passes, 3 refuses in the ratchet's own line.
+        baseline = json.loads(self.project.read(".coast/ratchet-baseline.json"))
+        baseline["baselines"].append({"id": "build-warnings", "count": 2, "deadline": "2026-12-03",
+                                      "written": "2026-09-04", "by": "Tester", "moves": []})
+        self.project.write(".coast/ratchet-baseline.json", json.dumps(baseline))
+        os.remove(record)
+        code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="2", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: build (warnings ratchet)", out)
+        self.assertIn("OK ratchet build-warnings: 2 in the tree, equal to the baseline", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertNotIn("-warnings-as-errors", handle.read())
+        code, out = self.project.hook("pre-push", "--seat", "build", env=clean_env(STUB_WARNINGS="3", **overrides))
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet .coast/ratchet-baseline.json:0:build-warnings:", out)
+        self.assertIn("[C-4]", out)
+        self.assertIn("the push was refused", out)
+
+    def test_adopt_measure_tools_writes_the_tool_baselines_from_what_the_tools_report(self):
+        overrides, _ = self._stub_tools()
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="2", STUB_FINDINGS="3")):
+            code, out = self.project.adopt("--measure-tools")
+        self.assertEqual(code, 0, out)
+        entries = self._baseline_entries()
+        self.assertEqual((entries["build-warnings"]["count"], entries["build-warnings"]["deadline"]), (2, "2026-12-03"))
+        self.assertEqual(entries["format-findings"]["count"], 3)
+        self.assertIn("build-warnings measured 2", out)
+        # A re-measure that fell lowers the count; one that rose is not raised.
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="5")):
+            code, out = self.project.adopt("--measure-tools")
+        self.assertEqual(code, 0, out)
+        entries = self._baseline_entries()
+        self.assertEqual(entries["build-warnings"]["count"], 0)
+        self.assertEqual(entries["format-findings"]["count"], 3)
+        self.assertIn("format-findings is 5 in the tree, above its baseline of 3", out)
+        # A clean project writes no tool entry at all: its seats stay strict.
+        fresh = Project()
+        self.addCleanup(fresh.cleanup)
+        with unittest.mock.patch.dict(os.environ, dict(overrides, STUB_WARNINGS="0", STUB_FINDINGS="0")):
+            code, out = fresh.adopt("--measure-tools")
+        self.assertEqual(code, 0, out)
+        ids = {e["id"] for e in json.loads(fresh.read(".coast/ratchet-baseline.json"))["baselines"]}
+        self.assertNotIn("build-warnings", ids)
+        self.assertNotIn("format-findings", ids)
+        self.assertIn("the seat stays strict", out)
+
+    def test_pre_commit_holds_doc_comments_on_added_lines_only(self):
+        self.project.adopt()
+        self.project.write("Sources/App/Api.swift", "import Foundation\npublic struct Api {\n    public func go() {}\n}\n")
+        sh(self.project.path, "git", "add", "-A")
+        code, out = self.project.hook("pre-commit")
+        self.assertEqual(code, 1, out)
+        self.assertIn(":doc-comments:", out)
+        self.assertIn("[DOC-1]", out)
+        self.assertNotIn("doc-comments (staged)", out, "the whole-file seat is gone; the staged scan holds added lines")
 
     def test_dry_run_writes_nothing(self):
         before = self.project.snapshot()

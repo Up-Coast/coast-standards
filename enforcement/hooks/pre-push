@@ -10,12 +10,23 @@
 #                    swift build -Xswiftc -warnings-as-errors; gradle needs
 #                    allWarningsAsErrors in its build files; tsc --noEmit
 #                    under "strict"; eslint --max-warnings 0; Python tests
-#                    run with PYTHONWARNINGS=error
+#                    run with PYTHONWARNINGS=error. On a repository that
+#                    already carries warnings (a `build-warnings` entry in
+#                    .coast/ratchet-baseline.json, written by adopt.py
+#                    --measure-tools), the Swift build runs without the
+#                    switch and its warning count is a RATCHET: the rule is
+#                    "zero NEW warnings" (C-4), the count may only fall, and
+#                    past the deadline the switch comes back (decision 2)
 #   tests            the platform's test runner
-#   lint / format    the shipped linter configs, format in check mode
+#   lint / format    the shipped linter configs, format in check mode; the
+#                    Swift formatter's findings ratchet the same way under a
+#                    `format-findings` entry
 #   rules-scan       check_rules.py on the lines added since the remote,
 #                    then on the whole tree (tree signatures + ratchets)
-#   doc-comments     check_doc_comments.py --all (once E1.5 ships it)
+#   doc-comments     held on ADDED lines by the rules-scan seat (the scanner's
+#                    doc-comments built-in); this seat prints the whole-tree
+#                    count as an advisory — a legacy tree's debt is not a
+#                    rewrite day nobody sanctioned (decision 2)
 #   jscpd            tool:jscpd — duplicated code; refuses NEW clones against
 #                    the committed baseline .coast/jscpd-baseline.json
 #                    (`--baseline … --fail-on-new-clones`, jscpd 5.1.2, see
@@ -29,7 +40,10 @@
 #
 # git calls this as `pre-push <remote> <url>` with the ref lines on stdin.
 # Run by hand as `pre-push --seat <name>[,<name>]` to run named seats
-# (tests use this; git never passes --seat, so it is no bypass).
+# (tests use this; git never passes --seat, so it is no bypass), or as
+# `pre-push --measure <name>[,<name>]` to run the build/format seats in
+# counting mode: each prints `MEASURE <id> <count>` instead of judging, so
+# adopt.py can write the ratchet baseline from what the tools report.
 # The platform is one word in .coast/platform (or COAST_PLATFORM); checks
 # live under Scripts/checks/ (COAST_CHECKS_DIR overrides). JSCPD_BIN names
 # a jscpd binary when it is not on PATH. GOVERNING: agents never edit the
@@ -51,8 +65,12 @@ if [ -z "$platform" ]; then
 fi
 
 seats=all
+measure=0
 if [ "${1-}" = "--seat" ]; then
   seats=${2:?--seat needs a name}
+elif [ "${1-}" = "--measure" ]; then
+  seats=${2:?--measure needs a name}
+  measure=1
 fi
 
 wants() {
@@ -76,6 +94,43 @@ need() {  # a battery member that is not installed is a refusal, never a silent 
     echo "FAIL pre-push toolchain:0:$1: $1 is not installed — $2 (enforcement/TOOLCHAIN.md)" >&2
     return 1
   fi
+}
+
+# A tool ratchet (decision 2 on the tools): when the baseline carries an entry
+# for the tool — or in --measure mode — the tool runs without its strict switch
+# and its finding count is judged like any scanner ratchet by check_rules.py
+# (one baseline file, one verdict); with no entry it runs strict, so a fresh
+# repository is held at zero from its first push.
+ratcheted() {  # <id>
+  [ "$measure" = 1 ] || python3 "$checks/check_rules.py" --has-baseline "$1" >/dev/null 2>&1
+}
+judge() {  # <id> <count>
+  if [ "$measure" = 1 ]; then
+    printf 'MEASURE %s %s\n' "$1" "$2"
+    return 0
+  fi
+  python3 "$checks/check_rules.py" --ratchet "$1" --count "$2" --platform "$platform"
+}
+count_warnings() {  # <log> — distinct `file:line:col: warning:` lines
+  grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: ' "$1" | sort -u | wc -l | tr -d ' '
+}
+count_format_findings() {  # <log> — swift-format's `file:line:col: warning|error:` lines
+  grep -cE '^[^ ]+:[0-9]+:[0-9]+: (warning|error): ' "$1" | tr -d ' '
+}
+# <id> <counter> <command…>: run the tool into a log, echo the log, count, judge.
+ratcheted_run() {
+  id=$1; counter=$2; shift 2
+  log=$(mktemp "${TMPDIR:-/tmp}/coast-gate.XXXXXX") || return 1
+  "$@" > "$log" 2>&1
+  status=$?
+  if [ "$id" = build-warnings ] || [ "$measure" = 1 ]; then cat "$log"; else head -n 40 "$log"; fi
+  if [ "$id" = build-warnings ] && [ $status -ne 0 ]; then
+    rm -f "$log"
+    return 1
+  fi
+  n=$("$counter" "$log")
+  rm -f "$log"
+  judge "$id" "${n:-0}"
 }
 
 xcode_scheme() {  # .coast/xcode-scheme, else the first scheme xcodebuild lists
@@ -107,8 +162,12 @@ case "$platform" in
     if [ -f Package.swift ]; then
       # A Swift package: build and test through SwiftPM.
       if wants build; then
-        # warnings-as-errors: the Swift build fails on any warning.
-        run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+        if ratcheted build-warnings; then
+          run "build (warnings ratchet)" ratcheted_run build-warnings count_warnings swift build
+        else
+          # warnings-as-errors: the Swift build fails on any warning.
+          run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+        fi
       fi
       wants tests && run "tests" swift test
     else
@@ -119,10 +178,16 @@ case "$platform" in
       need xcodebuild "install Xcode" || exit 1
       scheme=$(xcode_scheme) || exit 1
       if wants build; then
-        # warnings-as-errors: SWIFT_TREAT_WARNINGS_AS_ERRORS fails the build on any warning.
-        run "build (warnings-as-errors)" xcodebuild build -quiet -scheme "$scheme" \
-          -destination "$(xcode_build_destination)" SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-          CODE_SIGNING_ALLOWED=NO
+        if ratcheted build-warnings; then
+          run "build (warnings ratchet)" ratcheted_run build-warnings count_warnings \
+            xcodebuild build -quiet -scheme "$scheme" -destination "$(xcode_build_destination)" \
+            CODE_SIGNING_ALLOWED=NO
+        else
+          # warnings-as-errors: SWIFT_TREAT_WARNINGS_AS_ERRORS fails the build on any warning.
+          run "build (warnings-as-errors)" xcodebuild build -quiet -scheme "$scheme" \
+            -destination "$(xcode_build_destination)" SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            CODE_SIGNING_ALLOWED=NO
+        fi
       fi
       wants tests && run "tests" xcodebuild test -quiet -scheme "$scheme" \
           -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO
@@ -134,7 +199,12 @@ case "$platform" in
     if wants format; then
       need swift-format "brew install swift-format" || exit 1
       # every tracked Swift file, so an Xcode layout with no Sources/ folder is covered too
-      run "format (swift-format lint)" sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
+      if ratcheted format-findings; then
+        run "format (findings ratchet)" ratcheted_run format-findings count_format_findings \
+          sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
+      else
+        run "format (swift-format lint)" sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
+      fi
     fi
     ;;
   android)
@@ -231,7 +301,9 @@ fi
 
 if wants doc-comments; then
   if [ -f "$checks/check_doc_comments.py" ]; then
-    run "doc-comments" python3 "$checks/check_doc_comments.py" --all
+    printf 'gate: doc-comments (whole tree, advisory — added lines are held by rules-scan)\n'
+    count=$(python3 "$checks/check_doc_comments.py" --all --platform "$platform" 2>/dev/null | grep -c '^FAIL doc-comments ' || true)
+    printf 'ADVISORY doc-comments: %s public declaration(s) in the tree without a doc comment\n' "${count:-0}"
   else
     printf 'gate: doc-comments — not installed yet (check_doc_comments.py ships with E1.5); this seat is not held\n'
   fi

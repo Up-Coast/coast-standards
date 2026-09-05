@@ -17,6 +17,8 @@ Usage::
     check_rules.py --staged --platform <p>           # the index (a pre-commit hook)
     check_rules.py --files a b c --platform <p>      # whole files (an editor hook; every line is new)
     check_rules.py --tree --platform <p>             # no diff: only the tree-scope and ratchet signatures
+    check_rules.py --ratchet <id> --count <n> --platform <p>   # a tool's count judged as a ratchet (build-warnings, format-findings)
+    check_rules.py --has-baseline <id>               # exit 0 when .coast/ratchet-baseline.json carries an entry for <id>
 
 The platform also comes from ``COAST_PLATFORM``. Run from the repository
 root. Exit 0 = pass; any failure prints
@@ -291,6 +293,42 @@ def ratchet_verdict(signature_id, count, baselines, today):
     return True, f"{count} in the tree, equal to the baseline" + (f"; deadline {deadline}" if deadline else "")
 
 
+# Tool ratchets — decision 2 applied to the tools the pre-push battery runs.
+# The rule is "zero NEW compiler warnings" (C-4 on every app platform, the
+# numbered file 02 for Python): on a repository that already carries
+# warnings, the build seat counts them and this verdict holds the count
+# against the same baseline file, with the same deadline, as any scanner
+# ratchet; with no entry the tool runs strict (warnings as errors). One
+# baseline file, one verdict, one reader.
+TOOL_RATCHETS = {
+    "build-warnings": {
+        "words": "compiler warnings in the build — a change added one; the count may only fall, and past the deadline the build runs with warnings as errors",
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+    "format-findings": {
+        "words": "formatter findings in the tree — a change added one; the count may only fall, and past the deadline the format check refuses any finding",
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+}
+
+
+def tool_ratchet_rule(signature_id, platform):
+    entry = TOOL_RATCHETS[signature_id]
+    return entry["rules"].get(platform or "", entry["rule"])
+
+
+def judge_tool_ratchet(signature_id, count, platform, today):
+    """Print the ratchet line (and the FAIL line on a refusal) for a tool's count; the exit code."""
+    if signature_id not in TOOL_RATCHETS:
+        print(f"check_rules.py: unknown tool ratchet '{signature_id}' (one of {', '.join(sorted(TOOL_RATCHETS))})")
+        return 2
+    rule = tool_ratchet_rule(signature_id, platform)
+    ok, words = ratchet_verdict(signature_id, count, load_baselines(), today or _dt.date.today())
+    print(f"{'OK' if ok else 'FAIL'} ratchet {signature_id}: {words} [{rule}]")
+    if ok:
+        return 0
+    print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
+    return 1
+
+
 # ---------------------------------------------------------------- matching
 
 
@@ -511,14 +549,22 @@ def main(argv=None):
     parser.add_argument("--files", nargs="+")
     parser.add_argument("--tree", action="store_true")
     parser.add_argument("--paths-override", help="a project's own path-class bindings (default: .coast/paths.json when present)")
+    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings or format-findings (with --count)")
+    parser.add_argument("--count", type=int, help="the count the tool produced (with --ratchet)")
+    parser.add_argument("--has-baseline", metavar="ID", help="exit 0 when the ratchet baseline carries an entry for ID, else 1")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
-    modes = [bool(args.staged), bool(args.files), bool(args.tree), bool(args.base)]
-    if sum(modes) != 1 or (args.base and not args.head):
+    modes = [bool(args.staged), bool(args.files), bool(args.tree), bool(args.base), bool(args.ratchet), bool(args.has_baseline)]
+    if sum(modes) != 1 or (args.base and not args.head) or (args.ratchet and args.count is None):
         parser.print_usage()
-        print("check_rules.py: give exactly one of <base> <head|WORKTREE>, --staged, --files …, --tree")
+        print("check_rules.py: give exactly one of <base> <head|WORKTREE>, --staged, --files …, --tree, --ratchet ID --count N, --has-baseline ID")
         return 2
+    if args.has_baseline:
+        return 0 if args.has_baseline in load_baselines() else 1
+    if args.ratchet:
+        today = _dt.date.fromisoformat(args.today) if args.today else None
+        return judge_tool_ratchet(args.ratchet, args.count, args.platform, today)
     signatures, paths = load_tables(args.platform, args.paths_override)
     today = _dt.date.fromisoformat(args.today) if args.today else None
     scan = Scan(args.platform, signatures, paths, today)

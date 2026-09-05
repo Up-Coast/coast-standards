@@ -7,6 +7,7 @@ Run from anywhere::
     python3 enforcement/adopt.py <project-dir> [--platform <p>] [--dry-run]
                                  [--by <name>] [--today YYYY-MM-DD]
                                  [--secret-scan] [--jscpd-bin <path>]
+                                 [--measure-tools]
 
 What it installs, and who owns each file afterwards:
 
@@ -33,7 +34,13 @@ What it installs, and who owns each file afterwards:
 * Baselines (decision 2: written once, the count may only fall, the
   deadline 90 days from the day it was written and never moved here):
   ``.coast/ratchet-baseline.json`` from the scanner's current tree counts
-  (``check_rules.py --tree``); ``.coast/jscpd-baseline.json`` from jscpd's
+  (``check_rules.py --tree``) and, with ``--measure-tools``, from the tools
+  the pre-push battery runs (``.githooks/pre-push --measure build,format``:
+  the build's distinct warnings as ``build-warnings``, the formatter's
+  findings as ``format-findings`` — the rule is "zero NEW warnings", so a
+  repository that already carries some ratchets them down instead of being
+  refused wholesale; a count of zero writes nothing and the seat stays
+  strict); ``.coast/jscpd-baseline.json`` from jscpd's
   own ``--update-baseline`` fingerprints plus the clone count — or
   ``"clones": null`` with a note when jscpd is not installed. On a re-run a
   count that fell is lowered (dates kept); a count that rose is left as it
@@ -159,7 +166,7 @@ def detect_platform(project):
 
 
 class Adoption:
-    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan):
+    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan, measure_tools=False):
         self.project = project
         self.platform = platform
         self.dry_run = dry_run
@@ -167,6 +174,7 @@ class Adoption:
         self.today = today
         self.jscpd_bin = jscpd_bin
         self.secret_scan = secret_scan
+        self.measure_tools = measure_tools
         self.lines = []
         self.changed = 0
         self.first_adoption = not os.path.isfile(self.path(".coast/platform"))
@@ -339,12 +347,62 @@ class Adoption:
         self.put("CLAUDE.md", new.encode("utf-8"), governed=False)
         self.say("note", "CLAUDE.md", f"rules held by a machine {counts['machine']} of {counts['total']}")
 
+    def bind_theme(self):
+        """An existing app already has a theme file, almost never at the platform's default
+        path; unbound, it fails `second-theme-file` on every push. Bind the one it has (the
+        first, sorted, when there are several — the others are then real second theme files)
+        as the project's own `theme` class, and its folder as `ui_lib`, in .coast/paths.json.
+        Written once; a founder edits it from there (it is GOVERNING: agents never do)."""
+        if self.load_json(".coast/paths.json") is not None:
+            return
+        done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--tree", "--platform", self.platform],
+                              cwd=self.project, capture_output=True, text=True, env=clean_git_env())
+        found = sorted(set(re.findall(r"^FAIL rules (\S+?):\d+:second-theme-file:", done.stdout, re.M)))
+        if not found:
+            return
+        theme = found[0]
+        folder = os.path.dirname(theme)
+        classes = {"theme": [theme]}
+        if folder:
+            classes["ui_lib"] = [folder + "/**"]
+        self.put_json(".coast/paths.json", {
+            "_comment": "This project's own path-class bindings, merged over the platform's defaults (enforcement/README.md section 4.2). Written once by adopt.py from the theme file it found; a founder edits it from here.",
+            "platforms": {self.platform: {"classes": classes}}})
+        self.say("note", ".coast/paths.json", f"bound the theme file {theme}" + (f" (the folder {folder}/ is the UI library)" if folder else ""))
+        if len(found) > 1:
+            self.say("note", ".coast/paths.json", "other theme-shaped files still refuse as second theme files: " + ", ".join(found[1:]))
+
+    def measure_tool_counts(self):
+        """The counts the pre-push tools report in --measure mode (the installed hook is the one
+        home of the build and format commands): {id: count}. A tool that cannot run is a note."""
+        if not self.measure_tools:
+            return {}
+        hook = self.path(f"{PROJECT_HOOKS_DIR}/pre-push")
+        if not os.path.isfile(hook):
+            self.say("note", "tool ratchets", "the pre-push hook is not installed, so nothing was measured")
+            return {}
+        env = dict(os.environ, COAST_CHECKS_DIR=self.path(PROJECT_CHECKS_DIR))
+        for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX"):
+            env.pop(name, None)
+        done = subprocess.run(["sh", hook, "--measure", "build,format"], cwd=self.project, capture_output=True, text=True, env=env)
+        counts = {m.group(1): int(m.group(2)) for m in re.finditer(r"^MEASURE (\S+) (\d+)$", done.stdout, re.M)}
+        if done.returncode != 0:
+            failed = [line for line in (done.stdout + done.stderr).splitlines() if line.startswith(("FAIL ", "gate: ")) and "failed" in line]
+            self.say("note", "tool ratchets", "a tool did not finish, so its count was not measured: " + ("; ".join(failed[-2:]) or "see the build output"))
+        for signature_id, count in sorted(counts.items()):
+            self.say("note", "tool ratchets", f"{signature_id} measured {count}" + ("" if count else " — the seat stays strict"))
+        existing = self.load_json(".coast/ratchet-baseline.json") or {}
+        held = {e.get("id") for e in existing.get("baselines", []) if isinstance(e, dict)}
+        # a count of zero writes nothing (the seat stays strict) unless an entry exists to lower
+        return {k: v for k, v in counts.items() if v > 0 or k in held}
+
     def write_ratchet_baseline(self):
         done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--tree", "--platform", self.platform,
                                "--today", self.today.isoformat()], cwd=self.project, capture_output=True, text=True)
         counts = {}
         for match in re.finditer(r"^(?:OK|FAIL) ratchet (\S+): (\d+) in the tree", done.stdout, re.M):
             counts[match.group(1)] = int(match.group(2))
+        counts.update(self.measure_tool_counts())
         existing = self.load_json(".coast/ratchet-baseline.json") or {}
         entries = {e["id"]: e for e in existing.get("baselines", []) if isinstance(e, dict) and "id" in e}
         deadline = (self.today + _dt.timedelta(days=RATCHET_DAYS)).isoformat()
@@ -444,6 +502,7 @@ class Adoption:
         self.install_hooks()
         self.install_seeds()
         self.install_claude_md()
+        self.bind_theme()
         self.write_ratchet_baseline()
         self.write_jscpd_baseline()
         if self.seeds or os.path.isfile(self.path(".coast/seeds.json")):
@@ -465,6 +524,8 @@ def main(argv=None):
     parser.add_argument("--today", help=argparse.SUPPRESS)
     parser.add_argument("--secret-scan", action="store_true", help="run the tracked-tree secret scan even after the first adoption")
     parser.add_argument("--jscpd-bin", help="a jscpd binary to use (default: JSCPD_BIN, PATH, then npx --no-install)")
+    parser.add_argument("--measure-tools", action="store_true",
+                        help="run the build and format seats in counting mode and write their counts as ratchet baselines (build-warnings, format-findings); slow — it builds the project")
     args = parser.parse_args(argv)
 
     project = os.path.abspath(args.project)
@@ -489,7 +550,7 @@ def main(argv=None):
 
     by = args.by or git(project, "config", "--get", "user.name", check=False) or os.environ.get("USER", "unknown")
     today = _dt.date.fromisoformat(args.today) if args.today else _dt.date.today()
-    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan)
+    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan, args.measure_tools)
     secrets = adoption.run()
 
     print(f"adopt.py — {project} ({platform}){' — DRY RUN, nothing written' if args.dry_run else ''}")

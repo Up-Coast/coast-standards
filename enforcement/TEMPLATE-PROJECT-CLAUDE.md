@@ -26,17 +26,20 @@ still open {{OPEN}}). A rule is in one of these bins:
 What will refuse you, and where it lives — all GOVERNING, none of it is
 yours to edit:
 
-- `.githooks/pre-commit` — the scanner on the staged diff and the
-  doc-comment check, in seconds.
+- `.githooks/pre-commit` — the scanner on the staged diff (every added
+  line, the doc-comment check among them), in seconds.
 - `.githooks/commit-msg` — a subject line under 100 characters; a commit
   from an agent session names the model that did the work
   (`Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>`).
 - `.githooks/pre-push` — the full battery: build with warnings as errors,
   tests, lint, format, the scanner on everything added since the remote
-  and on the whole tree, doc-comments, jscpd (no new duplicated code
-  against `.coast/jscpd-baseline.json`), and the protected-main ruleset.
+  and on the whole tree, the whole-tree doc-comment count (advisory),
+  jscpd (no new duplicated code against `.coast/jscpd-baseline.json`),
+  and the protected-main ruleset.
 - `.coast/ratchet-baseline.json` — the legacy counts the ratchet checks
-  may only lower; each carries a deadline after which the check blocks.
+  may only lower (the scanner's ratchets, and on a repository that came
+  with warnings or formatter findings, `build-warnings` and
+  `format-findings`); each carries a deadline after which the check blocks.
 - `.coast/platform`, `.coast/paths.json` (when present), `Scripts/checks/`.
 
 Never `--no-verify`. Never edit the files above. When a check is wrong,

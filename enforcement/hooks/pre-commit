@@ -1,10 +1,12 @@
 #!/bin/sh
 # Up Coast standards — the project's pre-commit hook (enforcement task E2.2).
 #
-# Seconds, not minutes: the rules scanner on the STAGED diff and the
-# doc-comment check on the staged product files. The full battery runs at
-# push (.githooks/pre-push). Both refuse in the checks' own FAIL lines, so a
-# human and an agent meet the same wall (enforcement/README.md §4.4).
+# Seconds, not minutes: the rules scanner on the STAGED diff — every added
+# line, the doc-comment check among them (the scanner's `doc-comments`
+# built-in holds DOC-1 on added declarations; a legacy file's old debt is
+# the whole-tree advisory at push, never a refusal here — decision 2). The
+# full battery runs at push (.githooks/pre-push). Refusals are the checks'
+# own FAIL lines, so a human and an agent meet the same wall (README §4.4).
 #
 # Installed by enforcement/adopt.py, which also sets
 #   git config core.hooksPath .githooks
@@ -43,28 +45,5 @@ run() {
 }
 
 run "rules-scan (staged)" python3 "$checks/check_rules.py" --staged --platform "$platform"
-
-# The doc-comment check on the staged product files (the platform's source
-# extensions, from paths.json). Ships with E1.5; until the script is present
-# the seat says so out loud instead of pretending.
-if [ -f "$checks/check_doc_comments.py" ]; then
-  staged=$(git diff --cached --name-only --diff-filter=ACMR | python3 -c '
-import json, os, sys
-checks = sys.argv[1]; platform = sys.argv[2]
-table = json.load(open(os.path.join(checks, "paths.json")))["platforms"].get(platform, {})
-exts = tuple(table.get("extensions", []))
-for line in sys.stdin.read().splitlines():
-    if line.endswith(exts) and os.path.isfile(line):
-        print(line)
-' "$checks" "$platform")
-  if [ -n "$staged" ]; then
-    # shellcheck disable=SC2086
-    run "doc-comments (staged)" python3 "$checks/check_doc_comments.py" --files $staged
-  else
-    printf 'gate: doc-comments (staged) — no product files staged\n'
-  fi
-else
-  printf 'gate: doc-comments — not installed yet (check_doc_comments.py ships with E1.5); this seat is not held\n'
-fi
 
 printf 'gate: every pre-commit check green\n'

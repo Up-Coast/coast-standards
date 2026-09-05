@@ -156,9 +156,9 @@ class GoverningEdit(HookCase):
         self.assertPassed(self.edit("Sources/App/HomeView.swift", tool="Write"))
 
     def test_every_governing_class_is_refused(self):
-        for relative in (".claude/settings.json", "Scripts/checks/check_rules.py", "docs/domain-rules.md",
-                         "docs/ai-features-rules.md", ".swiftlint.yml", ".swift-format", ".github/workflows/ci.yml",
-                         ".coast/ratchet-baseline.json", ".coast/platform"):
+        for relative in (".claude/settings.json", "Scripts/checks/check_rules.py", "Scripts/hooks/claude-hook.py",
+                         "docs/domain-rules.md", "docs/ai-features-rules.md", ".swiftlint.yml", ".swift-format",
+                         ".github/workflows/ci.yml", ".coast/ratchet-baseline.json", ".coast/platform"):
             with self.subTest(path=relative):
                 self.assertRefused(self.edit(relative), relative)
 
