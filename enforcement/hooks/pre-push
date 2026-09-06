@@ -78,11 +78,54 @@ elif [ "${1-}" = "--measure" ]; then
   measure=1
 fi
 
+# A seat a PERSON has excused, with a reason and a date it runs again. The founder writes
+# these into .coast/rules-exceptions.json, which is GOVERNING — the session hooks refuse an
+# agent editing it, so this is a door only a human can open. It exists because a wrong check
+# would otherwise block every push with no sanctioned way out: the rules say never
+# --no-verify, and an agent that finds a false positive has nothing to do but stop. An entry
+# without an `until` date, or past it, is ignored and the seat runs.
+excused() {
+  [ -f .coast/rules-exceptions.json ] || return 1
+  python3 - "$1" <<'PY'
+import datetime, json, sys
+seat = sys.argv[1]
+try:
+    with open(".coast/rules-exceptions.json", encoding="utf-8") as handle:
+        entries = json.load(handle).get("exceptions", [])
+except (OSError, ValueError):
+    sys.exit(1)
+today = datetime.date.today()
+for entry in entries:
+    if not isinstance(entry, dict) or entry.get("seat") != seat:
+        continue
+    until = entry.get("until")
+    try:
+        expires = datetime.date.fromisoformat(until) if until else None
+    except (TypeError, ValueError):
+        expires = None
+    if expires is None:
+        print("the exception names no 'until' date (YYYY-MM-DD), so it is not honoured")
+        sys.exit(1)
+    if expires < today:
+        print(f"the exception expired {until}, so this seat runs again")
+        sys.exit(1)
+    print(f"excused by {entry.get('who', 'someone')} until {until} — {entry.get('reason', 'no reason given')}")
+    sys.exit(0)
+sys.exit(1)
+PY
+}
+
 wants() {
   case ",$seats," in
-    *,all,*|*",$1,"*) return 0 ;;
+    *,all,*|*",$1,"*) ;;
     *) return 1 ;;
   esac
+  if excuse=$(excused "$1"); then
+    printf 'gate: %s SKIPPED — %s\n' "$1" "$excuse"
+    return 1
+  fi
+  [ -n "${excuse:-}" ] && printf 'gate: %s — %s\n' "$1" "$excuse"
+  return 0
 }
 
 # ---------------------------------------------------------------- one gate at a time
@@ -151,9 +194,9 @@ fi
 # that off without a word — a check the founder chose is never dropped on the floor.
 previous_hooks() {
   [ -f .coast/previous-hooks-path ] || return 0
-  previous=$(tr -d '"'"'[:space:]'"'"' < .coast/previous-hooks-path)
+  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
   [ -n "$previous" ] && [ -f "$previous/pre-push" ] || return 0
-  printf '"'"'gate: %s/pre-push (this project had it before it adopted)\n'"'"' "$previous"
+  printf 'gate: %s/pre-push (this project had it before it adopted)\n' "$previous"
   if [ -n "$refs_file" ]; then
     sh "$previous/pre-push" "$push_remote" "$push_url" < "$refs_file"
   else

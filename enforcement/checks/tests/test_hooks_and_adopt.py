@@ -17,6 +17,7 @@ Run from the repo root:  python3 -m unittest discover -s enforcement/checks/test
 import glob
 import hashlib
 import io
+import datetime as _dt
 import json
 import os
 import shutil
@@ -347,6 +348,34 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("the project own pre-commit ran", out)
         code, out = self.project.hook("pre-push", "--seat", "rules-scan")
         self.assertNotIn("the project own pre-push ran", out, "a named seat is not a whole push")
+
+    def test_a_founder_can_excuse_one_seat_with_a_date_and_an_agent_cannot(self):
+        # A wrong check would otherwise block every push: the rules forbid --no-verify, so an
+        # agent that finds a false positive can only stop. The door is dated and recorded.
+        self.project.adopt()
+        today = _dt.date.today()
+        def exceptions(entry):
+            self.project.write(".coast/rules-exceptions.json", json.dumps({"exceptions": [entry]}))
+        exceptions({"seat": "rules-scan", "reason": "the check misreads our path alias",
+                    "who": "Abbey", "when": str(today), "until": str(today + _dt.timedelta(days=14))})
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertEqual(code, 0, out)
+        self.assertIn("rules-scan SKIPPED", out)
+        self.assertIn("excused by Abbey", out)
+        self.assertIn("the check misreads our path alias", out)
+        # Expired: the seat runs again and says so.
+        exceptions({"seat": "rules-scan", "reason": "stale", "who": "Abbey",
+                    "when": "2026-01-01", "until": str(today - _dt.timedelta(days=1))})
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertIn("the exception expired", out)
+        self.assertIn("gate: rules-scan (tree + ratchets)", out)
+        # No date at all is not a door.
+        exceptions({"seat": "rules-scan", "reason": "forever please", "who": "an agent"})
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertIn("names no 'until' date", out)
+        self.assertIn("gate: rules-scan (tree + ratchets)", out)
+        # The file is GOVERNING, so the session hook refuses an agent editing it.
+        os.remove(os.path.join(self.project.path, ".coast/rules-exceptions.json"))
 
     def test_dry_run_writes_nothing(self):
         before = self.project.snapshot()

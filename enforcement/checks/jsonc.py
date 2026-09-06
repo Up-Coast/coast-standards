@@ -3,7 +3,9 @@
 .eslintrc.json and the rest of the JSONC family.
 
 Written because the push gate stripped comments with the regex ``//.*|/\\*.*?\\*/``,
-which does not know what a string is: ccm-replacement's tsconfig maps ``"@/*"`` to
+which does not know what a string is. It is not one project's problem: the alias
+``"@/*"`` is the conventional TypeScript path mapping, so the check was wrong on most
+TypeScript repositories. ccm-replacement's tsconfig maps ``"@/*"`` to
 ``["./src/*"]``, the regex read ``/*`` inside that path as a comment opener, ate the rest
 of the file, and the gate refused the push saying ``compilerOptions.strict is not true``
 when it was true on line 7. A scanner that tracks string state cannot make that mistake.

@@ -602,6 +602,33 @@ question whose answer is always the same, the answer belongs in the code.**
   reported wherever it appears, including in tests, because that shape is
   worth a human's glance every time.
 
+### 4.7b A wrong check is a founder's call, not a dead end
+
+Raised by the ccm-replacement session on 2026-09-05, from the other side of the
+tsconfig bug: *"combined with a false-positive check it means an adopted repo can
+hard-block every push with no sanctioned way out."* It had done exactly what its
+CLAUDE.md block told it to — verified the check was wrong, refused to bypass, and
+stopped with an unpushed commit. The instruction was right and the design left it
+nowhere to go.
+
+A seat can now be excused by a person, in `.coast/rules-exceptions.json`, beside the
+signature exceptions that were already there:
+
+```json
+{"exceptions": [
+  {"seat": "build", "reason": "the build needs env vars this checkout has not got",
+   "who": "Abbey", "when": "2026-09-05", "until": "2026-09-19"}
+]}
+```
+
+It skips one named seat (`build`, `tests`, `lint`, `format`, `rules-scan`,
+`doc-comments`, `jscpd`, `gh-ruleset`), prints who excused it and why on every push,
+and refuses again the day it expires. An entry with no `until` is ignored — a
+permanent skip is how enforcement quietly dies. The file is GOVERNING, so the session
+hooks refuse an agent writing it: the door exists, and only a human can open it.
+`--no-verify` stays forbidden, because it turns everything off at once and leaves no
+record of who did it or why.
+
 ### 4.8 A project's own hooks are never switched off
 
 Adopting used to point `core.hooksPath` at `.githooks` and say nothing about what was

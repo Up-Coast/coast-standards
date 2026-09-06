@@ -43,6 +43,19 @@ yours to edit:
   `tests-missing`); each carries a deadline after which the check blocks.
 - `.coast/platform`, `.coast/paths.json` (when present), `Scripts/checks/`.
 
-Never `--no-verify`. Never edit the files above. When a check is wrong,
-say so in plain words and stop; the founder changes the standards repo.
+Never `--no-verify`. Never edit the files above. When a check is wrong, say so
+in plain words and stop — and say which seat and why, because there is a door
+and it is the founder's to open, not yours:
+
+    .coast/rules-exceptions.json
+    {"exceptions": [
+      {"seat": "build", "reason": "the build needs env vars this checkout has not got",
+       "who": "Abbey", "when": "2026-09-05", "until": "2026-09-19"}
+    ]}
+
+That skips one named seat (`build`, `tests`, `lint`, `format`, `rules-scan`,
+`doc-comments`, `jscpd`, `gh-ruleset`) until the date, prints who excused it and
+why on every push, and starts refusing again the day it expires. An entry with
+no `until` is ignored. The file is GOVERNING, so an agent cannot write it — which
+is the point: a wrong check is a founder's call, never a bypass.
 <!-- up-coast-standards: end -->
