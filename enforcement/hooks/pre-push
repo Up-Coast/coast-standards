@@ -370,7 +370,7 @@ case "$platform" in
     if wants build; then
       # warnings-as-errors: tsc under "strict": true reports every problem as
       # an error, and eslint runs with --max-warnings 0 below.
-      if [ -f tsconfig.json ] && ! python3 -c 'import json,re,sys; t=open("tsconfig.json").read(); t=re.sub(r"//.*|/\*.*?\*/", "", t, flags=re.S); sys.exit(0 if json.loads(t).get("compilerOptions",{}).get("strict") is True else 1)'; then
+      if [ -f tsconfig.json ] && [ "$(python3 "$checks/jsonc.py" tsconfig.json compilerOptions.strict 2>/dev/null)" != true ]; then
         echo "FAIL pre-push tsconfig.json:0:warnings-as-errors: compilerOptions.strict is not true — the shipped tsconfig seed sets it" >&2
         exit 1
       fi

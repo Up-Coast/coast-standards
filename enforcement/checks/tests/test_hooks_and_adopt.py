@@ -525,6 +525,31 @@ class HookTests(unittest.TestCase):
         self.assertIn("breaking a push lock left behind", stale.communicate()[0])
         shutil.rmtree(lock, ignore_errors=True)
 
+    def test_a_tsconfig_with_comments_and_a_path_star_is_read_correctly(self):
+        # ccm-replacement maps "@/*" to ["./src/*"]. A comment stripper that does not know
+        # what a string is reads the /* inside that path as a comment, eats the rest of the
+        # file, and the gate refuses the push claiming strict is not set when it is.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("jsonc", os.path.join(CHECKS_DIR, "jsonc.py"))
+        jsonc = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(jsonc)
+        text = """{
+          // the compiler
+          "compilerOptions": {
+            "strict": true,   /* every check on */
+            "paths": { "@/*": ["./src/*"], "~/*": ["./lib/*"] },
+          },
+          "include": ["next-env.d.ts"],
+        }"""
+        data = json.loads(jsonc.strip(text))
+        self.assertIs(data["compilerOptions"]["strict"], True)
+        self.assertEqual(data["compilerOptions"]["paths"]["@/*"], ["./src/*"], "the path survived the comment stripper")
+        self.assertEqual(data["include"], ["next-env.d.ts"], "the trailing commas were dropped")
+        # A string containing a comment opener is left alone.
+        kept = json.loads(jsonc.strip('{"url": "https://example.com/a", "glob": "src/**/*.ts"}'))
+        self.assertEqual(kept["url"], "https://example.com/a")
+        self.assertEqual(kept["glob"], "src/**/*.ts")
+
     def test_pre_push_rules_scan_seat_runs_the_scanner_on_the_tree(self):
         code, out = self.project.hook("pre-push", "--seat", "rules-scan")
         self.assertEqual(code, 0, out)
