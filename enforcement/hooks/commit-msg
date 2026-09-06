@@ -43,4 +43,13 @@ elif [ -n "${CLAUDECODE:-}" ]; then
   echo "FAIL commit-msg $file:0:attribution-trailer: this commit comes from an agent session but names no model — end the message with 'Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>' (rules/09)" >&2
   exit 1
 fi
+# A project that had its own hooks keeps them: ours ran, now its own does.
+if [ -f .coast/previous-hooks-path ]; then
+  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+  if [ -n "$previous" ] && [ -f "$previous/commit-msg" ]; then
+    printf 'gate: %s/commit-msg (this project had it before it adopted)\n' "$previous"
+    sh "$previous/commit-msg" "$file" || exit 1
+  fi
+fi
+
 exit 0

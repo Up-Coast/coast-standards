@@ -602,7 +602,20 @@ question whose answer is always the same, the answer belongs in the code.**
   reported wherever it appears, including in tests, because that shape is
   worth a human's glance every time.
 
-### 4.8 One gate at a time per checkout
+### 4.8 A project's own hooks are never switched off
+
+Adopting used to point `core.hooksPath` at `.githooks` and say nothing about what was
+there before. ccm-replacement's own `scripts/git-hooks/pre-push` ran `gitleaks` — a real
+secret scanner this layer does not have — and adoption silently turned it off. A check a
+founder chose is never dropped on the floor.
+
+`adopt.py` now records the path it found in `.coast/previous-hooks-path`, and each shipped
+hook runs the project's own hook of the same name after its own checks pass, with the same
+arguments and the same ref lines on stdin. It also names the npm script that would undo the
+adoption: a `prepare` step running `git config core.hooksPath scripts/git-hooks` puts the
+old path back on the next install, so the report says which script and which word to change.
+
+### 4.9 One gate at a time per checkout
 
 Two sessions sharing one working tree ran their gates concurrently and hurt
 each other twice: their incremental builds crossed, so a warning count read

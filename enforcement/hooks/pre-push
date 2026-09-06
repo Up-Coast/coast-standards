@@ -69,6 +69,8 @@ fi
 
 seats=all
 measure=0
+push_remote=${1-}
+push_url=${2-}
 if [ "${1-}" = "--seat" ]; then
   seats=${2:?--seat needs a name}
 elif [ "${1-}" = "--measure" ]; then
@@ -132,10 +134,32 @@ remote_still_ours() {
   return 1
 }
 
+refs_file=""
+if [ "$seats" = all ] && [ ! -t 0 ]; then
+  refs_file=$(mktemp "${TMPDIR:-/tmp}/coast-refs.XXXXXX") || refs_file=""
+  [ -n "$refs_file" ] && cat > "$refs_file"
+fi
+
 if [ "$seats" = all ]; then
   take_push_lock || exit 1
   remote_still_ours || exit 1
 fi
+
+# A project that had its own hooks keeps them: ours run first, then its own, with the same
+# ref lines on stdin. adopt.py wrote the path it found into .coast/previous-hooks-path.
+# ccm-replacement's pre-push ran gitleaks, and pointing core.hooksPath at .githooks switched
+# that off without a word — a check the founder chose is never dropped on the floor.
+previous_hooks() {
+  [ -f .coast/previous-hooks-path ] || return 0
+  previous=$(tr -d '"'"'[:space:]'"'"' < .coast/previous-hooks-path)
+  [ -n "$previous" ] && [ -f "$previous/pre-push" ] || return 0
+  printf '"'"'gate: %s/pre-push (this project had it before it adopted)\n'"'"' "$previous"
+  if [ -n "$refs_file" ]; then
+    sh "$previous/pre-push" "$push_remote" "$push_url" < "$refs_file"
+  else
+    sh "$previous/pre-push" "$push_remote" "$push_url" < /dev/null
+  fi
+}
 
 run() {
   name=$1; shift
@@ -421,7 +445,7 @@ if wants rules-scan; then
   # has never seen is compared with the empty tree, so every line counts.
   empty_tree=$(git hash-object -t tree /dev/null)
   bases=""
-  if [ "$seats" = all ] && [ ! -t 0 ]; then
+  if [ "$seats" = all ] && [ -n "$refs_file" ]; then
     while read -r _local_ref local_sha _remote_ref remote_sha; do
       [ -z "${local_sha:-}" ] && continue
       case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac  # a deletion
@@ -430,7 +454,7 @@ if wants rules-scan; then
         *) base=$remote_sha ;;
       esac
       bases="$bases $base"
-    done
+    done < "$refs_file"
   fi
   [ -z "$bases" ] && bases=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree")
   # The first push after adoption carries commits written before the checks existed. Lines
@@ -584,5 +608,8 @@ sys.exit(1)
 '
 }
 wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
+
+[ "$seats" = all ] && run "the hooks this project already had" previous_hooks
+[ -n "$refs_file" ] && rm -f "$refs_file"
 
 printf 'gate: every check green\n'

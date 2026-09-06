@@ -46,4 +46,13 @@ run() {
 
 run "rules-scan (staged)" python3 "$checks/check_rules.py" --staged --platform "$platform"
 
+# A project that had its own hooks keeps them: ours ran, now its own does.
+if [ -f .coast/previous-hooks-path ]; then
+  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+  if [ -n "$previous" ] && [ -f "$previous/pre-commit" ]; then
+    printf 'gate: %s/pre-commit (this project had it before it adopted)\n' "$previous"
+    sh "$previous/pre-commit"  || exit 1
+  fi
+fi
+
 printf 'gate: every pre-commit check green\n'

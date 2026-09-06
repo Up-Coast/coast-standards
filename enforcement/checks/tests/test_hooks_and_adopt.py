@@ -327,6 +327,27 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("[DOC-1]", out)
         self.assertNotIn("doc-comments (staged)", out, "the whole-file seat is gone; the staged scan holds added lines")
 
+    def test_a_project_with_its_own_hooks_keeps_them(self):
+        # ccm-replacement had scripts/git-hooks/pre-push running gitleaks; adopting pointed
+        # core.hooksPath at .githooks and switched it off without a word.
+        self.project.write("scripts/git-hooks/pre-push", "#!/bin/sh\necho 'the project own pre-push ran'\nexit 0\n")
+        self.project.write("scripts/git-hooks/pre-commit", "#!/bin/sh\necho 'the project own pre-commit ran'\nexit 0\n")
+        os.chmod(os.path.join(self.project.path, "scripts/git-hooks/pre-push"), 0o755)
+        os.chmod(os.path.join(self.project.path, "scripts/git-hooks/pre-commit"), 0o755)
+        self.project.write("package.json", json.dumps({"scripts": {"prepare": "git config core.hooksPath scripts/git-hooks"}}))
+        self.project.commit("its own hooks")
+        sh(self.project.path, "git", "config", "core.hooksPath", "scripts/git-hooks")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(".coast/previous-hooks-path").strip(), "scripts/git-hooks")
+        self.assertIn("they are kept and run after ours", out)
+        self.assertIn('its "prepare" script sets core.hooksPath back', out, "the script that would undo this is named")
+        code, out = self.project.hook("pre-commit")
+        self.assertEqual(code, 0, out)
+        self.assertIn("the project own pre-commit ran", out)
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan")
+        self.assertNotIn("the project own pre-push ran", out, "a named seat is not a whole push")
+
     def test_dry_run_writes_nothing(self):
         before = self.project.snapshot()
         code, out = self.project.adopt("--dry-run")

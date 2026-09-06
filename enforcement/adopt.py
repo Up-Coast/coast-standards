@@ -547,12 +547,39 @@ class Adoption:
 
     def set_hooks_path(self):
         current = git(self.project, "config", "--get", "core.hooksPath", check=False)
+        if current and current != PROJECT_HOOKS_DIR:
+            self.keep_existing_hooks(current)
         if current == PROJECT_HOOKS_DIR:
             self.say("unchanged", "git config core.hooksPath", PROJECT_HOOKS_DIR)
             return
         self.say("would set" if self.dry_run else "set", "git config core.hooksPath", PROJECT_HOOKS_DIR)
         if not self.dry_run:
             git(self.project, "config", "core.hooksPath", PROJECT_HOOKS_DIR)
+
+    def keep_existing_hooks(self, current):
+        """A project that already had hooks keeps them: ours run first, then its own.
+        ccm-replacement's pre-push ran gitleaks, a real secret scanner this layer does not
+        have, and pointing core.hooksPath at .githooks switched it off without a word."""
+        existing = os.path.join(self.project, current)
+        kept = [name for name in HOOK_NAMES if os.path.isfile(os.path.join(existing, name))]
+        if not kept:
+            return
+        self.put(".coast/previous-hooks-path", (current + "\n").encode("utf-8"))
+        self.say("note", ".coast/previous-hooks-path",
+                 f"this project already had {', '.join(kept)} in {current}/ — they are kept and run after ours")
+        installer = self.package_script_setting_hooks_path()
+        if installer:
+            self.say("note", "package.json",
+                     f'its "{installer}" script sets core.hooksPath back to {current} — change that one word to '
+                     f'{PROJECT_HOOKS_DIR} or the next install turns these checks off')
+
+    def package_script_setting_hooks_path(self):
+        """The npm script that resets core.hooksPath, if the project has one."""
+        data = self.load_json("package.json") or {}
+        for name, command in (data.get("scripts") or {}).items():
+            if isinstance(command, str) and "core.hooksPath" in command:
+                return name
+        return None
 
     def secret_scan_tree(self):
         """The scanner's secret-literal group over every tracked file (the first-push scan). Returns the FAIL lines."""
