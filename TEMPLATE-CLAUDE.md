@@ -5,7 +5,7 @@
 
 ## Standing rules (read before any work)
 
-This project follows the Up Coast standards repo:
+This project follows the Coast Standards repo:
 `~/Claude/Work/Code/tools/up-coast-standards/` (GitHub: Up-Coast/up-coast-standards).
 
 Read `rules/00-priority-rules.md` first — the non-negotiables, headed by: **the project

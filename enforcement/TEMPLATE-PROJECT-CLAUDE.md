@@ -1,7 +1,7 @@
 <!-- up-coast-standards: begin (this block is written by enforcement/adopt.py; edit outside it) -->
 ## Standing rules — enforced by machines where a machine can hold them
 
-This project follows the Up Coast standards repo,
+This project follows the Coast Standards repo,
 `{{STANDARDS_PATH}}` (GitHub: Up-Coast/up-coast-standards), adopted for
 the **{{PLATFORM}}** platform from standards commit `{{STANDARDS_COMMIT}}`.
 Read `rules/00-priority-rules.md` there first (DRY is the rule above all

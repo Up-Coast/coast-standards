@@ -1,5 +1,5 @@
 #!/bin/sh
-# Up Coast standards — the project's commit-msg hook (enforcement task E2.2).
+# Coast Standards — the project's commit-msg hook (enforcement task E2.2).
 #
 # Small on purpose. It holds the commit-message rules a machine can hold:
 #   - a subject line that exists and fits in 100 characters

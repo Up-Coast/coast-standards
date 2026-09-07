@@ -1,4 +1,6 @@
-# Up Coast Standards
+# Coast Standards
+
+*Named Coast Standards on 2026-09-07 (Abbey: "let's just call it Coast Standards for now"). The GitHub repository is still `Up-Coast/up-coast-standards` until the rename in the plan's E6 is run; the org stays Up-Coast.*
 
 The standing engineering rules for every project Abbey Jackson (Up Coast) builds with AI
 agents. This repo exists so no session ever has to be told these rules again: point an agent
@@ -113,9 +115,9 @@ blocks. Never `--no-verify`; the governed files are not an agent's to edit.
   standards, **not** part of Coast's shipped corpus — Coast builds mobile and web app
   targets, so it has no Python rules doc to copy. Added 20 August 2026 for client backend
   work. If Coast ever ships a Python target, that corpus and this file must be reconciled.
-- `rules/08-auditing-and-completeness.md` is Up Coast standards, written 20 August 2026 from
+- `rules/08-auditing-and-completeness.md` is Coast Standards, written 20 August 2026 from
   the Coast completeness-sweep failure it describes.
-- `examples/fleetsignal-full-scope.md` is Up Coast standards, added 21 August 2026: a
+- `examples/fleetsignal-full-scope.md` is Coast Standards, added 21 August 2026: a
   reference list of everything delivered on the FleetSignal client engagement outside its
   frontend build (backend hardening, standards docs, security, deploy infra, analytics,
   localization, ops tooling, handoff docs), kept for scoping future client projects.

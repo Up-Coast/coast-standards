@@ -1,5 +1,5 @@
 #!/bin/sh
-# Up Coast standards — the project's pre-push hook: the full gate battery
+# Coast Standards — the project's pre-push hook: the full gate battery
 # for the platform (enforcement task E2.2; design enforcement/README.md
 # §4.4 and §5.3). Nothing is pushed unverified — a failure stays local.
 #

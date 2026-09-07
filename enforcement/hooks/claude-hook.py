@@ -545,7 +545,7 @@ def rules_at_start(event):
     root = repo_root(event) or event.get("cwd") or os.getcwd()
     checks = checks_dir(root)
     platform, project_type = platform_of(root)
-    lines = ["Up Coast rules — what this session is held to:"]
+    lines = ["Coast Standards — what this session is held to:"]
     if platform:
         lines.append(f"platform: {platform}" + (f" · project type {project_type}" if project_type else "")
                      + f" (from {PLATFORM_FILE})")

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Up Coast standards — the project's pre-commit hook (enforcement task E2.2).
+# Coast Standards — the project's pre-commit hook (enforcement task E2.2).
 #
 # Seconds, not minutes: the rules scanner on the STAGED diff — every added
 # line, the doc-comment check among them (the scanner's `doc-comments`

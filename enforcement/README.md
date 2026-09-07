@@ -578,13 +578,13 @@ prevent.
 | E5.6 | **Ask once.** `adopt.py --init` (or a first adoption with no config) asks the founder the on/off questions once, in plain words, one screen per group (rules with a sentence each, seats, session hooks), writes `.coast/config.json`, and never asks again; `--yes` takes every default. Every question's default is "on". | S | a scripted answer file drives the prompt in a test; `--yes` writes the default config byte-for-byte |
 | E5.7 | **Docs.** `DEVELOPER-GUIDE.md` gains "Configuration" (the schema, the merge order, what `off` does to the number) and the layout table changes; this document's §4 architecture tree and §4.2 gain the config; `README.md` "How to adopt" gains the one question screen. | S | verify_rules green; no doc names a path the layout table does not |
 
-### Phase E6 — the name (Abbey's question of 2026-09-07; her decision, then the rows)
+### Phase E6 — the name: **Coast Standards** (Abbey, 2026-09-07: "let's just call it Coast Standards for now")
 
 Abbey: *"I am actually not sure if I should be branding this with Up Coast or with
 Coast. I feel like I should use Coast. That means the repo name and product need to
-change. And maybe 'standards' isn't the best name."* Recorded here so the rename is one
-task and not a drift: the recommendation and the options are in the session's reply of
-2026-09-07; this table waits for the name.
+change. And maybe 'standards' isn't the best name."* Decided the same day: **Coast Standards**. The product name is in every title and
+template already (commit of 2026-09-07); the rows below are the repository rename, which
+waits for Abbey's go-ahead because it changes GitHub and every clone path.
 
 | Task | What | Size | Guard |
 |---|---|---|---|
