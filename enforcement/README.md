@@ -471,6 +471,11 @@ Serial by default, one consolidated review per phase, each task DONE only
 with its guard named and a reviewer's confirmation from the code. Sizes: S
 under half a day, M a day, L two or more.
 
+**The order from 2026-09-07 (Abbey: finish the remaining work, fix what the review
+found, wrap every rule in a config):** E2.7 → E2.8 … E2.12 → E5.1 … E5.7 → E6 (once
+the name is chosen) → E7. Phase E3 is Coast's own half and runs in Coast's repo on
+its own clock; E4 stays filed.
+
 ### Phase E0 — the honest starting line (this repo)
 
 | Task | What | Size | Guard |
@@ -543,35 +548,57 @@ below, ranked, and the next session builds the first row that does not say DONE.
 - Compose `Text("literal")` as an Android Lint custom check if the scanner's
   Kotlin precision proves insufficient.
 
-### Phase E5 — a product for third parties (design only; Abbey's question of 2026-09-07)
+### Phase E5 — the config: every rule, seat and hook behind a switch, and the names out of the code (Abbey, 2026-09-07)
 
-Asked: could this be a set of Claude skills plus an SDK installed in the project, with rules
-a founder can switch on and off? What the review found that bears on it:
+Abbey's brief, 2026-09-07: *"make a detailed plan to finish all of the remaining work,
+fix the things you found were wrong, AND wrap all of the rules in a config"*; the
+config lets a user put their own name and app name in, and when they do not, the
+text is general — except that "Coast" may stay, because these are Coast's standards.
+E2.7–E2.12 come first (a third party meets every one of those edges on day one), then
+E5 in the order below. Sizes: S under half a day, M a day, L two or more.
 
-- **Nothing is configurable today.** Every signature, seat, session hook and lint opt-in is
-  on for the platform. The only switches are the two dated exception shapes. `--only` is
-  opt-in for the installer's own use; `rules-exceptions.json` cannot say "this rule,
-  everywhere"; `.coast/paths.json` overrides classes but not `order`; severities are frozen.
-- **The table is six near-copies.** A shared signature is pasted per platform with only
-  `files` differing, so any per-project override must key on `(platform, id)` and any fix
-  lands six times. The layout (`Scripts/checks`, `.coast/`, `Scripts/hooks`) is a literal
-  in at least six files. "Abbey", "Up Coast", "Coast" appear in refusal text, the CLAUDE.md
-  template, every lint seed's header and the temp-file names.
-- **The verifier is the asset.** A disabled rule must show as `open` (or a new `off` bin)
-  in "held by a machine N of M", or the number becomes a lie — the one thing this whole
-  design exists to prevent. That is the design constraint on any on/off switch.
+**What the review found that shapes this** (§ Phase E2 review): nothing is
+configurable today — every signature, seat, session hook and lint opt-in is on for the
+platform, and the only switches are the two dated exception shapes. The signature table
+is six near-copies, so any per-project override must key on `(platform, id)`. The
+layout (`Scripts/checks`, `Scripts/hooks`, `.githooks`, `.coast/`, `docs/domain-rules.md`)
+is a literal in at least six files. "Abbey", "Up Coast" and "Coast" appear in refusal
+text, the CLAUDE.md template, every lint seed's header and the temp-file names. And the
+one design constraint on any switch: **a rule switched off must show in "held by a
+machine N of M"**, or the number becomes a lie — the thing this whole design exists to
+prevent.
 
-The shape, when it is built: (1) one governed `.coast/config.json` — `org` (name, the
-founder name the sentences use), `layout` (the five paths), `rules: {off: [ids],
-severity: {id: block|ratchet|advisory}}`, `seats: {off: [names]}`, `session_hooks: {off:
-[ids]}`, `ratchet_days` — merged in `load_tables` where `.coast/paths.json` already
-merges, read by the hooks and by the verifier; (2) `rules_signatures.json` refactored to
-one row per id with per-platform `files`/`pattern` overrides; (3) `adopt.py --config`
-and a `standards init` that asks the founder the on/off questions once; (4) a Claude
-Code plugin carrying the skills (adopt, explain-a-refusal, add-a-signature, read-the-number)
-and the hooks, with `adopt.py` as the "SDK" the plugin installs. Rows and sizes when
-Abbey says build it; E2.8–E2.12 come first, because a third party meets every one of
-those edges on day one.
+| Task | What | Size | Guard |
+|---|---|---|---|
+| E5.1 | **One home for the layout.** Every path the layer names lives in one table, `enforcement/checks/layout.json`: `checks_dir`, `hooks_dir` (git), `session_hook`, `settings_file`, `state_dir`, `rules_document`, `ai_rules_document`, `lock_name`, `temp_prefix`, the env-variable prefix. `adopt.py`, the three git hooks, `claude-hook.py`, `claude-settings.json` (rendered at adoption, not copied), `paths.json`'s governing classes and the jscpd ignore list read it — the hooks through a generated `.coast/layout.sh` the installer writes beside the platform file, so a `sh` hook sources one line instead of carrying literals. **Decision offered with this row:** move the checks and the session hook under the state directory (`.coast/checks/`, `.coast/hooks/`) so a project has ONE folder that is the layer's and the `Scripts/`-vs-`scripts/` case-fold collision cannot happen; recommended. | M | a test greps every shipped file for the old literals and fails on any; the case-fold test from E2.6 passes on a project with `scripts/` |
+| E5.2 | **One row per signature.** `rules_signatures.json` becomes `{"signatures": [{id, rule, severity, scope, applies_to, excludes, words, platforms: {ios: {files, pattern}, web: {…}}}]}` — the shared fields once, the per-platform `files`/`pattern`/`paired` under `platforms`, a signature absent from a platform simply not listed there. `load_tables` flattens it back to the per-platform shape the scanner already uses, so nothing downstream changes; the plants and `verify_rules.py` read the same loader. The retired-words list, the test reference words and the tool-ratchet ids move from Python constants into the table. | M | every plant still proves both directions; the flattened tables are byte-equal to today's per-platform tables on the day of the change (a one-off parity test, then deleted) |
+| E5.3 | **The config file.** `.coast/config.json`, GOVERNING (an agent cannot switch a rule off), written by `adopt.py` from `enforcement/config.default.json` on first adoption, merged over the defaults on every read — one loader (`config.py`) used by the scanner, the verifier, the hooks (through the same generated `layout.sh`) and the installer: <br>`{"version": 1,`<br>` "owner": {"name": "", "product": "", "org": ""},`<br>` "rules": {"off": [ids], "severity": {id: "block"\|"ratchet"\|"advisory"}, "retired_words": [...]},`<br>` "seats": {"off": [names]},`<br>` "session_hooks": {"off": [ids]},`<br>` "linters": {"off": [names]},`<br>` "ratchet_days": 90,`<br>` "layout": {…overrides of E5.1's table…}}`<br>An `off` entry is the whole switch: the scanner skips the id, the hook skips the seat or hook, the verifier reports it (E5.4). Severity may only move DOWN (block → ratchet → advisory) in the config; moving up is the table's job. `rules-exceptions.json` stays as it is — an exception is dated and per-path, a switch is neither. | M | `test_config.py`: an `off` signature produces no hit on its fail plant; an `off` seat prints `gate: <name> OFF (config)` and runs nothing; an `off` session hook exits 0 with a one-line note; a severity raised in the config is refused with a sentence |
+| E5.4 | **The verifier tells the truth about switches.** A new bin, `off`, in `verify_rules.py` and in every place the number is printed (the CLAUDE.md block, `rules-at-start`, `--json`): a rule whose every machine reference is switched off is `off`, not `machine`; a rule with one of several references off is `partly`. `--config <file>` (default the project's) so `adopt.py` computes the project's number with its switches applied. The headline reads "rules held by a machine 21 of 74 (3 switched off)". | S | `test_verify_rules.py`: the bins with a config; the number falls by exactly the rules switched off |
+| E5.5 | **The names out of the code.** Every sentence that says "Abbey", "Up Coast" or a product name reads `owner.name` / `owner.product` from the config and falls back to general words: "ask the founder in one line first" (not "ask Abbey"), "this project" (not the app's name), "the standards" (not "Up Coast standards"). "Coast" stays where it names the product: the `.coast/` directory, the `coast-rules-version` stamp, "Coast standards" in the CLAUDE.md block title. The lint seeds' headers, `TEMPLATE-PROJECT-CLAUDE.md`, `claude-hook.py`'s refusals, the verifier baseline's `by`, the temp-file names and the exception examples are the list; `adopt.py --owner "Abbey Jackson" --product "Dayletter"` (or the config) fills them in. | S | a test greps every shipped file and template for the three names and fails on any outside `README.md`'s history |
+| E5.6 | **Ask once.** `adopt.py --init` (or a first adoption with no config) asks the founder the on/off questions once, in plain words, one screen per group (rules with a sentence each, seats, session hooks), writes `.coast/config.json`, and never asks again; `--yes` takes every default. Every question's default is "on". | S | a scripted answer file drives the prompt in a test; `--yes` writes the default config byte-for-byte |
+| E5.7 | **Docs.** `DEVELOPER-GUIDE.md` gains "Configuration" (the schema, the merge order, what `off` does to the number) and the layout table changes; this document's §4 architecture tree and §4.2 gain the config; `README.md` "How to adopt" gains the one question screen. | S | verify_rules green; no doc names a path the layout table does not |
+
+### Phase E6 — the name (Abbey's question of 2026-09-07; her decision, then the rows)
+
+Abbey: *"I am actually not sure if I should be branding this with Up Coast or with
+Coast. I feel like I should use Coast. That means the repo name and product need to
+change. And maybe 'standards' isn't the best name."* Recorded here so the rename is one
+task and not a drift: the recommendation and the options are in the session's reply of
+2026-09-07; this table waits for the name.
+
+| Task | What | Size | Guard |
+|---|---|---|---|
+| E6.1 | Rename the GitHub repository (`gh repo rename` keeps a redirect from the old name — verify on GitHub's own docs first) and the local folder; the `Up-Coast` org stays. | S | the clone line in `~/.claude/CLAUDE.md` and this README work from a fresh clone |
+| E6.2 | Every reference: this repo's README and templates, `~/.claude/CLAUDE.md` (the bootstrap table and clone lines), the CLAUDE.md block in every adopted repo (`adopt.py` rewrites it — E2.7 carries it), Coast's `PORTFOLIO.md` and TOOLING rows, the memory files that name the path. | S | `grep -r up-coast-standards` over `~/.claude` and `~/Claude/Work/Code` finds only history |
+| E6.3 | The corpus stamp and the block title carry the product name (`coast-rules-version` already does). | S | verify_rules green |
+
+### Phase E7 — the plugin: skills plus the SDK (after E5; the shape Abbey asked about)
+
+| Task | What | Size | Guard |
+|---|---|---|---|
+| E7.1 | A Claude Code plugin in this repo (`plugin/` with `.claude-plugin/plugin.json`): the session hooks shipped as the plugin's `hooks/` so a project gets them by installing the plugin, and `adopt.py` as the command the plugin's `adopt` skill runs. Verify the plugin hooks contract on Anthropic's plugin reference before writing a line. | M | the plugin installs into a fixture project and every session-hook test passes through it |
+| E7.2 | The skills: `adopt` (run the installer, walk the one question screen), `explain-this-refusal` (paste a FAIL line, get the rule, the check and the door — the exception or the switch — in plain words), `add-a-signature` (the E1 loop: pattern, plants, tag, verifier), `the-number` (read and explain "held by a machine N of M" for this project). | M | each skill's steps run end to end on the fixture |
+| E7.3 | Publish: a versioned release of the plugin and the standards together (`CHECKS-VERSION`, §4.6), the developer guide as the published docs, the plain-words changes line per release. | S | a fresh Mac follows the README from clone to first green push |
 
 ## 7. The decisions (ALL DECIDED 2026-09-04 — build them, don't re-ask)
 
