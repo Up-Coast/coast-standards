@@ -1,10 +1,14 @@
-# Up Coast Standards Enforcement — Developer Guide
+# Coast Standards Enforcement — Internal Developer Guide
 
-This is the reference for the enforcement layer: what it is, how it holds a rule, what it
-installs into a project, every file and flag it reads or writes, and how to extend or
-excuse it. It describes what the code does today (standards commit of 7 September 2026).
-The design rationale and the build history live in [README.md](README.md); this page is
-the manual.
+**Audience: people working on this layer itself** — the scanner, the hooks, the installer.
+It is the full technical reference: how a rule is held, what is installed into a project,
+every file and flag the code reads or writes, and how to extend or excuse it. It describes
+what the code does today (standards commit of 7 September 2026). The design rationale and
+the build history live in [README.md](README.md).
+
+If you are a founder or a developer **installing this into your own product**, you want the
+public documentation instead: [docs/](../docs/README.md). It says the same things in plain
+words and leaves out what only a maintainer needs.
 
 ---
 
