@@ -6,7 +6,7 @@
 ## Standing rules (read before any work)
 
 This project follows the Up Coast standards repo:
-`~/Documents/Claude/Code/tools/up-coast-standards/` (GitHub: Up-Coast/up-coast-standards).
+`~/Claude/Work/Code/tools/up-coast-standards/` (GitHub: Up-Coast/up-coast-standards).
 
 Read `rules/00-priority-rules.md` first — the non-negotiables, headed by: **the project
 must stay DRY (rule above all other rules), all user-facing strings externalized for

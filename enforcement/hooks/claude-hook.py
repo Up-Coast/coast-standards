@@ -87,9 +87,11 @@ https://docs.anthropic.com/en/docs/claude-code/hooks redirects there; read
   "Permission rule syntax to filter when this hook runs, such as
   ``\"Bash(git *)\"`` or ``\"Edit(*.ts)\"``. The hook command only runs if the
   tool call matches the pattern." and "``\"Bash(git *)\"`` runs when any
-  subcommand of the Bash input matches ``git *``" — so the README's
-  ``if: Bash(git commit *)`` is a documented field; ``scan-at-commit`` also
-  checks the command itself, so it is correct without the field.
+  subcommand of the Bash input matches ``git *``" — and the same page says
+  the filter is best-effort prefix matching, so ``if: Bash(git commit *)``
+  would never fire for ``git -C <dir> commit`` or ``git -c … commit``. The
+  settings file therefore carries no ``if``: ``scan-at-commit`` reads the
+  command itself and passes anything that is not a commit (2026-09-07).
   ``${CLAUDE_PROJECT_DIR}`` in a command is a documented path placeholder,
   also exported "as the environment variables ``CLAUDE_PROJECT_DIR`` …".
 * Exit codes: "Exit code 2 is the way a hook signals 'stop, don't do this.'"
@@ -343,8 +345,10 @@ def no_verify(event):
         if program != "git":
             continue
         sub, rest = git_subcommand(args)
-        bypass = any(token == "--no-verify" or token.startswith("--no-verify=") for token in args)
-        bypass = bypass or any(token.startswith("core.hooksPath=") for token in args)
+        bypass = any(token.startswith("--no-verif") for token in args)   # git accepts any unique prefix
+        bypass = bypass or any(token.lower().startswith("core.hookspath=") for token in args)   # keys are case-insensitive
+        if sub == "config" and any(token.lower() == "core.hookspath" or token.lower().startswith("core.hookspath=") for token in rest):
+            bypass = True   # pointing the hooks path elsewhere (or unsetting it) is the same switch by another route
         if sub == "commit":
             bypass = bypass or any(re.fullmatch(r"-[a-zA-Z]*n[a-zA-Z]*", token) for token in rest)
         if bypass:
@@ -400,7 +404,10 @@ def scan_at_commit(event):
     checks = checks_dir(root)
     if target:
         base = event.get("cwd") or os.getcwd()
-        pointed = run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(base, os.path.expanduser(target)))
+        try:
+            pointed = run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(base, os.path.expanduser(target)))
+        except OSError:
+            return PASS   # the directory does not exist; git will say so itself
         pointed_root = pointed.stdout.strip() if pointed.returncode == 0 else None
         if pointed_root and os.path.realpath(pointed_root) != os.path.realpath(root or ""):
             root = pointed_root
@@ -477,11 +484,25 @@ def unpushed_at_stop(event):
     return refuse(*lines)
 
 
+def rules_number_from_claude_md(root):
+    """The number adopt.py wrote into the CLAUDE.md block (the verifier itself stays in the standards repo)."""
+    try:
+        with open(os.path.join(root, "CLAUDE.md"), encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError:
+        return "rules held by a machine: unknown (no CLAUDE.md block — run adopt.py)"
+    match = re.search(r"Rules held by a machine: (\d+) of (\d+)\*\*\s+in that document\s*\((.*?)\)", text, re.DOTALL)
+    if not match:
+        return "rules held by a machine: unknown (no CLAUDE.md block — run adopt.py)"
+    detail = " ".join(match.group(3).split())
+    return f"rules held by a machine: {match.group(1)} of {match.group(2)} in docs/domain-rules.md ({detail}) — as of the last adopt.py run"
+
+
 def rules_number(root, checks, platform):
     """(lines for the context, review-only titles) from verify_rules.py, or a plain sentence when it cannot run."""
     verifier = os.path.join(checks, "verify_rules.py")
     if not os.path.isfile(verifier):
-        return ["rules held by a machine: unknown (verify_rules.py is not beside the scanner)"], []
+        return [rules_number_from_claude_md(root)], []
     battery = os.path.join(checks, "battery.json")
     args = [sys.executable, verifier, "--root", os.path.dirname(os.path.dirname(checks)), "--json"]
     if os.path.isfile(battery):

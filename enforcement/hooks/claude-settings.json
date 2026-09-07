@@ -43,7 +43,6 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-at-commit",
-            "if": "Bash(git commit *)",
             "statusMessage": "rules: scan-at-commit (scanning the staged diff)",
             "timeout": 300
           }

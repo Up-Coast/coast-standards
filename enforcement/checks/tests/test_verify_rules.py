@@ -456,6 +456,15 @@ class ResolutionTests(unittest.TestCase):
         report = self.fx.run()
         self.assertEqual(report["gaps"][0]["words"], "document does not exist")
 
+    def test_document_override_does_not_report_unnamed_signatures(self):
+        # One project's document names the checks its rules use, not every signature in
+        # the platform table: a single iOS document reported 198 false gaps and exit 1.
+        self.doc("- **X-1** [check: scan:one]\n")
+        self.fx.signatures({"ios": {"one": "block", "orphan": "block"}})
+        report = self.fx.run(documents=["docs/rules.md"], platforms=["ios"])
+        self.assertEqual(report["gaps"], [])
+        self.assertEqual(report["gap_count"], 0)
+
     def test_document_override_replaces_the_manifest_list(self):
         self.doc("- **X-1** [check: scan:one]\n")
         self.fx.write("docs/other.md", "# T\n\n## S\n\n- **Y-1** [check: review]\n")

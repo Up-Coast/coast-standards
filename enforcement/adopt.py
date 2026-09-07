@@ -266,7 +266,20 @@ class Adoption:
 
     # -- the steps
 
+    def note_case_folded_collision(self):
+        """macOS folds case: writing Scripts/ beside an existing scripts/ lands the checks inside scripts/,
+        git records them there, and a Linux clone — where the two spellings are different folders —
+        finds nothing at the path the hooks and settings name. Said out loud; the layout is not yet
+        configurable (enforcement/README.md, review of 2026-09-07)."""
+        wanted = PROJECT_CHECKS_DIR.split("/")[0]
+        for name in os.listdir(self.project):
+            if name != wanted and name.lower() == wanted.lower() and os.path.isdir(self.path(name)):
+                self.say("note", f"{wanted}/", f"this project already has {name}/ — on this case-folding filesystem the "
+                         f"checks land inside it and git records them as {name}/checks; a Linux clone will not find "
+                         f"them at {wanted}/checks. Rename {name}/ before adopting if the project is built anywhere but a Mac")
+
     def install_checks(self):
+        self.note_case_folded_collision()
         for name in sorted(os.listdir(CHECKS_DIR)):
             source = os.path.join(CHECKS_DIR, name)
             if not os.path.isfile(source) or name in CHECKS_NOT_SHIPPED or name.startswith("."):
@@ -501,6 +514,8 @@ class Adoption:
         found = shutil.which("jscpd")
         if found:
             return [found]
+        if not shutil.which("npx"):
+            return None
         probe = subprocess.run(["npx", "--no-install", "jscpd", "--version"], cwd=self.project, capture_output=True, text=True)
         if probe.returncode == 0:
             return ["npx", "--no-install", "jscpd"]

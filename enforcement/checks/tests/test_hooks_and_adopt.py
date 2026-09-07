@@ -132,6 +132,16 @@ class AdoptTests(unittest.TestCase):
         self.project = Project()
         self.addCleanup(self.project.cleanup)
 
+    def test_a_folder_that_case_folds_to_scripts_is_said_out_loud(self):
+        # On a case-folding filesystem Scripts/checks lands inside an existing scripts/ and git
+        # records it there, so a Linux clone finds nothing at Scripts/checks. The report says so.
+        self.project.write("scripts/deploy.sh", "#!/bin/sh\n")
+        self.project.commit("a scripts folder")
+        code, out = self.project.adopt("--dry-run")
+        self.assertEqual(code, 0, out)
+        self.assertIn("already has scripts/", out)
+        self.assertIn("a Linux clone will not find them", out)
+
     def test_adopting_twice_changes_nothing_the_second_time(self):
         code, first = self.project.adopt()
         self.assertEqual(code, 0, first)
@@ -171,6 +181,21 @@ class AdoptTests(unittest.TestCase):
                         "scan-at-commit", "scan-on-edit", "unpushed-at-stop", "rules-at-start"):
             self.assertIn(hook_id, commands, f"the settings file must wire {hook_id}")
         self.assertIn("Scripts/hooks/claude-hook.py", commands)
+
+    def test_session_start_reads_the_number_adopt_wrote_into_claude_md(self):
+        # The verifier is not installed into a project (it reads the standards repo), so the
+        # session-start hook used to say "unknown" in every adopted repository. adopt.py writes
+        # the number into the CLAUDE.md block; the hook reads it from there.
+        code, _ = self.project.adopt()
+        self.assertEqual(code, 0)
+        block = self.project.read("CLAUDE.md")
+        self.assertRegex(block, r"Rules held by a machine: \d+ of \d+")
+        event = json.dumps({"session_id": "t", "cwd": self.project.path, "hook_event_name": "SessionStart", "source": "startup"})
+        done = subprocess.run([sys.executable, os.path.join(self.project.path, "Scripts/hooks/claude-hook.py"), "rules-at-start"],
+                              input=event, cwd=self.project.path, capture_output=True, text=True, env=clean_env())
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertRegex(done.stdout, r"rules held by a machine: \d+ of \d+ in docs/domain-rules.md \(partly \d+")
+        self.assertNotIn("unknown", done.stdout)
 
     def test_pre_push_builds_an_xcode_project_through_xcodebuild_with_warnings_as_errors(self):
         # An xcodegen app: no Package.swift, an .xcodeproj, a stub xcodebuild on PATH that records its arguments.
@@ -484,6 +509,16 @@ class HookTests(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(":empty-subject:", out)
 
+    def test_commit_msg_counts_characters_not_bytes(self):
+        # wc -m counts bytes under a C locale: a 98-character subject with two em dashes read as 102.
+        subject = "A wrong check is a founder's call — not a dead end — one seat excused, dated, recorded"
+        self.assertLessEqual(len(subject), 100)
+        path = os.path.join(self.project.path, "MSG")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(subject + "\n")
+        code, out = self.project.hook("commit-msg", path, env=clean_env(LC_ALL="C", LANG="C"))
+        self.assertEqual(code, 0, out)
+
     def test_commit_msg_refuses_a_long_subject_and_passes_a_plain_one(self):
         code, out = self.commit_msg("x" * 101 + "\n")
         self.assertEqual(code, 1, out)
@@ -552,9 +587,7 @@ class HookTests(unittest.TestCase):
     def test_two_pushes_in_one_checkout_are_serialised_and_a_stale_lock_is_broken(self):
         # A held lock makes the second push wait rather than build alongside the first.
         lock = os.path.join(self.project.path, ".git", "coast-push.lock")
-        os.makedirs(lock, exist_ok=True)
-        with open(os.path.join(lock, "started"), "w") as handle:
-            handle.write(str(int(time.time())))
+        os.makedirs(lock, exist_ok=True)   # a live lock: just made (its age is the directory's own mtime)
         waiting = subprocess.Popen(["sh", os.path.join(self.project.path, ".githooks", "pre-push"), "origin", "x"],
                                    cwd=self.project.path, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=clean_env())
@@ -565,8 +598,8 @@ class HookTests(unittest.TestCase):
         shutil.rmtree(lock, ignore_errors=True)
         # A lock left behind by a dead push is broken, not waited on for ever.
         os.makedirs(lock, exist_ok=True)
-        with open(os.path.join(lock, "started"), "w") as handle:
-            handle.write(str(int(time.time()) - 7200))
+        two_hours_ago = time.time() - 7200
+        os.utime(lock, (two_hours_ago, two_hours_ago))
         stale = subprocess.Popen(["sh", os.path.join(self.project.path, ".githooks", "pre-push"), "origin", "x"],
                                  cwd=self.project.path, stdin=subprocess.DEVNULL,
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=clean_env())

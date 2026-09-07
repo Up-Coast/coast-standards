@@ -144,7 +144,9 @@ class PathClasses:
 
 
 def git(*args, check=True):
-    result = subprocess.run(["git", *args], capture_output=True, text=True)
+    # core.quotePath would print a non-ASCII path as "Caf\303\251View.swift", which no later
+    # git command finds; every mode silently skipped such files before this.
+    result = subprocess.run(["git", "-c", "core.quotePath=false", *args], capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout
@@ -163,13 +165,15 @@ def added_lines_from_diff(diff_text):
     """[(new-file line number, text)] from a --unified=0 diff of one file."""
     lines = []
     new_line = 0
+    in_hunk = False
     for raw in diff_text.splitlines():
         hunk = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", raw)
         if hunk:
             new_line = int(hunk.group(1))
+            in_hunk = True
             continue
-        if raw.startswith("+++") or raw.startswith("---"):
-            continue
+        if not in_hunk and (raw.startswith("+++") or raw.startswith("---")):
+            continue   # the file headers; inside a hunk a line starting "++" is an added line like any other
         if raw.startswith("+"):
             lines.append((new_line, raw[1:]))
             new_line += 1
@@ -270,9 +274,14 @@ def governed_exceptions():
 def load_baselines():
     if not os.path.isfile(BASELINE_FILE):
         return {}
-    with open(BASELINE_FILE, encoding="utf-8") as handle:
-        data = json.load(handle)
-    return {entry["id"]: entry for entry in data.get("baselines", []) if isinstance(entry, dict) and "id" in entry}
+    try:
+        with open(BASELINE_FILE, encoding="utf-8") as handle:
+            data = json.load(handle)
+        entries = data.get("baselines", [])
+    except (ValueError, AttributeError) as error:
+        print(f"FAIL ratchet {BASELINE_FILE}:0:baseline: the ratchet baseline is not the JSON adopt.py writes ({error}) — re-run adopt.py")
+        sys.exit(1)
+    return {entry["id"]: entry for entry in entries if isinstance(entry, dict) and "id" in entry}
 
 
 def ratchet_verdict(signature_id, count, baselines, today):
@@ -335,6 +344,9 @@ def judge_tool_ratchet(signature_id, count, platform, today):
     """
     if signature_id not in TOOL_RATCHETS:
         print(f"check_rules.py: unknown tool ratchet '{signature_id}' (one of {', '.join(sorted(TOOL_RATCHETS))})")
+        return 2
+    if count < 0:
+        print(f"check_rules.py: a count of {count} for '{signature_id}' is not a count — the seat's counter is broken")
         return 2
     rule = tool_ratchet_rule(signature_id, platform)
     entry = load_baselines().get(signature_id)
@@ -427,25 +439,31 @@ def class_applies(signature, path_class):
     return "*" in applies or path_class in applies
 
 
-def pattern_hits(pattern, lines, joined):
+JOIN_WINDOW = 8   # a hatch split across chained modifiers spans a few lines, never a file
+
+
+def pattern_hits(pattern, lines):
     """The (line, text) pairs the regex matches, or — when only the whitespace-stripped
-    join of the lines matches (a hatch split across chained modifiers) — the first line."""
+    join of a few consecutive lines matches (a hatch split across chained modifiers) — the
+    first line of that window. The window is bounded: joining a whole file made a `print(`
+    on one line and the word `address` hundreds of lines later one pii-in-log hit."""
     regex = re.compile(pattern)
     hits = [(number, text) for number, text in lines if regex.search(text)]
     if hits:
         return hits
-    if lines and regex.search(joined):
-        return [lines[0]]
+    stripped = [text.strip() for _, text in lines]
+    for start in range(len(lines)):
+        if regex.search("".join(stripped[start:start + JOIN_WINDOW])):
+            return [lines[start]]
     return []
 
 
 def signature_hits(signature, lines):
-    joined = "".join(text.strip() for _, text in lines)
-    hits = pattern_hits(signature["pattern"], lines, joined)
+    hits = pattern_hits(signature["pattern"], lines)
     if not hits:
         return []
     paired = signature.get("paired")
-    if paired and not pattern_hits(paired, lines, joined):
+    if paired and not pattern_hits(paired, lines):
         return []
     return hits[:1] if signature.get("once") else hits
 

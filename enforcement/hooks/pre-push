@@ -140,12 +140,21 @@ lock="$(git rev-parse --git-common-dir)/coast-push.lock"
 
 release_push_lock() { rm -rf "$lock"; }
 
+lock_age() {  # seconds since the lock directory was made — its own mtime, which exists the
+              # instant mkdir succeeds (a start-time file left a window in which a second
+              # push read "no start time", called the live lock stale and took it too)
+  python3 -c 'import os, sys, time
+try:
+    print(int(time.time() - os.stat(sys.argv[1]).st_mtime))
+except OSError:
+    print(0)' "$lock" 2>/dev/null || echo 0
+}
+
 take_push_lock() {
   waited=0
   while ! mkdir "$lock" 2>/dev/null; do
-    started=$(cat "$lock/started" 2>/dev/null || echo 0)
-    age=$(( $(date +%s) - started ))
-    if [ "$started" -eq 0 ] || [ "$age" -gt 3600 ]; then
+    age=$(lock_age)
+    if [ "$age" -gt 3600 ]; then
       printf 'gate: breaking a push lock left behind (%ss old)\n' "$age"
       rm -rf "$lock"
       continue
@@ -158,15 +167,15 @@ take_push_lock() {
       return 1
     fi
   done
-  date +%s > "$lock/started"
-  trap 'release_push_lock' EXIT INT TERM
+  trap 'release_push_lock' EXIT
+  trap 'release_push_lock; trap - EXIT; exit 130' INT TERM   # a signal releases the lock AND stops the gate
   [ "$waited" -gt 0 ] && printf 'gate: the other push finished after %ss; starting this one\n' "$waited"
   return 0
 }
 
 remote_still_ours() {
   upstream=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
-  git fetch -q origin 2>/dev/null || return 0
+  git fetch -q "${push_remote:-origin}" 2>/dev/null || return 0
   moved=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
   [ "$moved" = "$upstream" ] && return 0
   if git merge-base --is-ancestor "$moved" HEAD 2>/dev/null; then

@@ -11,8 +11,9 @@ these rules and also others too… Please be the architect and research the
 best thing to do here."*
 
 **To start a session on this work, say:** *"Read
-`~/Documents/Claude/Code/tools/up-coast-standards/enforcement/README.md` and build
-the next enforcement task."* Every decision is taken (section 7) — a session
+`~/Claude/Work/Code/tools/up-coast-standards/enforcement/README.md` and build
+the next enforcement task."* The user-facing manual for what is built is
+[DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md); this document is the design and the plan. Every decision is taken (section 7) — a session
 builds, it never re-asks. Each task's row in section 6 says DONE when it is,
 with the commit; the next task is the first row that does not. Coast's own
 tasks wait until the scanner is proven on Coast's own code.
@@ -289,7 +290,7 @@ the hook's stdin JSON, exits 2 with the reason on stderr to block):
 |---|---|---|---|
 | `PreToolUse` | `Edit\|Write\|MultiEdit\|NotebookEdit` | Refuses edits to GOVERNING paths: `Scripts/checks/**`, `.githooks/**`, `.claude/settings.json`, the rules document, the linter configs, `.github/workflows/**`, the ratchet baseline. "Agents never edit the files that define their own checks." | 03 process; Coast D12 |
 | `PreToolUse` | `Bash` | Refuses `cd X && …` chains (atomic commands); refuses infrastructure commands (`fly`, `wrangler`, `terraform`, `gh api -X DELETE\|PUT\|POST` on repos/rulesets/secrets, `gh repo delete`, `gh secret set`, DNS tools) with the sentence "ask in one line"; refuses `git push --force*`, `--no-verify`, `git commit --no-verify`. | 10; 00 §2c; 07 |
-| `PreToolUse` | `Bash`, `if: Bash(git commit *)` | Runs the scanner on the staged diff; a red scan blocks the commit with the failing lines. (Also installed as the git `pre-commit` hook so a human meets the same refusal.) | 00 §1, §2, §2d |
+| `PreToolUse` | `Bash` (the hook reads the command itself; Anthropic's `if` filter is a best-effort prefix match and would miss `git -C <dir> commit`) | Runs the scanner on the staged diff; a red scan blocks the commit with the failing lines. (Also installed as the git `pre-commit` hook so a human meets the same refusal.) | 00 §1, §2, §2d |
 | `PostToolUse` | `Edit\|Write\|MultiEdit` | Runs the scanner on the touched file; findings go to the model's stderr immediately. Cannot block (the edit already happened) — it is the seconds-later feedback. | all machine rules |
 | `Stop` | — | Refuses to end the turn while the branch has commits not on the remote, or a dirty working tree that includes source changes, with "push before finishing". Honours `stop_hook_active` to avoid a loop. | 00 §7; 07 |
 | `SessionStart` | — | Prints, as context: project type and platform, the enforced/total number, the review-only rules in one list, the ratchet counts. The session starts knowing what will refuse it. | 01 |
@@ -501,6 +502,23 @@ under half a day, M a day, L two or more.
 | E2.4 | **DONE 2026-09-04 (Fable).** All three of Abbey's app repositories adopted with `adopt.py <app> --platform ios --measure-tools`, each committed and pushed through its own new gate. **keto-tracker** (commits d4fa4f1, a5b6461, 860708e): 24 of 74; theme bound at `KetoTracker/DesignSystem/Theme.swift` (its folder becomes the UI library); baselines build-warnings 22, format-findings 1,462, lint-findings 330, tests-missing 1, spacing-literal 839, inline-comment 74, jscpd 105; secret scan clean; the whole gate green on the first push. **meditation-app / Neori** (342ae00, e97f957): 24 of 74; theme bound at `Neori/Core/DesignSystem/Theme.swift`; baselines build-warnings 3, format-findings 177, lint-findings 47, tests-missing 1, spacing-literal 73, inline-comment 43; the secret scan's two findings were `env(…)` references in `supabase/config.toml`, which taught the signature that an environment reference is not a secret; green on the first push. **symptom-tracker / Dayletter** (7c2ca70, 66ed341): 24 of 74; no theme-shaped file to bind; baselines build-warnings 2, format-findings 1,640, lint-findings 364, spacing-literal 67, inline-comment 29 — and no `tests-missing` entry, because `MoreGoodDaysTests` exists and the seat runs the real tests. **What the three taught the layer, all fixed in this repo:** an app with no test target at all (keto and Neori) needs the `tests-missing` baseline rather than a push refused forever; the iOS tests seat must pick the iPhone on the newest installed runtime by id (it asked for an iOS 18 device for an iOS 26 app) and, when xcodebuild can see no concrete simulator at all, fall back to the Mac's Designed-for-iPad destination; the warnings count is comparable only on a full build; a linter seed that fails on legacy code is answered by the `lint-findings` baseline, so no app needed a rules-doc edit or a `--no-verify`. | S each | adopt.py's own verification; each app's first push through its installed gate |
 | E2.5 | **DONE 2026-09-04 (Fable).** The repo README's `enforcement/` row says what is built and where; step 6 of "How to adopt" runs `adopt.py --measure-tools` and says what it installs; a new "How enforcement works, in one screen" section gives the bins, the number (170 of 643 on 2026-09-04, each project's own from its `docs/domain-rules.md`), what refuses where, and the baselines with their deadline. `PROJECT-TYPES.md` gains "The checks travel with the rules". `TEMPLATE-CLAUDE.md` points at the block `adopt.py` writes and keeps. The one "reviews grep the diff" sentence (00 §2c) now names `env-literal`, the scanner and the hooks; its `[check: scan:env-literal]` tag is unchanged. | S | verify_rules green; no doc names a check that does not run |
 
+### Phase E2 — the review (2026-09-07, Fable, at Abbey's request: "some of it was done with Opus")
+
+Three reviewers read every line of the scanner, the hooks and the installer against this
+document and against Anthropic's hooks reference, and confirmed each finding with a
+probe before reporting it. What was fixed is fixed with a test; what was not is a row
+below, ranked, and the next session builds the first row that does not say DONE.
+
+| Task | What | Size | Guard |
+|---|---|---|---|
+| E2.6 | **DONE 2026-09-07 (Fable).** The small, unambiguous defects, each with a test: `verify_rules.py --document` reported every signature the one document did not name as a gap (198 false FAILs and exit 1 on a clean iOS document — the unnamed-signature check now runs only over the whole manifest); `rules-at-start` said "unknown" in every adopted repository because the verifier is not shipped (it now reads the number `adopt.py` wrote into the CLAUDE.md block); `if: Bash(git commit *)` on `scan-at-commit` is a best-effort prefix match per Anthropic's page, so `git -C <dir> commit` never reached the hook and the routing written for Coast's incident was dead (the field is gone; the hook reads the command); a `-C` target that did not exist raised a traceback; `no-verify` missed `core.hookspath` in any case, `--no-verif` (git takes unique prefixes) and `git config core.hooksPath …`; the push lock's start-time file left a window in which a second push read "no start time", called the live lock stale and took it too (the age is now the directory's own mtime), and Ctrl-C released the lock but kept the gate running (a signal now exits); the moved-remote check always fetched `origin`; `commit-msg` counted bytes under a C locale (a 98-character subject with two em dashes refused as 102); the scanner skipped an added line beginning `++` without counting it, shifting every later line number in the hunk; the whitespace-joined fallback ran over a WHOLE file in tree and `--files` scope, so `print(` on one line and `address` hundreds of lines later was one `pii-in-log` hit — and a ratchet count (the join is now a window of 8 lines); `ui-string-concat` backtracked cubically on a long line with one unmatched quote (a 12 KB line never finished; lookaheads now); `manual-plural` matched every identifier ending in `n` (`version == 1`, `column == 1`, `position === 1`); a malformed baseline file crashed with a traceback instead of a FAIL line; a negative tool count passed; git quoted non-ASCII paths so every mode silently skipped `CaféView.swift`; `adopt.py` crashed on a Mac without `npx` after files were written; a project folder that case-folds to `Scripts/` (ccm-replacement's `scripts/`) is now said out loud in the report. Two stale `~/Documents/Claude/Code` paths fixed. `enforcement/DEVELOPER-GUIDE.md` written: the manual. | M | 155 tests green; verify-rules 170 of 643, open 0 |
+| E2.7 | **Re-adopt the four repositories.** Coast, keto-tracker, symptom-tracker and meditation-app carry standards commit `65209a2`, five commits behind before this review and more after it: they lack the seat exceptions (§4.7b), the previous-hooks chaining (§4.8), the tsconfig parser, and everything in E2.6. Each also has an uncommitted CLAUDE.md edit (the standards path moved from `~/Documents/Claude/Code` to `~/Claude/Work/Code`) that `adopt.py` will rewrite anyway. Run `adopt.py <repo>` (no `--measure-tools`; the counts stand), commit, push through the gate. Note the `pii-in-log` and `spacing-literal` counts may FALL after E2.6's join-window fix — `adopt.py` lowers them. | S each | each repo's `.coast/standards-version` at head; its first push green |
+| E2.8 | **The Bash-rule bypasses, and the permission layer the docs recommend.** Probed and passing today: `sh -c "git push --force"`, a `\`-newline split before `--force`, `A=1 B=2 git push -f` (only the first `VAR=` is skipped), `env -i …`, `xargs git push -f`, `{ fly deploy; }`, `$(fly deploy)`, `npx wrangler deploy`; `chained-cd` misses `if cd X; then`, `pushd`, `builtin cd`; `infra-command` refuses `fly status`, `aws s3 ls`, `terraform plan` while its own sentence says read-only checks are fine. Fix: join `\`-newlines before splitting; skip every leading `VAR=` and wrapper; scan `$(…)` and backtick bodies and the string argument of `sh|bash|zsh -c`; treat `npx`, `pnpm dlx`, `bunx`, `xargs` as wrappers; a per-program read-only allowlist. And add `permissions.deny` rules to the committed settings (`Bash(git push --force*)`, `Bash(fly *)`, …) — Anthropic's page says outright to use the permission system, not a hook, for a hard deny; the hook stays as the explanation. Also `"disableAllHooks": false` in the committed settings (a project `false` overrides a user `true`) and `.claude/settings.local.json` in `ALWAYS_GOVERNING`. | M | `test_claude_hooks.py`: every bypass above refused |
+| E2.9 | **The doc-comment scanners for TypeScript and Python were written fresh, not ported, and both miss.** TS: a multi-line decorator (`@Component({` … `})`) drives brace depth negative and silences the rest of the file — every Angular/NestJS file is exempt; single-quoted and template strings are not sanitized, so a `"` inside one eats source to the next `"`; a `/** */` followed by blank lines still documents the next declaration. Python: a trailing `# comment` on a `def` line skips the next declaration; a nested function inside a method is reported as a public member. Fix Python with `ast` (stdlib: exact public defs, docstrings, nesting, `@overload`); fix TS by counting braces on decorator lines and a JS-aware string sanitizer. | M | plants for each shape, both directions |
+| E2.10 | **Scanner correctness on the push path.** (1) `secret-file` is added-scope with a `[\s\S]` pattern, so a binary `.p12`/`.sqlite`/`.jks` produces no `+` lines and is never caught in `<base> HEAD` or `--staged` — judge it from `--name-status` A/R/C paths. (2) A `git mv` re-judges every legacy line as new (`-- path` defeats rename detection) — pass both paths or parse one `-M` diff. (3) Built-ins lex the WORKTREE file but filter by index/commit line numbers, so partial staging moves or hides hits — read `:path` / `<head>:path` through `git show`. (4) `plaintext-http`'s plist toggle and `exported-component` need key and value in one hunk; flipping `<false/>` to `<true/>` under an existing key adds one line and misses — make them built-ins that read the file with context. (5) The tree+ratchet pass runs twice per push (`main` runs `scan_tree` in diff mode, then the hook runs `--tree`) — Coast's half-minute scan doubled. (6) A baseline entry with no `deadline` is accepted silently as permanent; decision 2 says every baseline carries one — refuse it. | M | `test_check_rules.py` for each |
+| E2.11 | **Web precision before ccm-replacement adopts.** `literals.py` on TSX flags each line of a multi-line named import (`  Button,`) and any comparison with `>` and `<` on one line (`if (a > 0 && b < max)`) as bare copy — block severity on every `.tsx` in the `ui` class, so a web adoption would refuse ordinary code at commit. `one-catalog-per-locale` blocks every legacy `.lproj/Localizable.strings` pair and every flat `locales/en.json`, and binding the `strings` class changes nothing (the exemption §5.1 describes was never wired). `import_matrix` misses a multi-line `import {\n…\n} from` (prettier's default), so the web/RN matrix is mostly blind. `eslint.config.mjs` imports `eslint-plugin-react-hooks` unconditionally, so a non-React web project's lint seat fails on import; `tsconfig.seed.json` is installed AS `tsconfig.json` with no `include` while its own comment calls it a base to extend. Run the scanner over ccm-replacement's tree and tune until the sampled hits are all real, the way E1.2 did for Swift. | M | web plants; a ccm-replacement dry-run whose hits are sampled and recorded here |
+| E2.12 | **The installer's edges.** The CLAUDE.md marker rewrite appends a block on every run when an end marker precedes the begin, and a second run after an orphaned begin deletes founder text between the orphan and the appended block — find the last begin, the first end after it, refuse on inconsistent markers. Hooks living in `.git/hooks/` (pre-commit-framework, lefthook, old husky) are dropped silently — §4.8 promises they are not; also record `$(git rev-parse --git-path hooks)` when it holds executables. Previous hooks are forced through `sh` (a Python or bash-ism hook breaks) — exec when executable. `pre-push` scans HEAD, not the pushed sha (`git push origin feature` from main scans the wrong range). `commit-msg` strips a `#123 …` subject as a comment and refuses every agent `git merge`/`revert` default message. The `Scripts/`-vs-`scripts/` collision is noted, not solved: the layout constants live in at least six files (`adopt.py`, the three hooks, `claude-settings.json`, `claude-hook.py`, every `paths.json` governing class) — one home for them is the fix, and the same change is the first step of E5. Stale governed files are never removed when a module is renamed upstream. `detect_platform` returns None for an `.xcodeproj`-only project (all three apps) — read the pbxproj. | M | `test_hooks_and_adopt.py` for each |
+
 ### Phase E3 — inside Coast (Coast repo; its task numbers in Coast's plan)
 
 | Task | What | Size |
@@ -524,6 +542,36 @@ under half a day, M a day, L two or more.
   wrong on one rule can be found (07 already asks for it).
 - Compose `Text("literal")` as an Android Lint custom check if the scanner's
   Kotlin precision proves insufficient.
+
+### Phase E5 — a product for third parties (design only; Abbey's question of 2026-09-07)
+
+Asked: could this be a set of Claude skills plus an SDK installed in the project, with rules
+a founder can switch on and off? What the review found that bears on it:
+
+- **Nothing is configurable today.** Every signature, seat, session hook and lint opt-in is
+  on for the platform. The only switches are the two dated exception shapes. `--only` is
+  opt-in for the installer's own use; `rules-exceptions.json` cannot say "this rule,
+  everywhere"; `.coast/paths.json` overrides classes but not `order`; severities are frozen.
+- **The table is six near-copies.** A shared signature is pasted per platform with only
+  `files` differing, so any per-project override must key on `(platform, id)` and any fix
+  lands six times. The layout (`Scripts/checks`, `.coast/`, `Scripts/hooks`) is a literal
+  in at least six files. "Abbey", "Up Coast", "Coast" appear in refusal text, the CLAUDE.md
+  template, every lint seed's header and the temp-file names.
+- **The verifier is the asset.** A disabled rule must show as `open` (or a new `off` bin)
+  in "held by a machine N of M", or the number becomes a lie — the one thing this whole
+  design exists to prevent. That is the design constraint on any on/off switch.
+
+The shape, when it is built: (1) one governed `.coast/config.json` — `org` (name, the
+founder name the sentences use), `layout` (the five paths), `rules: {off: [ids],
+severity: {id: block|ratchet|advisory}}`, `seats: {off: [names]}`, `session_hooks: {off:
+[ids]}`, `ratchet_days` — merged in `load_tables` where `.coast/paths.json` already
+merges, read by the hooks and by the verifier; (2) `rules_signatures.json` refactored to
+one row per id with per-platform `files`/`pattern` overrides; (3) `adopt.py --config`
+and a `standards init` that asks the founder the on/off questions once; (4) a Claude
+Code plugin carrying the skills (adopt, explain-a-refusal, add-a-signature, read-the-number)
+and the hooks, with `adopt.py` as the "SDK" the plugin installs. Rows and sizes when
+Abbey says build it; E2.8–E2.12 come first, because a third party meets every one of
+those edges on day one.
 
 ## 7. The decisions (ALL DECIDED 2026-09-04 — build them, don't re-ask)
 
@@ -649,8 +697,8 @@ each other twice: their incremental builds crossed, so a warning count read
 zero because the other build had just made everything current, and the slower
 push spent twenty-five minutes only to be rejected by a ref lock the faster
 one had taken. `pre-push` now serialises on a lock directory in the common git
-dir (`mkdir` is atomic; a lock with no start time, or older than an hour, is
-broken). After the wait it re-fetches: if the remote moved and this branch does
+dir (`mkdir` is atomic; the lock's age is the directory's own mtime, and a lock
+older than an hour is broken). After the wait it re-fetches: if the remote moved and this branch does
 not already contain it, the hook says so in seconds instead of building for
 half an hour and losing the race again. A `--seat` or `--measure` run takes no
 lock, so the tests are unaffected.
@@ -663,7 +711,7 @@ prompts, battery, hook and scaffold. Not verified: the precision of any
 signature on real code (that is what the plants and the ratchet baselines
 in E1 exist to measure), and Semgrep's free-engine per-language coverage
 (not itemised on a primary source). Built so far: **the whole of phases E0, E1 and E2** — E0.1 through E2.5, every
-row DONE, with what each one found on the way recorded in it. The layer is
+row DONE, and reviewed line by line on 2026-09-07 (E2.6 fixed, E2.7–E2.12 ranked), with what each one found on the way recorded in it. The layer is
 installed and proven on four real repositories (Coast, keto-tracker,
 meditation-app/Neori, symptom-tracker/Dayletter): each one adopted, committed
 and pushed through its own gate, and every refusal along the way was a defect

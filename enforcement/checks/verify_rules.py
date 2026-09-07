@@ -623,9 +623,13 @@ def run(root, manifest_path, documents_override=None, platforms_override=None):
                        "checks": [ref.raw for ref in r.refs], "gaps": r.gaps} for r in rules],
         })
         all_rules.extend(rules)
-    for platform, signature_id in battery.unnamed_signatures(named_by_platform):
-        report["gaps"].append({"path": manifest.get("signatures_file", ""), "line": 0, "id": signature_id,
-                               "words": f"signature '{signature_id}' in the {platform} table is named by no rule"})
+    # A signature no rule names is a gap of the CORPUS: only the whole manifest can say it.
+    # One project's document names the checks its platform holds, not every signature in
+    # the table (a single iOS document left 198 false gaps and exit 1 before this guard).
+    if not documents_override:
+        for platform, signature_id in battery.unnamed_signatures(named_by_platform):
+            report["gaps"].append({"path": manifest.get("signatures_file", ""), "line": 0, "id": signature_id,
+                                   "words": f"signature '{signature_id}' in the {platform} table is named by no rule"})
     report["totals"] = counts_for(all_rules)
     report["gap_count"] = len(report["gaps"])
     return report

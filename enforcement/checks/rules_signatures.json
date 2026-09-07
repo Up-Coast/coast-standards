@@ -664,7 +664,7 @@
           "files": [
             "**/*.swift"
           ],
-          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+\\w*(count|total|n)\\s*==\\s*1\\b",
+          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+(?:\\w*[cC]ount|\\w*[tT]otal|n)\\s*==\\s*1\\b",
           "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules"
         },
         {
@@ -688,7 +688,7 @@
           "files": [
             "**/*.swift"
           ],
-          "pattern": "\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"",
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"",
           "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages"
         },
         {
@@ -1701,7 +1701,7 @@
           "files": [
             "**/*.swift"
           ],
-          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+\\w*(count|total|n)\\s*==\\s*1\\b",
+          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+(?:\\w*[cC]ount|\\w*[tT]otal|n)\\s*==\\s*1\\b",
           "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules"
         },
         {
@@ -1725,7 +1725,7 @@
           "files": [
             "**/*.swift"
           ],
-          "pattern": "\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"",
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"",
           "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages"
         },
         {
@@ -2688,7 +2688,7 @@
             "**/*.kt",
             "**/*.kts"
           ],
-          "pattern": "(==|!=)\\s*1\\)?\\s*\"|\\bif\\s*\\(\\s*\\w*(count|total|size|n)\\s*==\\s*1\\s*\\)|\\bcount\\s*==\\s*1\\s*\\?",
+          "pattern": "(==|!=)\\s*1\\)?\\s*\"|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[sS]ize|n)\\s*==\\s*1\\s*\\)|\\bcount\\s*==\\s*1\\s*\\?",
           "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules"
         },
         {
@@ -2713,7 +2713,7 @@
             "**/*.kt",
             "**/*.kts"
           ],
-          "pattern": "\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"[^\"]*[A-Za-z][^\"]*\\s[^\"]*\"",
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"",
           "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages"
         },
         {
@@ -3650,7 +3650,7 @@
             "**/*.js",
             "**/*.jsx"
           ],
-          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*\\w*(count|total|length|n)\\s*===?\\s*1\\s*\\)",
+          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[lL]ength|n)\\s*===?\\s*1\\s*\\)",
           "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules"
         },
         {
@@ -3677,7 +3677,7 @@
             "**/*.js",
             "**/*.jsx"
           ],
-          "pattern": "[\\'\"][^\\'\"]*[A-Za-z][^\\'\"]*\\s[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"][^\\'\"]*[A-Za-z][^\\'\"]*\\s[^\\'\"]*[\\'\"]",
+          "pattern": "[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]",
           "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages"
         },
         {
@@ -4673,7 +4673,7 @@
             "**/*.js",
             "**/*.jsx"
           ],
-          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*\\w*(count|total|length|n)\\s*===?\\s*1\\s*\\)",
+          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[lL]ength|n)\\s*===?\\s*1\\s*\\)",
           "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules"
         },
         {
@@ -4700,7 +4700,7 @@
             "**/*.js",
             "**/*.jsx"
           ],
-          "pattern": "[\\'\"][^\\'\"]*[A-Za-z][^\\'\"]*\\s[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"][^\\'\"]*[A-Za-z][^\\'\"]*\\s[^\\'\"]*[\\'\"]",
+          "pattern": "[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]",
           "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages"
         },
         {

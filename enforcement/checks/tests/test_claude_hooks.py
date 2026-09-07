@@ -229,7 +229,11 @@ class NoVerify(BashCase):
     def test_no_verify_anywhere_in_a_git_command_is_refused(self):
         for command in ("git commit --no-verify -m x", "git push --no-verify origin main",
                         "git add -A && git commit -m x --no-verify", "git commit -n -m x", "git commit -anm x",
-                        "git -c core.hooksPath=/dev/null commit -m x"):
+                        "git -c core.hooksPath=/dev/null commit -m x",
+                        # the same switch by other routes: git's keys are case-insensitive, long options
+                        # take any unique prefix, and `git config` can point the hooks elsewhere or unset them
+                        "git -c core.hookspath=/dev/null commit -m x", "git commit --no-verif -m x",
+                        "git config core.hooksPath /dev/null", "git config --unset core.hookspath"):
             with self.subTest(command=command):
                 self.assertRefused(self.repo.bash("no-verify", command), "no-verify", "the hooks are the gate")
 
