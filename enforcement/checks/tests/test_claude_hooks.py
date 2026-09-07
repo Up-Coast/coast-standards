@@ -385,7 +385,7 @@ class RulesAtStart(HookCase):
         result = self.start()
         self.assertPassed(result)
         self.assertIn("platform: ios · project type A", result.stdout)
-        self.assertRegex(result.stdout, r"rules held by a machine: \d+ of \d+ \(this project's docs/domain-rules.md\)")
+        self.assertRegex(result.stdout, r"rules enforced by a check: \d+ of \d+ \(this project's docs/domain-rules.md\)")
         self.assertIn("review-only rules (", result.stdout)
         self.assertIn("inline-comment 12 (deadline 2026-12-01)", result.stdout)
         self.assertIn("session hooks that will refuse", result.stdout)

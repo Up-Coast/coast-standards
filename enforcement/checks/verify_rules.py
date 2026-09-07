@@ -7,7 +7,7 @@ is the test for that claim. It parses every rule, reads each rule's
 ``[… check: …]`` tag, resolves every reference against ``battery.json`` (the
 manifest of what each platform's battery runs) and the files the manifest
 points at, and prints the honest number per document:
-"held by a machine: N of M". Design: ``enforcement/README.md`` §4.1.
+"enforced by a check: N of M". Design: ``enforcement/README.md`` §4.1.
 
 What counts as a rule (one convention for every document):
 
@@ -63,7 +63,7 @@ How a reference resolves (all of it is files on disk — no network, no model):
 Bins per rule: ``machine`` when every reference is a machine check; ``partly``
 when a machine check and a review/process/advisory reference share the rule;
 ``advisory``; ``review``; ``process``. A rule with any gap — no tag, an unknown
-reference, an unresolved reference — is ``open``. "Held by a machine" counts
+reference, an unresolved reference — is ``open``. "Enforced by a check" counts
 only the ``machine`` bin; the number is honest or it is nothing.
 
 Also a gap: a signature in the signatures file that no rule names.
@@ -578,8 +578,17 @@ def counts_for(rules):
     return counts
 
 
+def number_label():
+    """The headline's wording, from vocabulary.json beside this file (one place, so a rename is one edit)."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocabulary.json"), encoding="utf-8") as handle:
+            return json.load(handle)["number"]["label"]
+    except (OSError, ValueError, KeyError):
+        return "enforced by a check"
+
+
 def summary_line(label, counts):
-    return (f"{label}: held by a machine {counts['machine']} of {counts['total']} · partly {counts['partly']}"
+    return (f"{label}: {number_label()} {counts['machine']} of {counts['total']} · partly {counts['partly']}"
             f" · advisory {counts['advisory']} · reviewer {counts['review']} · process {counts['process']}"
             f" · open {counts['open']}")
 

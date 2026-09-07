@@ -1,5 +1,7 @@
 # What gets checked
 
+*Last updated: 2026-09-07*
+
 This is the plain-words version. The exact rule text for your platform is in your
 project at `docs/domain-rules.md`, and every rule there ends with the name of the check
 that holds it.

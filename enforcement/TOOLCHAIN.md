@@ -1,5 +1,7 @@
 # The enforcement toolchain — pinned versions
 
+*Last updated: 2026-09-07*
+
 Every program the gate battery (`enforcement/hooks/pre-push`) runs, with the
 version it was verified against and where the verification came from. A
 row changes only when someone re-verifies the tool's own documentation;

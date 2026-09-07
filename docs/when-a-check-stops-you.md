@@ -1,5 +1,7 @@
 # When a check stops you
 
+*Last updated: 2026-09-07*
+
 Every refusal prints a line like this:
 
 ```
@@ -22,7 +24,7 @@ fall or stay flat, never rise. Remove the new one, or remove an old one somewher
 
 ## "It says a count went down and refuses anyway"
 
-Good news with an extra step. When a scanner count falls, the recorded starting line has
+When a scanner count falls, the recorded starting line has
 to come down with it so it cannot creep back up. Run the installer again; it lowers the
 count. Commit the updated `.coast/ratchet-baseline.json` with your change.
 
@@ -55,7 +57,7 @@ Then run the installer again so it can record your starting line for duplicate c
 
 ## "This check is wrong"
 
-It happens. The sanctioned path, in order:
+The sanctioned path, in order:
 
 1. **Set it aside with a date.** Add an entry to `.coast/rules-exceptions.json`, either for
    one rule on one file, or for one whole check until a date. See [Options](options.md).

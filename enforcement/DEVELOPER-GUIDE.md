@@ -1,5 +1,7 @@
 # Coast Standards Enforcement — Internal Developer Guide
 
+*Last updated: 2026-09-07*
+
 **Audience: people working on this layer itself** — the scanner, the hooks, the installer.
 It is the full technical reference: how a rule is held, what is installed into a project,
 every file and flag the code reads or writes, and how to extend or excuse it. It describes
@@ -22,7 +24,7 @@ the machinery that makes those checks real in any git repository:
 - a **doc-comment check** (`check_doc_comments.py`) for Swift, Kotlin/Java, TypeScript and
   Python;
 - a **verifier** (`verify_rules.py`) that proves every rule names a check that exists, and
-  prints the honest number, *"held by a machine N of M"*;
+  prints the honest number, *"enforced by a check N of M"*;
 - **linter configs** with the opt-in rules the documents cite switched on;
 - three **git hooks** (`pre-commit`, `commit-msg`, `pre-push`) and a set of **Claude Code
   session hooks** that refuse the things an agent must not do;
@@ -54,7 +56,7 @@ on the builder's own machine, in seconds, before anything leaves it.
 | **Governed file** | A file the installer owns and replaces on every run, and that agents may not edit (the session hooks refuse). |
 | **Seed** | A file the installer writes once and the founder owns afterwards (linter configs, `docs/domain-rules.md`). |
 | **Exception** | A human-written entry in `.coast/rules-exceptions.json` excusing one signature on one path, or one seat until a date. |
-| **The number** | "Rules held by a machine N of M", computed by the verifier from a rules document. It appears in a project's `CLAUDE.md` and in the verifier's output. |
+| **The number** | "Rules enforced by a check N of M", computed by the verifier from a rules document. It appears in a project's `CLAUDE.md`, in the verifier's output, in the session-start context, and in Coast's Rules tab. Its wording lives in one place, `enforcement/checks/vocabulary.json`, which the verifier, the installer and the hook read (the file ships to projects with the checks). To rename it: change `label`, append the old wording to `retired`, run the tests; `test_vocabulary.py` lists every page still using the old name, and the hook keeps reading CLAUDE.md blocks written under the old name until the project is re-adopted. |
 
 ---
 
@@ -76,7 +78,7 @@ Pinned versions and the primary sources they were verified against are in
 ### 3.2 Adopt a project
 
 ```bash
-python3 ~/Claude/Work/Code/tools/up-coast-standards/enforcement/adopt.py /path/to/project --platform ios
+python3 ~/Claude/Work/Code/tools/coast-standards/enforcement/adopt.py /path/to/project --platform ios
 ```
 
 Add `--dry-run` first to see the report without writing anything. `--platform` may be

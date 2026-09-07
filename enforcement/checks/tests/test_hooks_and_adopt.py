@@ -159,7 +159,7 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(ids["spacing-literal"]["written"], "2026-09-04")
         self.assertEqual(ids["spacing-literal"]["by"], "Tester")
         claude_md = self.project.read("CLAUDE.md")
-        self.assertIn("Rules held by a machine", claude_md)
+        self.assertIn("Rules enforced by a check", claude_md)
         self.assertIn("up-coast-standards: end", claude_md)
 
         code, second = self.project.adopt()
@@ -189,12 +189,12 @@ class AdoptTests(unittest.TestCase):
         code, _ = self.project.adopt()
         self.assertEqual(code, 0)
         block = self.project.read("CLAUDE.md")
-        self.assertRegex(block, r"Rules held by a machine: \d+ of \d+")
+        self.assertRegex(block, r"Rules enforced by a check: \d+ of \d+")
         event = json.dumps({"session_id": "t", "cwd": self.project.path, "hook_event_name": "SessionStart", "source": "startup"})
         done = subprocess.run([sys.executable, os.path.join(self.project.path, "Scripts/hooks/claude-hook.py"), "rules-at-start"],
                               input=event, cwd=self.project.path, capture_output=True, text=True, env=clean_env())
         self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertRegex(done.stdout, r"rules held by a machine: \d+ of \d+ in docs/domain-rules.md \(partly \d+")
+        self.assertRegex(done.stdout, r"rules enforced by a check: \d+ of \d+ in docs/domain-rules.md \(partly \d+")
         self.assertNotIn("unknown", done.stdout)
 
     def test_pre_push_builds_an_xcode_project_through_xcodebuild_with_warnings_as_errors(self):

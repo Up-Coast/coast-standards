@@ -484,25 +484,38 @@ def unpushed_at_stop(event):
     return refuse(*lines)
 
 
-def rules_number_from_claude_md(root):
+def number_labels(checks):
+    """(current label, every label ever used) from vocabulary.json in the checks folder; defaults when it is missing."""
+    try:
+        with open(os.path.join(checks, "vocabulary.json"), encoding="utf-8") as handle:
+            entry = json.load(handle)["number"]
+        return entry["label"], [entry["label"]] + list(entry.get("retired", []))
+    except (OSError, ValueError, KeyError, TypeError):
+        return "enforced by a check", ["enforced by a check", "held by a machine"]
+
+
+def rules_number_from_claude_md(root, checks):
     """The number adopt.py wrote into the CLAUDE.md block (the verifier itself stays in the standards repo)."""
+    label, known = number_labels(checks)
     try:
         with open(os.path.join(root, "CLAUDE.md"), encoding="utf-8") as handle:
             text = handle.read()
     except OSError:
-        return "rules held by a machine: unknown (no CLAUDE.md block — run adopt.py)"
-    match = re.search(r"Rules held by a machine: (\d+) of (\d+)\*\*\s+in that document\s*\((.*?)\)", text, re.DOTALL)
+        return f"rules {label}: unknown (no CLAUDE.md block — run adopt.py)"
+    any_label = "|".join(re.escape(name) for name in known)
+    match = re.search(r"Rules (?:" + any_label + r"): (\d+) of (\d+)\*\*\s+in that document\s*\((.*?)\)", text, re.DOTALL | re.IGNORECASE)
     if not match:
-        return "rules held by a machine: unknown (no CLAUDE.md block — run adopt.py)"
+        return f"rules {label}: unknown (no CLAUDE.md block — run adopt.py)"
     detail = " ".join(match.group(3).split())
-    return f"rules held by a machine: {match.group(1)} of {match.group(2)} in docs/domain-rules.md ({detail}) — as of the last adopt.py run"
+    return f"rules {label}: {match.group(1)} of {match.group(2)} in docs/domain-rules.md ({detail}) — as of the last adopt.py run"
 
 
 def rules_number(root, checks, platform):
     """(lines for the context, review-only titles) from verify_rules.py, or a plain sentence when it cannot run."""
     verifier = os.path.join(checks, "verify_rules.py")
+    label = number_labels(checks)[0]
     if not os.path.isfile(verifier):
-        return [rules_number_from_claude_md(root)], []
+        return [rules_number_from_claude_md(root, checks)], []
     battery = os.path.join(checks, "battery.json")
     args = [sys.executable, verifier, "--root", os.path.dirname(os.path.dirname(checks)), "--json"]
     if os.path.isfile(battery):
@@ -519,11 +532,11 @@ def rules_number(root, checks, platform):
         totals = report["totals"]
     except (ValueError, KeyError, TypeError):
         first = (result.stderr or result.stdout).strip().splitlines()
-        return [f"rules held by a machine: unavailable ({first[0] if first else 'verify_rules.py printed nothing'})"], []
+        return [f"rules {label}: unavailable ({first[0] if first else 'verify_rules.py printed nothing'})"], []
     if not totals.get("total"):
-        return ["rules held by a machine: unavailable (no rule document was found to count)"], []
+        return [f"rules {label}: unavailable (no rule document was found to count)"], []
     review = [rule["title"] for doc in report["documents"] for rule in doc["rules"] if rule["category"] == "review"]
-    line = (f"rules held by a machine: {totals['machine']} of {totals['total']} ({scope}) · partly {totals['partly']} "
+    line = (f"rules {label}: {totals['machine']} of {totals['total']} ({scope}) · partly {totals['partly']} "
             f"· advisory {totals['advisory']} · reviewer-judged {totals['review']} · process {totals['process']} "
             f"· open {totals['open']}")
     return [line], review
@@ -559,7 +572,7 @@ def rules_at_start(event):
             lines.append(f"review-only rules ({len(review)}, a reviewer judges these — no machine holds them): "
                          + "; ".join(review))
     else:
-        lines.append("rules held by a machine: unknown (no check_rules.py beside this hook or under Scripts/checks)")
+        lines.append(f"rules {number_labels(checks)[0]}: unknown (no check_rules.py beside this hook or under Scripts/checks)")
     lines.append(ratchet_line(root))
     lines.append("session hooks that will refuse: edits to governing files, chained cd, infrastructure commands, "
                  "--no-verify, force pushes, a red scan at commit, and ending a turn with unpushed commits.")

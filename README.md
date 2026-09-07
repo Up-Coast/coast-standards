@@ -1,6 +1,8 @@
 # Coast Standards
 
-*Named Coast Standards on 2026-09-07 (Abbey: "let's just call it Coast Standards for now"). The GitHub repository is still `Up-Coast/up-coast-standards` until the rename in the plan's E6 is run; the org stays Up-Coast.*
+*Last updated: 2026-09-07*
+
+*Named Coast Standards on 2026-09-07 (Abbey: "let's just call it Coast Standards for now"). The GitHub repository is `Up-Coast/coast-standards` (renamed the same day; the old name redirects, and GitHub's own docs say never to reuse it); the org stays Up-Coast. Every documentation page carries a "Last updated" line under its title — move the date whenever you change the page.*
 
 The standing engineering rules for every project Abbey Jackson (Up Coast) builds with AI
 agents. This repo exists so no session ever has to be told these rules again: point an agent
@@ -31,7 +33,7 @@ open-source BuilderOS skill set that Coast's build loop wraps.
 | `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
 | `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
 | `docs/` | **The public documentation** — for a founder or developer installing this into their own product: what it is, the quickstart, how it works, what gets checked, the options, what to do when a check stops you, working with AI agents, FAQ. Plain words; nothing a maintainer-only reader needs. |
-| `enforcement/` | **How these rules are held by machines** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("held by a machine N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `docs/` is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); `enforcement/DEVELOPER-GUIDE.md` is the internal guide for people working on the layer itself — every mode, flag, file and format; `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and Abbey's three app repositories (September 2026). |
+| `enforcement/` | **How these rules are enforced by checks** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("enforced by a check N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `docs/` is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); `enforcement/DEVELOPER-GUIDE.md` is the internal guide for people working on the layer itself — every mode, flag, file and format; `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and Abbey's three app repositories (September 2026). |
 | `.githooks/` | This repo's own pre-commit hook: the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
 | `examples/` | Reference snapshots of real engagements — not rules, just what a project actually delivered, kept for scoping future client work by rule of thumb |
 | `skills/` | The BuilderOS skills (BuildGreatProducts/builder-os, MIT), vendored verbatim |
@@ -75,7 +77,7 @@ machine check and a reviewer share it), **advisory** (the scanner reports it, no
 fails), **reviewer** (only a mind can judge it; every review returns a row per rule with
 evidence), **process** (held by the pipeline or by a person). `verify_rules.py` counts the
 bins and fails the commit when a rule names no check or names one nothing runs; the
-corpus stands at **held by a machine 170 of 643** (4 September 2026), and each project's
+corpus stands at **enforced by a check 170 of 643** (4 September 2026), and each project's
 own number comes from its `docs/domain-rules.md`.
 
 What refuses, and where: `.githooks/pre-commit` (the scanner on the staged diff — added

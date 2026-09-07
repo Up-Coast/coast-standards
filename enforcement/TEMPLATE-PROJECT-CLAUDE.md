@@ -2,14 +2,14 @@
 ## Standing rules — enforced by machines where a machine can hold them
 
 This project follows the Coast Standards repo,
-`{{STANDARDS_PATH}}` (GitHub: Up-Coast/up-coast-standards), adopted for
+`{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards), adopted for
 the **{{PLATFORM}}** platform from standards commit `{{STANDARDS_COMMIT}}`.
 Read `rules/00-priority-rules.md` there first (DRY is the rule above all
 other rules), then `rules/01-working-style.md`, and the others as the work
 touches their areas. This project's own checkable rules document is
 `{{RULES_DOCUMENT}}`; reviews judge every change against exactly that file.
 
-**Rules held by a machine: {{ENFORCED}} of {{TOTAL}}** in that document
+**Rules enforced by a check: {{ENFORCED}} of {{TOTAL}}** in that document
 (partly {{PARTLY}}, advisory {{ADVISORY}}, reviewer {{REVIEW}}, process {{PROCESS}},
 still open {{OPEN}}). A rule is in one of these bins:
 

@@ -1,5 +1,7 @@
 # Which rules apply to your project
 
+*Last updated: 2026-09-07*
+
 Read this before applying the rules to a project that is not an app with a
 user interface. **Not every rule here makes sense everywhere**, and applying
 UI rules to a headless service produces noise that trains people to ignore
@@ -71,7 +73,7 @@ system, its validation layer, its task queue — not a hand-rolled substitute.
 **The checks travel with the rules.** Every rule in every file names the check that
 holds it (`[check: …]`), and `enforcement/adopt.py` installs the same scanner, hooks and
 linter configs whatever the type; the platform file decides which signatures apply (the
-Python file for types B and C, the app file for A). The "held by a machine N of M" line
+Python file for types B and C, the app file for A). The "enforced by a check N of M" line
 in a project's `CLAUDE.md` is computed from that project's own `docs/domain-rules.md`.
 
 **Security applies everywhere, but the weight shifts.** For an app, the

@@ -1,5 +1,7 @@
 # Coast Standards
 
+*Last updated: 2026-09-07*
+
 Coast Standards is a set of engineering rules for apps, and a small tool that installs
 those rules into your project so they are checked automatically every time code is
 saved, committed, or pushed.
@@ -11,7 +13,7 @@ stopped, you get a plain sentence saying what was wrong and where.
 ## Who this is for
 
 - **Founders using Coast.** Coast installs this into every project it builds. You will
-  mostly meet it as the "rules held by a machine" number in your Rules tab and as the
+  mostly meet it as the "rules enforced by a check" number in your Rules tab and as the
   occasional refusal with a reason. This documentation explains what those mean.
 - **Developers adding it to an existing project.** You run one command, commit what it
   writes, and the checks are live. The [Quickstart](quickstart.md) takes about ten minutes.
@@ -22,7 +24,7 @@ Every rule is sorted into one of two kinds: rules a machine can check, and rules
 person can judge. The machine-checked ones are enforced by scripts that run on your own
 computer before anything is pushed: a scanner that looks for known mistakes in the lines
 you added, your platform's standard linter, a duplicate-code detector, and a set of
-guard-rails for AI coding agents. The rest are listed honestly as "needs a reviewer". The
+guard-rails for AI coding agents. The rest are listed as "needs a reviewer". The
 number of rules a machine holds is shown to you and only ever goes up.
 
 ## Pages

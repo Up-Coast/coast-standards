@@ -487,8 +487,8 @@ class OutputTests(unittest.TestCase):
         code, out = self.fx.main()
         self.assertEqual(code, 1)
         self.assertIn("FAIL verify-rules docs/rules.md:6:X-2: no check tag", out)
-        self.assertIn("docs/rules.md [ios]: held by a machine 0 of 2 · partly 0 · advisory 0 · reviewer 1 · process 0 · open 1", out)
-        self.assertIn("TOTAL: held by a machine 0 of 2", out)
+        self.assertIn("docs/rules.md [ios]: enforced by a check 0 of 2 · partly 0 · advisory 0 · reviewer 1 · process 0 · open 1", out)
+        self.assertIn("TOTAL: enforced by a check 0 of 2", out)
         self.assertTrue(out.strip().endswith("FAIL verify-rules: 1 gaps — every rule names its check and every check runs, or this fails"))
 
     def test_summary_mode_drops_the_per_rule_lines(self):

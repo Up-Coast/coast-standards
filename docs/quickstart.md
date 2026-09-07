@@ -1,11 +1,13 @@
 # Quickstart
 
+*Last updated: 2026-09-07*
+
 Ten minutes from an existing project to live checks.
 
 ## 1. Get the standards
 
 ```bash
-git clone https://github.com/Up-Coast/up-coast-standards.git ~/coast-standards
+git clone https://github.com/Up-Coast/coast-standards.git ~/coast-standards
 ```
 
 ## 2. See what would change
@@ -53,9 +55,6 @@ An existing project usually has warnings, style findings, and a few duplicated b
 already. Rather than demand you fix all of them before the first push, the installer
 counts them and writes the counts down with a date 90 days out. From then on the counts
 may go down but never up. After the 90 days, the counts must be zero.
-
-So you never have a "rewrite day" forced on you at install, and you cannot quietly sit
-on the debt forever either.
 
 ## Updating later
 

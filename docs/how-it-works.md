@@ -1,8 +1,10 @@
 # How it works
 
+*Last updated: 2026-09-07*
+
 ## Three moments
 
-The checks run at three moments, each one cheap enough for where it sits.
+The checks run at three moments.
 
 | Moment | What runs | How long |
 |---|---|---|
@@ -10,7 +12,7 @@ The checks run at three moments, each one cheap enough for where it sits.
 | **Every commit** | the scanner on the lines you added, and a check that the commit message is sensible | seconds |
 | **Every push** | the whole battery: build, tests, linter, formatter, the scanner on everything since your last push, duplicate-code detection, and a check that your main branch is protected | as long as your build |
 
-A refusal at any moment stays on your machine. Nothing is pushed unverified.
+A refusal at any moment stays on your machine.
 
 ## The scanner
 
@@ -21,8 +23,7 @@ the main thread. The scanner has a list of these patterns for each platform and 
 for them in the lines you added. It knows what kind of file it is looking at (a screen, a
 test, the theme, a strings catalog) and applies only the patterns that make sense there.
 
-It does not read your program's structure. It is fast and precise for what it does, and
-it does not pretend to do more.
+It does not read your program's structure.
 
 ## Your platform's linter
 
@@ -41,15 +42,15 @@ only when it adds a new one.
 
 Every rule is labelled with what holds it, and the label puts it in a bin:
 
-- **Held by a machine.** A check refuses the change. This is the number you see.
+- **Enforced by a check.** A check refuses the change. This is the number you see.
 - **Advisory.** The scanner mentions it. Nothing fails.
 - **Needs a reviewer.** Only a person (or a review agent reading the code) can judge it:
   naming, whether an abstraction is premature, whether an error message is honest.
-  These are listed, so nobody can claim a machine holds them.
+  These are listed in your rules file as review-only.
 
-The number "rules held by a machine: 24 of 74" is computed from your project's own copy
-of the rules and written into your `CLAUDE.md`. It is honest by construction: a rule
-counts only if the check it names actually exists and actually runs.
+The number "rules enforced by a check: 24 of 74" is computed from your project's own copy
+of the rules and written into your `CLAUDE.md`. A rule counts only if the check it names
+exists and runs.
 
 ## Starting lines and deadlines
 

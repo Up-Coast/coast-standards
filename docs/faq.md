@@ -1,5 +1,7 @@
 # FAQ
 
+*Last updated: 2026-09-07*
+
 **Will this slow down my commits?**
 No. A commit runs the scanner on the lines you added, which takes seconds. The full
 battery runs only at push, and it takes as long as your build and tests.
@@ -25,10 +27,10 @@ warning refuses. After 90 days the count has to be zero.
 Not with a switch yet. You can set aside one rule on one file, or one whole check until a
 date, and both are signed. Per-rule switches are planned. See [Options](options.md).
 
-**What is "rules held by a machine 24 of 74"?**
+**What is "rules enforced by a check 24 of 74"?**
 Of the 74 rules in your project's rules file, 24 are enforced by a check that runs. The
-rest need a reviewer, are advisory, or are process rules. The number is honest by
-construction: a rule counts only when the check it names exists and runs.
+rest need a reviewer, are advisory, or are process rules. A rule counts only when the
+check it names exists and runs.
 
 **Why does the first push after install pass when my code breaks rules?**
 Lines written before the checks existed are legacy, and legacy is recorded as a starting

@@ -1,5 +1,7 @@
 # Options
 
+*Last updated: 2026-09-07*
+
 Everything you can change today, and where. All of it lives in a `.coast/` folder in
 your project, which the installer creates.
 
@@ -79,8 +81,8 @@ environment variables this machine does not have.
 ```
 
 Checks you can name: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`,
-`jscpd`, `gh-ruleset`. The date is required. An entry without one is ignored, on purpose:
-a permanent skip is how enforcement quietly dies.
+`jscpd`, `gh-ruleset`. The date is required. An entry without one is ignored, so a skip cannot
+become permanent.
 
 ## Which Xcode scheme to build
 

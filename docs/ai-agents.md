@@ -1,8 +1,9 @@
 # Working with AI coding agents
 
-Coast Standards was built because AI coding agents follow written rules only when it is
-convenient. The checks make that stop mattering: the rules are enforced by scripts the
-agent cannot argue with, and the agent gets the verdict in seconds while it still has the
+*Last updated: 2026-09-07*
+
+Coast Standards exists because AI coding agents do not reliably follow written rules.
+The checks are scripts, and the agent gets the verdict in seconds while it still has the
 code in front of it.
 
 ## What the agent sees
@@ -30,15 +31,14 @@ These are refused before they run, in every permission mode:
 
 Says so in plain words and stops. If the check is wrong, the agent should name which check
 and why, so you can set it aside with a dated entry (see
-[When a check stops you](when-a-check-stops-you.md)). That door exists and only a person
-can open it, which is the point.
+[When a check stops you](when-a-check-stops-you.md)). Only a person can add that entry.
 
 ## Setting it up
 
 The installer writes the hooks into `.claude/settings.json` in your project. Any other
 settings you had in that file are kept. Claude Code picks the hooks up when a session
 starts at the project root. If you have disabled all hooks in your personal Claude Code
-settings, these are disabled too; that is your machine and your choice.
+settings, these are disabled too.
 
 ## Commit attribution
 

@@ -89,6 +89,15 @@ PROJECT_CLAUDE_HOOK = "Scripts/hooks/claude-hook.py"   # the path claude-setting
 PROJECT_CLAUDE_SETTINGS = ".claude/settings.json"
 HOOK_NAMES = ("pre-commit", "pre-push", "commit-msg")
 CHECKS_NOT_SHIPPED = {"verify_rules.py", "battery.json", "verify-baseline.json"}  # they read this repo, not a project
+
+
+def number_label():
+    """The headline number's wording, from checks/vocabulary.json (the one place it is defined)."""
+    try:
+        with open(os.path.join(CHECKS_DIR, "vocabulary.json"), encoding="utf-8") as handle:
+            return json.load(handle)["number"]["label"]
+    except (OSError, ValueError, KeyError):
+        return "enforced by a check"
 PLATFORMS = ("ios", "macos", "android", "react-native", "web", "python")
 RATCHET_DAYS = 90
 JSCPD_PIN = "5.1.2"
@@ -406,7 +415,7 @@ class Adoption:
         else:
             new = f"# {os.path.basename(self.project)} — Agent Context\n\n{block}\n"
         self.put("CLAUDE.md", new.encode("utf-8"), governed=False)
-        self.say("note", "CLAUDE.md", f"rules held by a machine {counts['machine']} of {counts['total']}")
+        self.say("note", "CLAUDE.md", f"rules {number_label()} {counts['machine']} of {counts['total']}")
 
     def bind_theme(self):
         """An existing app already has a theme file, almost never at the platform's default
