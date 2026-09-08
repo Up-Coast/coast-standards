@@ -24,6 +24,11 @@ Three parts:
 - **`docs/`** — the public documentation for someone installing this into their product,
   in plain words.
 
+**Installing this into your own project? Start with the
+[quickstart](docs/quickstart.md)** — ten minutes, one command to fetch the newest
+release, one to install it. The steps further down this page are the same work in
+longer form, for someone who wants to see what the installer does before running it.
+
 Source-available, not open source: see [License](#license) below, and
 [CONTRIBUTING.md](CONTRIBUTING.md) to change a rule or a check.
 
@@ -61,13 +66,17 @@ Source-available, not open source: see [License](#license) below, and
    library/CLI) — a project with a frontend and an API is two types, one per part — and
    name it in the project's `CLAUDE.md` so no session has to guess which rules apply.
 2. Copy `TEMPLATE-CLAUDE.md` content into the project's `CLAUDE.md` and fill in the blanks.
-3. Copy the matching `rules/platform/domain-rules-<platform>.md` to `docs/domain-rules.md`
-   in the project and edit it to fit (delete inapplicable sections, add product-specific
-   rules — keep every rule checkable: a reviewer must be able to answer "does this change
-   break the rule — yes or no?").
-4. Install the BuilderOS skills (see "Built on BuilderOS" below):
-   `npx skills add BuildGreatProducts/builder-os`. The rules assume the Claude Code build
-   loop, `design-better` and `design-system` are present.
+   *The installer writes its own block into `CLAUDE.md` either way; do this when you want
+   the fuller template around it.*
+3. *The installer does this for you* when the project has no `docs/domain-rules.md`: it
+   copies the matching `rules/platform/domain-rules-<platform>.md` there. Do it by hand
+   only to start from a different platform's document. Either way, edit it to fit — delete
+   inapplicable sections, add product-specific rules, and keep every rule checkable: a
+   reviewer must be able to answer "does this change break the rule — yes or no?".
+4. Recommended, not required: install the BuilderOS skills (see "Built on BuilderOS"
+   below), `npx skills add BuildGreatProducts/builder-os`. Some rules are written to sit on
+   top of the Claude Code build loop, `design-better` and `design-system`, and read best
+   with them present. No check depends on them: nothing is refused if you skip this.
 5. The numbered files in `rules/` are read in place — reference this repo's path from the
    project CLAUDE.md rather than copying them, so improvements land everywhere at once.
 6. Run `python3 enforcement/adopt.py <project-dir> --measure-tools` (`--dry-run` first if
@@ -87,8 +96,11 @@ Source-available, not open source: see [License](#license) below, and
    baselines instead of refusing the first push. Re-run it to take a newer version — it
    replaces governed files, keeps anything you edited, lowers a baseline that fell, and
    changes nothing when nothing changed, and `--release <version>` (or `latest`) fetches
-   another release and installs from it. The programs the hooks expect are listed in
-   `enforcement/TOOLCHAIN.md`.
+   another release and installs from it.
+7. Install the programs the checks run — your platform's linter, formatter and test
+   runner, plus `jscpd` — *before* your first push, which is where a missing one is
+   refused. The list per platform is in the [quickstart](docs/quickstart.md); the pinned
+   versions and what each is used for are in `enforcement/TOOLCHAIN.md`.
 
 ## How enforcement works, in one screen
 

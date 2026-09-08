@@ -4,7 +4,25 @@
 
 Ten minutes from an existing project to live checks.
 
-## 1. Get the newest release
+## 1. Install the programs the checks run
+
+The checks do not bundle a linter or a test runner; they run your platform's own, and
+the push gate refuses with an install line when one is missing. Install them first, so
+your first push is not stopped by a missing program after you have already committed.
+
+| Your project | Install |
+|---|---|
+| iOS, macOS | Xcode (the build seat runs `xcodebuild`), then `brew install swiftlint swift-format` |
+| Android | `brew install ktlint` (detekt comes through the Gradle plugin) |
+| React Native, Web | `npm install` in the project — `tsc`, `eslint` and `prettier` are run from its own `node_modules` |
+| Python | `pip install ruff mypy pytest` — `ruff` and `mypy` are required; without `pytest` the tests seat falls back to `unittest` |
+| every project | `npm install -g jscpd@5.1.2` — the duplicate-code seat |
+
+`gh` (`brew install gh`) is optional: without it the branch-protection check prints that
+it was skipped rather than failing. The pinned versions, and what each program is used
+for, are in [enforcement/TOOLCHAIN.md](../enforcement/TOOLCHAIN.md).
+
+## 2. Get the newest release
 
 One command. It reads the newest version from the releases page, fetches that release,
 and leaves it at `~/.cache/coast-standards/<version>/`. No clone is needed.
@@ -17,7 +35,7 @@ The last line prints the version. The commands below use `$v` from the same shel
 (Contributors who want to change the rules or the checks clone the repository instead;
 see [CONTRIBUTING.md](../CONTRIBUTING.md).)
 
-## 2. See what would change
+## 3. See what would change
 
 Nothing is written yet. This prints a list of every file the installer would add or
 replace in your project.
@@ -29,7 +47,7 @@ python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project -
 The installer works out your platform from your project files. If it cannot, add
 `--platform ios` (or `macos`, `android`, `react-native`, `web`, `python`).
 
-## 3. Install
+## 4. Install
 
 ```bash
 python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project
@@ -48,7 +66,7 @@ where it stands today. It:
 
 Its last line says which version your project now carries.
 
-## 4. Commit and push
+## 5. Commit and push
 
 ```bash
 git add -A
