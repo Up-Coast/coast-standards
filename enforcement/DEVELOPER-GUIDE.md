@@ -331,7 +331,7 @@ and dispatched by id:
 |---|---|---|
 | `ui-string-literal` | `literals.py` | lexes the whole file the way Coast's copy guard did: Swift (with the guard's skip contexts — SF Symbols, identifiers, URLs, comparisons, SQL), Kotlin/XML, TSX/JSX text between tags, bare text on its own line and the known text props (a comparison, an arrow, a generic or one name of a multi-line import is not copy), Python message shapes; only added lines are reported |
 | `doc-comments` | `check_doc_comments.py` | every public declaration without a doc comment (§6) |
-| `import-matrix` | `import_matrix.py` | module-layer imports against `.coast/module-kinds.json` (app / feature / shared); a TypeScript named list broken over lines is read as one import |
+| `import-matrix` | `import_matrix.py` | module-layer imports against `.coast/module-kinds.json` (app / feature / shared) over the platform's layout: Swift package targets, Gradle modules, Node `Modules/<M>/src` or the root `src/`, and for Python the project package's subpackages (`src/<pkg>/` or `<pkg>/`, found by `__init__.py`; the package root is the app target) or, with several packages side by side, each package (imports read with `ast`); a TypeScript named list broken over lines is read as one import |
 | `blocking-call` (python) | `async_blocking.py` | a blocking call counted only inside `async def` |
 | `test-criterion-tag` | `test_criteria.py` | a test declaration with no `AC-<n>` or "criterion" in its name, the three lines above, or its first body line |
 | `type-size` | `type_size.py` | a type past 300 lines or a file past 400, reported once (advisory) |

@@ -407,6 +407,81 @@ class ImportMatrixTests(unittest.TestCase):
         self.assertIn("FAIL import-matrix Sources/Home/HomeView.swift:0:import-matrix: Home imports Profile", out)
         self.assertIn("[A-2]", out)
 
+    def test_python_reads_the_project_package_as_the_modules(self):
+        # The src layout: subpackages are the modules, the package root is the app target.
+        repo = Repo()
+        self.addCleanup(repo.cleanup)
+        for package in ("", "domain", "data", "billing", "orders"):
+            repo.write(f"src/shop/{package}/__init__.py".replace("//", "/"), "")
+        repo.write("src/shop/main.py", "from shop.data.repo import Repo\nfrom shop.billing.service import bill\nfrom . import settings\n")
+        repo.write("src/shop/settings.py", "DB = 1\n")
+        repo.write("src/shop/domain/models.py", "class User: pass\n")
+        repo.write("src/shop/domain/rules.py", "import sqlalchemy\nfrom shop.domain import models\nfrom .models import User\n")
+        repo.write("src/shop/data/repo.py", "from shop.domain.models import User\nimport sqlalchemy\n")
+        repo.write("src/shop/billing/service.py", "from ..domain import models\nfrom shop.data.repo import Repo\nimport os\n")
+        repo.write("src/shop/orders/flow.py", "from shop import billing\nfrom .. import domain\n")
+        repo.write("src/shop/orders/broken.py", "this is not python (\n")
+        repo.write("src/shop/tests/test_flow.py", "from shop.billing import service\n")
+        repo.write("tests/test_all.py", "from shop.billing import service\n")
+        repo.write("src/shop/orders/conftest.py", "from shop.billing import service\n")
+        repo.write(".venv/lib/site.py", "import shop.billing\n")
+        repo.commit("python project")
+        code, out = repo.run("--tree", "--platform", "python")
+        self.assertEqual(code, 1)
+        fails = [line for line in out.split("\n") if line.startswith("FAIL import-matrix")]
+        self.assertEqual(len(fails), 3, out)
+        self.assertIn("FAIL import-matrix src/shop/billing/service.py:0:import-matrix: billing imports Data", out)
+        self.assertIn("FAIL import-matrix src/shop/domain/rules.py:0:import-matrix: Domain imports sqlalchemy", out)
+        self.assertIn("FAIL import-matrix src/shop/orders/flow.py:0:import-matrix: orders imports billing", out)
+        self.assertIn("[ARCH-2]", out)
+        self.assertNotIn("main.py", out)   # the app target wires Data in
+
+    def test_python_packages_side_by_side_are_each_a_module(self):
+        # No single project package: every top-level package is a module, under src/ or at the root.
+        for prefix in ("src/", ""):
+            repo = Repo()
+            self.addCleanup(repo.cleanup)
+            for package in ("domain", "billing", "reporting"):
+                repo.write(f"{prefix}{package}/__init__.py", "")
+            repo.write(f"{prefix}domain/money.py", "def cents(): return 1\n")
+            repo.write(f"{prefix}billing/invoice.py", "from domain.money import cents\n")
+            repo.write(f"{prefix}reporting/summary.py", f"from {'src.' if prefix else ''}billing.invoice import total\n")
+            repo.commit("side by side")
+            code, out = repo.run("--tree", "--platform", "python")
+            self.assertEqual(code, 1, out)
+            fails = [line for line in out.split("\n") if line.startswith("FAIL import-matrix")]
+            self.assertEqual(len(fails), 1, out)
+            self.assertIn(f"FAIL import-matrix {prefix}reporting/summary.py:0:import-matrix: reporting imports billing", out)
+
+    def test_python_flat_layout_and_declared_kinds(self):
+        repo = Repo()
+        self.addCleanup(repo.cleanup)
+        for package in ("", "domain", "api", "core"):
+            repo.write(f"shop/{package}/__init__.py".replace("//", "/"), "")
+        repo.write("shop/api/routes.py", "import fastapi\nfrom shop.domain import x\nfrom shop.core import helpers\n")
+        repo.write("shop/domain/x.py", "from shop.api import routes\n")
+        repo.write("shop/core/helpers.py", "import json\n")
+        repo.commit("flat project")
+        cwd = os.getcwd()
+        os.chdir(repo.path)
+        try:
+            failures, layout, judged = im.failures_for("python")
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(layout, "python")
+        self.assertTrue(judged)
+        self.assertEqual([path for path, _ in failures], ["shop/api/routes.py", "shop/domain/x.py"])
+        self.assertIn("api imports core", failures[0][1])
+        self.assertIn("Domain imports api", failures[1][1])
+        # The state dir's module-kinds.json names core as shared: the api → core import is then allowed.
+        repo.write(im.KINDS_FILE, {"shared": ["core"]})
+        os.chdir(repo.path)
+        try:
+            failures, _, _ = im.failures_for("python")
+        finally:
+            os.chdir(cwd)
+        self.assertEqual([path for path, _ in failures], ["shop/domain/x.py"])
+
 
 class PushPathCorrectnessTests(unittest.TestCase):
     """E2.10: the six ways the push path misjudged a change, each held by one test."""

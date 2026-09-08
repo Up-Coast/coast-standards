@@ -25,7 +25,12 @@ web file's rules for that part.
 - **ARCH-2** Module dependencies flow one way, with no cycles: feature
   modules depend on shared domain abstractions, never on each other, and
   never on concrete data-access code. Import cycles are a build failure,
-  not a style note. [Industry-wide practice; check: scan:import-matrix]
+  not a style note. The modules are the project package's subpackages
+  (`src/<pkg>/<module>/` or `<pkg>/<module>/`, the package root being the
+  app target that wires data access in) or, with no single project package,
+  the top-level packages side by side; `domain` and `data` are the shared
+  layers by name, and the state dir's `module-kinds.json` names any other
+  module's kind. [Industry-wide practice; check: scan:import-matrix]
 - **ARCH-3** Business logic is separated from transport: request handlers
   (FastAPI/Flask/Django views) parse and validate, then call a function
   that could be called just as well from a worker, a test, or a script.

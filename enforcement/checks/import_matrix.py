@@ -29,12 +29,18 @@ Swift package tree (`Sources/<T>/**`, `Modules/<M>/Sources/**`); Android the
 Gradle tree (any `<name>/src/main/{kotlin,java}/**`, imports resolved by
 declared package); React Native and Web the Node tree (`Modules/<M>/src/**`,
 else the package's root `src/` as one module named after the package,
-relative imports resolved by path). Tests, generated trees and dependencies
-are never product code.
+relative imports resolved by path); Python the packages under `src/`, else at
+the root, each found by its `__init__.py`: ONE package is the project package,
+whose subpackages are the modules and whose root files are the app target (the
+composition root, where Data is wired in); SEVERAL packages side by side are
+each a module. Imports are read with `ast`, relative ones made absolute from
+the file's own package. Tests, generated trees and dependencies are never
+product code.
 
 Usage: check_import_matrix.py [--platform <name>]   (run from the repository root;
        the platform also comes from COAST_PLATFORM, which the shipped workflow sets)
 """
+import ast
 import json
 import os
 import re
@@ -43,28 +49,41 @@ import sys
 import layout as _layout  # noqa: E402 — the state dir's name comes from the layout table (E5.1)
 KINDS_FILE = _layout.load().state_file("module-kinds.json")
 SHARED_NAMES = {"Domain", "Data", "DesignSystem", "Strings", "AppFoundation", "Shared", "SharedUI"}
+STANDARD_NAME = {name.lower(): name for name in SHARED_NAMES}  # a Python package is `domain`, the taxonomy says Domain
 DOMAIN = "Domain"
 DATA = "Data"
-DOMAIN_FORBIDDEN_FRAMEWORKS = {"SwiftUI", "UIKit", "AppKit", "CoreData", "SwiftData", "GRDB", "SQLite3", "Realm"}
+# Frameworks Domain never imports: UI and data on Apple platforms; web, data and transport on Python.
+DOMAIN_FORBIDDEN_FRAMEWORKS = {"SwiftUI", "UIKit", "AppKit", "CoreData", "SwiftData", "GRDB", "SQLite3", "Realm",
+                               "django", "fastapi", "flask", "starlette", "sqlalchemy", "sqlite3", "psycopg",
+                               "psycopg2", "asyncpg", "pymongo", "redis", "boto3", "requests", "httpx", "aiohttp"}
 DECLARATION_WORDS = {"struct", "class", "enum", "protocol", "typealias", "func", "let", "var"}
 HEAVY_DIRECTORIES = {".git", ".gradle", "node_modules", ".build", "intermediates",
-                     "Pods", ".idea", "DerivedData", "caches", "tmp"}
+                     "Pods", ".idea", "DerivedData", "caches", "tmp",
+                     ".venv", "venv", "__pycache__", ".tox", ".mypy_cache", ".ruff_cache", "site-packages", ".eggs"}
+PYTHON_TEST_DIRECTORIES = {"tests", "test"}
 
 LAYOUT_OF_PLATFORM = {"ios": "swift-package", "macos": "swift-package", "android": "gradle",
-                      "react-native": "node", "web": "node"}
+                      "react-native": "node", "web": "node", "python": "python"}
 EXTENSIONS_OF_LAYOUT = {"swift-package": (".swift",), "gradle": (".kt", ".java"),
-                        "node": (".ts", ".tsx", ".js", ".jsx")}
+                        "node": (".ts", ".tsx", ".js", ".jsx"), "python": (".py",)}
+
+
+def standard(module):
+    """The taxonomy's spelling of a module name (`domain` and `Domain` are the same module)."""
+    return STANDARD_NAME.get(module.lower(), module)
 
 
 def default_kind(module):
-    if module in SHARED_NAMES:
+    if standard(module) in SHARED_NAMES:
         return "shared"
-    if module == "App" or module.endswith("App"):
+    if module.lower() == "app" or module.endswith("App"):
         return "app"
     return "feature"
 
 
-def kinds_for(modules):
+def kinds_for(modules, app_modules=()):
+    """The kind of every module: the state dir's declarations first, then the layout's own
+    app targets (`app_modules` — a Python package root), then the taxonomy's default by name."""
     by_module = {}
     if os.path.exists(KINDS_FILE):
         with open(KINDS_FILE, encoding="utf-8") as handle:
@@ -73,7 +92,7 @@ def kinds_for(modules):
             for name in declared.get(kind, []):
                 by_module[name] = kind
     for module in modules:
-        by_module.setdefault(module, default_kind(module))
+        by_module.setdefault(module, "app" if module in app_modules else default_kind(module))
     return by_module
 
 
@@ -87,11 +106,15 @@ def is_product_file(layout, name):
             return False
         if any(marker in name for marker in (".test.", ".spec.", ".stories.")):
             return False
+    if layout == "python":
+        if name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py":
+            return False
     return True
 
 
 def location(parts, layout, root_module):
-    """(module, root) for a repository-relative path, or None."""
+    """(module, root) for a repository-relative path, or None. `root_module` is the
+    layout's root: node's package name, python's packages (see python_packages)."""
     if len(parts) < 2 or any(p in HEAVY_DIRECTORIES for p in parts[:-1]):
         return None
     if layout == "swift-package":
@@ -115,7 +138,33 @@ def location(parts, layout, root_module):
         if len(parts) >= 2 and parts[0] == "src" and root_module:
             return root_module, "src"
         return None
+    if layout == "python":
+        if any(p in PYTHON_TEST_DIRECTORIES for p in parts[:-1]):
+            return None
+        for package, prefix in root_module or ():
+            if parts[:len(prefix)] != prefix or len(parts) <= len(prefix):
+                continue
+            rest = parts[len(prefix):]
+            if len(rest) == 1 or not python_has_project_package(root_module):
+                return package, "/".join(prefix)
+            return rest[0], "/".join(prefix + [rest[0]])
+        return None
     return None
+
+
+def python_has_project_package(packages):
+    """True when the tree holds ONE package — the project package, whose subpackages are
+    the modules. Several packages side by side are each a module themselves."""
+    return len(packages) == 1
+
+
+def python_package_of(parts, packages):
+    """The dotted package a Python file belongs to, as parts (`src/app/billing/x.py` →
+    ["app", "billing"]) — what its relative imports are resolved against."""
+    for package, prefix in packages:
+        if parts[:len(prefix)] == prefix and len(parts) > len(prefix):
+            return [package] + parts[len(prefix):-1]
+    return []
 
 
 def skips_directory(parts, layout):
@@ -126,10 +175,34 @@ def skips_directory(parts, layout):
         return name == "build"
     if layout == "node":
         return len(parts) == 1 and name in ("dist", "build")
+    if layout == "python":
+        return name.endswith(".egg-info") or (len(parts) == 1 and name in ("dist", "build"))
     return False
 
 
+def python_packages():
+    """The project's packages as (name, path prefix parts): every `<dir>/__init__.py` under
+    `src/` (the src layout), else at the repository root (the flat layout). Nothing here
+    reads a config: the tree itself says which packages exist."""
+    found = []
+    for base in (["src"], []):
+        parent = "/".join(base) or "."
+        if not os.path.isdir(parent):
+            continue
+        for name in sorted(os.listdir(parent)):
+            if name in HEAVY_DIRECTORIES or name in PYTHON_TEST_DIRECTORIES:
+                continue
+            if os.path.isfile("/".join(base + [name, "__init__.py"])):
+                found.append((name, base + [name]))
+        if found:
+            return found
+    return found
+
+
 def root_module_name(layout):
+    """The layout's root: node's package name, python's packages, else None."""
+    if layout == "python":
+        return python_packages()
     if layout != "node":
         return None
     name = None
@@ -320,6 +393,44 @@ def typescript_imports(text):
     return specifiers
 
 
+def python_read(text, package, project_names):
+    """(foreign top-level names, project imports) for one Python file. Every import is
+    made absolute — a relative one from `package`, the file's own dotted package as
+    parts — and split: a name outside the project's packages (`project_names`) is
+    foreign (judged by its top-level name, the framework check); one inside is a
+    project import, as parts, for resolve(). `from pkg import billing` names the
+    subpackage through its alias, so each alias is a candidate too. A file that does
+    not parse has no imports."""
+    foreign = []
+    own = []
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return foreign, own
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            candidates = [alias.name.split(".") for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = list(package[:max(0, len(package) - (node.level - 1))])
+            else:
+                base = []
+            base = base + (node.module.split(".") if node.module else [])
+            candidates = [base] + [base + [alias.name] for alias in node.names if alias.name != "*"]
+        else:
+            continue
+        for parts in candidates:
+            if len(parts) > 1 and parts[0] == "src" and parts[1] in project_names:
+                parts = parts[1:]
+            if not parts:
+                continue
+            if parts[0] in project_names:
+                own.append(parts)
+            else:
+                foreign.append(parts[0])
+    return foreign, own
+
+
 def resolve(layout, module, path, imports, modules, packages, root_module):
     """The project modules a file's imports resolve to (never its own)."""
     resolved = set()
@@ -331,6 +442,15 @@ def resolve(layout, module, path, imports, modules, packages, root_module):
             for other, declared in packages.items():
                 if any(name == p or name.startswith(p + ".") for p in declared):
                     resolved.add(other)
+        elif layout == "python":
+            # `name` is the dotted import as parts. Under the project package its
+            # subpackage is the module and a name at the root is the app target;
+            # side by side, the package itself is the module.
+            target = name[0]
+            if python_has_project_package(root_module) and len(name) > 1 and name[1] in modules:
+                target = name[1]
+            if target in modules:
+                resolved.add(target)
         else:
             if not name.startswith("."):
                 continue
@@ -348,16 +468,16 @@ def resolve(layout, module, path, imports, modules, packages, root_module):
 def judge(importer, imported, kinds):
     importer_kind = kinds.get(importer, default_kind(importer))
     imported_is_module = imported in kinds
-    if importer == DOMAIN:
+    if standard(importer) == DOMAIN:
         if imported_is_module:
             return ("domain-imports-nothing",
                     f"Domain imports {imported} — Domain is the stable centre and imports nothing app-side")
         if imported in DOMAIN_FORBIDDEN_FRAMEWORKS:
-            return ("domain-imports-nothing", f"Domain imports {imported} — no UI or data framework belongs in Domain")
+            return ("domain-imports-nothing", f"Domain imports {imported} — no UI, data or transport framework belongs in Domain")
         return None
     if not imported_is_module:
         return None
-    if imported == DATA and importer_kind != "app":
+    if standard(imported) == DATA and importer_kind != "app":
         return ("only-app-imports-data",
                 f"{importer} imports Data — only the app target wires Data in; features see repositories as Domain protocols")
     if importer_kind == "feature" and kinds.get(imported) == "feature":
@@ -376,7 +496,9 @@ def failures_for(platform):
     root_module = root_module_name(layout)
     by_module = walk(layout, root_module)
     modules = set(by_module)
-    kinds = kinds_for(modules)
+    package_names = {package for package, _ in root_module} if layout == "python" else set()
+    app_modules = package_names if layout == "python" and python_has_project_package(root_module) else ()
+    kinds = kinds_for(modules, app_modules)
 
     texts = {}
     packages = {}
@@ -394,12 +516,14 @@ def failures_for(platform):
         for path in sorted(by_module[module]):
             text = texts[path]
             if layout == "swift-package":
-                raw = imports_in(text)
+                raw = project_imports = imports_in(text)
             elif layout == "gradle":
-                raw = kotlin_read(text)[1]
+                raw = project_imports = kotlin_read(text)[1]
+            elif layout == "python":
+                raw, project_imports = python_read(text, python_package_of(path.split("/"), root_module), package_names)
             else:
-                raw = typescript_imports(text)
-            imported = set(raw) | resolve(layout, module, path, raw, modules, packages, root_module)
+                raw = project_imports = typescript_imports(text)
+            imported = set(raw) | resolve(layout, module, path, project_imports, modules, packages, root_module)
             for name in sorted(imported):
                 if name == module:
                     continue
