@@ -1,0 +1,21 @@
+{
+  "_comment": "The layout: every path the enforcement layer names in a project, in one table (enforcement/README.md task E5.1). adopt.py, the three git hooks (through the layout.sh it writes into the state dir), claude-hook.py, the rendered settings file, the governing classes in paths.json and the jscpd ignore list all read it; nothing else names these paths. A value may name another key as {key}; {session_hook_dir} and {settings_local_file} are derived. The checks and the session hook live under the state dir, so a project has ONE folder that is the layer's and nothing can case-fold against a folder the project already has. A project overrides a key under \"layout\" in <state_dir>/config.json (adopt.py --checks-dir writes one) — every key but state_dir, which is the anchor the hooks find that file by. The env prefix names the variables the layer reads: <prefix>PLATFORM, <prefix>CHECKS_DIR, <prefix>STATE_DIR.",
+  "checks_dir": ".coast/checks",
+  "hooks_dir": ".githooks",
+  "session_hook": ".coast/hooks/claude-hook.py",
+  "settings_file": ".claude/settings.json",
+  "state_dir": ".coast",
+  "rules_document": "docs/domain-rules.md",
+  "ai_rules_document": "docs/ai-features-rules.md",
+  "context_file": "CLAUDE.md",
+  "lock_name": "coast-push.lock",
+  "temp_prefix": "coast-",
+  "env_prefix": "COAST_",
+  "jscpd_ignore": [
+    "**/node_modules/**", "**/.build/**", "**/build/**", "**/Pods/**", "**/DerivedData/**", "**/dist/**",
+    "**/.venv/**", "**/__pycache__/**", "**/{state_dir}/**", "**/{checks_dir}/**", "**/{hooks_dir}/**",
+    "**/*.min.js", "**/*.lock", "**/Package.resolved",
+    "**/*.md", "**/*.markdown", "**/*.txt", "**/*.json", "**/*.jsonl", "**/*.yml", "**/*.yaml", "**/*.toml",
+    "**/*.html", "**/*.svg", "**/*.xml", "**/*.plist", "**/*.strings", "**/*.xcstrings", "**/*.stringsdict"
+  ]
+}

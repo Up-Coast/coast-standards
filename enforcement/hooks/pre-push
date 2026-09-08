@@ -12,7 +12,7 @@
 #                    under "strict"; eslint --max-warnings 0; Python tests
 #                    run with PYTHONWARNINGS=error. On a repository that
 #                    already carries warnings (a `build-warnings` entry in
-#                    .coast/ratchet-baseline.json, written by adopt.py
+#                    the state dir's ratchet-baseline.json, written by adopt.py
 #                    --measure-tools), the Swift build runs without the
 #                    switch and its warning count is a RATCHET: the rule is
 #                    "zero NEW warnings" (C-4), the count may only fall, and
@@ -31,7 +31,7 @@
 #                    count as an advisory — a legacy tree's debt is not a
 #                    rewrite day nobody sanctioned (decision 2)
 #   jscpd            tool:jscpd — duplicated code; refuses NEW clones against
-#                    the committed baseline .coast/jscpd-baseline.json
+#                    the committed baseline, the state dir's jscpd-baseline.json
 #                    (`--baseline … --fail-on-new-clones`, jscpd 5.1.2, see
 #                    enforcement/TOOLCHAIN.md); past the baseline's deadline
 #                    any clone refuses (`--exit-code`, decision 2)
@@ -47,23 +47,36 @@
 # `pre-push --measure <name>[,<name>]` to run the build/format seats in
 # counting mode: each prints `MEASURE <id> <count>` instead of judging, so
 # adopt.py can write the ratchet baseline from what the tools report.
-# The platform is one word in .coast/platform (or COAST_PLATFORM); checks
-# live under Scripts/checks/ (COAST_CHECKS_DIR overrides). JSCPD_BIN names
-# a jscpd binary when it is not on PATH. GOVERNING: agents never edit the
-# files that define their own checks.
+# Every path this hook names comes from the layout table (layout.json beside
+# the checks), rendered by adopt.py as layout.sh in the state dir; the state
+# dir is the one name the hook carries, and it is the table's default. The
+# platform is one word in the state dir's platform file (or the environment).
+# JSCPD_BIN names a jscpd binary when it is not on PATH. GOVERNING: agents
+# never edit the files that define their own checks.
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
 export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
 export SWT_SF_SYMBOLS_ENABLED=0   # Swift Testing's marks paste as plain text
 
-checks=${COAST_CHECKS_DIR:-Scripts/checks}
-platform=${COAST_PLATFORM:-}
-if [ -z "$platform" ] && [ -f .coast/platform ]; then
-  platform=$(tr -d '[:space:]' < .coast/platform)
+state=${COAST_STATE_DIR:-.coast}
+if [ ! -f "$state/layout.sh" ]; then
+  echo "FAIL pre-push $state/layout.sh:0:missing: the layout file is not written — run enforcement/adopt.py from the standards repo" >&2
+  exit 1
+fi
+. "./$state/layout.sh"
+# The config's switches (seats, linters, session hooks off), read fresh from config.json each run.
+if [ -f "$layout_checks_dir/config.py" ]; then
+  switches=$(python3 "$layout_checks_dir/config.py" --sh) || { echo "FAIL pre-push $state/config.json:0:config: the config refuses to load — see the line above" >&2; exit 1; }
+  eval "$switches"
+fi
+checks=$layout_checks_dir
+platform=$layout_platform
+if [ -z "$platform" ] && [ -f "$state/platform" ]; then
+  platform=$(tr -d '[:space:]' < "$state/platform")
 fi
 if [ -z "$platform" ]; then
-  echo "FAIL pre-push .coast/platform:0:platform: no platform named — write one word to .coast/platform, or run adopt.py" >&2
+  echo "FAIL pre-push $state/platform:0:platform: no platform named — write one word to $state/platform, or run adopt.py" >&2
   exit 1
 fi
 
@@ -81,18 +94,18 @@ elif [ "${1-}" = "--measure" ]; then
 fi
 
 # A seat a PERSON has excused, with a reason and a date it runs again. The founder writes
-# these into .coast/rules-exceptions.json, which is GOVERNING — the session hooks refuse an
+# these into the state dir's rules-exceptions.json, which is GOVERNING — the session hooks refuse an
 # agent editing it, so this is a door only a human can open. It exists because a wrong check
 # would otherwise block every push with no sanctioned way out: the rules say never
 # --no-verify, and an agent that finds a false positive has nothing to do but stop. An entry
 # without an `until` date, or past it, is ignored and the seat runs.
 excused() {
-  [ -f .coast/rules-exceptions.json ] || return 1
-  python3 - "$1" <<'PY'
+  [ -f "$state/rules-exceptions.json" ] || return 1
+  python3 - "$1" "$state/rules-exceptions.json" <<'PY'
 import datetime, json, sys
 seat = sys.argv[1]
 try:
-    with open(".coast/rules-exceptions.json", encoding="utf-8") as handle:
+    with open(sys.argv[2], encoding="utf-8") as handle:
         entries = json.load(handle).get("exceptions", [])
 except (OSError, ValueError):
     sys.exit(1)
@@ -123,8 +136,18 @@ wants_named() {  # <seat> — named on the command line (or every seat), excuses
     *) return 1 ;;
   esac
 }
+# A seat the project's CONFIG switches off (seats.off in the state dir's config.json, task
+# E5.3; the switch travels into layout.sh). The config is GOVERNING too, so only a person
+# writes it; unlike an excuse it has no date — it is the project's decision, said aloud.
+switched_off() {  # <list> <name>
+  case " $1 " in *" $2 "*) return 0 ;; *) return 1 ;; esac
+}
 wants() {
   wants_named "$1" || return 1
+  if switched_off "${config_seats_off:-}" "$1"; then
+    printf 'gate: %s OFF (config)\n' "$1"
+    return 1
+  fi
   if excuse=$(excused "$1"); then
     printf 'gate: %s SKIPPED — %s\n' "$1" "$excuse"
     return 1
@@ -141,7 +164,7 @@ wants() {
 # checkout with a lock directory, which mkdir creates atomically. After the wait the hook
 # checks whether the remote moved: if it did, it says so in seconds instead of building
 # for half an hour and losing the race again.
-lock="$(git rev-parse --git-common-dir)/coast-push.lock"
+lock="$(git rev-parse --git-common-dir)/$layout_lock_name"
 
 release_push_lock() { rm -rf "$lock"; }
 
@@ -197,7 +220,7 @@ remote_still_ours() {
 # that is not HEAD this way); --measure never reads stdin.
 refs_file=""
 if [ ! -t 0 ] && [ "$measure" = 0 ] && { [ "$seats" = all ] || wants_named rules-scan; }; then
-  refs_file=$(mktemp "${TMPDIR:-/tmp}/coast-refs.XXXXXX") || refs_file=""
+  refs_file=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}refs.XXXXXX") || refs_file=""
   [ -n "$refs_file" ] && cat > "$refs_file"
 fi
 
@@ -207,12 +230,12 @@ if [ "$seats" = all ]; then
 fi
 
 # A project that had its own hooks keeps them: ours run first, then its own, with the same
-# ref lines on stdin. adopt.py wrote the path it found into .coast/previous-hooks-path.
-# one adopting web project's pre-push ran gitleaks, and pointing core.hooksPath at .githooks switched
+# ref lines on stdin. adopt.py wrote the path it found into the state dir's previous-hooks-path.
+# one adopting web project's pre-push ran gitleaks, and pointing core.hooksPath at our hooks dir switched
 # that off without a word — a check the founder chose is never dropped on the floor.
 previous_hooks() {
-  [ -f .coast/previous-hooks-path ] || return 0
-  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+  [ -f "$state/previous-hooks-path" ] || return 0
+  previous=$(tr -d '[:space:]' < "$state/previous-hooks-path")
   [ -n "$previous" ] && [ -f "$previous/pre-push" ] || return 0
   printf 'gate: %s/pre-push (this project had it before it adopted)\n' "$previous"
   # An executable hook runs as itself (its shebang may say python or bash); one that
@@ -231,6 +254,13 @@ run() {
   if ! "$@"; then
     printf 'gate: %s failed — the push was refused. Fix what it printed, then push again.\n' "$name" >&2
     exit 1
+  fi
+}
+
+linter_on() {  # <name> — false, with a line, when the config switches the linter off (linters.off)
+  if switched_off "${config_linters_off:-}" "$1"; then
+    printf 'gate: %s OFF (config)\n' "$1"
+    return 1
   fi
 }
 
@@ -281,7 +311,7 @@ count_format_findings() {  # <log> — swift-format's and swiftlint's `file:line
 # <id> <counter> <command…>: run the tool into a log, echo the log, count, judge.
 ratcheted_run() {
   id=$1; counter=$2; shift 2
-  log=$(mktemp "${TMPDIR:-/tmp}/coast-gate.XXXXXX") || return 1
+  log=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}gate.XXXXXX") || return 1
   "$@" > "$log" 2>&1
   status=$?
   if [ "$id" = build-warnings ] || [ "$measure" = 1 ]; then cat "$log"; else head -n 40 "$log"; fi
@@ -310,7 +340,7 @@ sys.exit(0 if any(n.endswith(("Tests", "UITests")) for n in names) else 1)' && e
 # run on the Mac's Designed-for-iPad destination, which needs no simulator to boot.
 xcode_tests() {
   scheme=$1
-  log=$(mktemp "${TMPDIR:-/tmp}/coast-tests.XXXXXX") || return 1
+  log=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}tests.XXXXXX") || return 1
   xcodebuild test -quiet -scheme "$scheme" -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
   status=$?
   if [ $status -ne 0 ] && [ "$platform" = ios ] && grep -q 'Unable to find a device matching the provided destination' "$log"; then
@@ -336,14 +366,14 @@ tests_seat() {
   "$@"
 }
 
-xcode_scheme() {  # .coast/xcode-scheme, else the first scheme xcodebuild lists
-  if [ -f .coast/xcode-scheme ]; then
-    tr -d '[:space:]' < .coast/xcode-scheme
+xcode_scheme() {  # the state dir's xcode-scheme file, else the first scheme xcodebuild lists
+  if [ -f "$state/xcode-scheme" ]; then
+    tr -d '[:space:]' < "$state/xcode-scheme"
     return 0
   fi
   first=$(xcodebuild -list 2>/dev/null | awk '/Schemes:/{flag=1; next} flag && NF {print $1; exit}')
   if [ -z "$first" ]; then
-    echo "FAIL pre-push .coast/xcode-scheme:0:scheme: no scheme found — write the scheme name to .coast/xcode-scheme" >&2
+    echo "FAIL pre-push $state/xcode-scheme:0:scheme: no scheme found — write the scheme name to $state/xcode-scheme" >&2
     return 1
   fi
   echo "$first"
@@ -397,7 +427,7 @@ case "$platform" in
       wants tests && run "tests" tests_seat swift test
     else
       # An Xcode project or workspace (xcodegen apps): build and test through
-      # xcodebuild. The scheme is .coast/xcode-scheme, else the first scheme
+      # xcodebuild. The scheme is the state dir's xcode-scheme file, else the first scheme
       # xcodebuild lists; the destination is a generic simulator for the
       # build and the first available iPhone (or the Mac) for the tests.
       need xcodebuild "install Xcode" || exit 1
@@ -416,7 +446,7 @@ case "$platform" in
       fi
       wants tests && run "tests" tests_seat xcode_tests "$scheme"
     fi
-    if wants lint; then
+    if wants lint && linter_on swiftlint; then
       need swiftlint "brew install swiftlint" || exit 1
       if ratcheted lint-findings; then
         run "lint (findings ratchet)" ratcheted_run lint-findings count_format_findings swiftlint lint --quiet
@@ -424,7 +454,7 @@ case "$platform" in
         run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
       fi
     fi
-    if wants format; then
+    if wants format && linter_on swiftformat; then
       need swift-format "brew install swift-format" || exit 1
       # every tracked Swift file, so an Xcode layout with no Sources/ folder is covered too
       if ratcheted format-findings; then
@@ -446,10 +476,10 @@ case "$platform" in
     elif wants tests; then
       run "tests" ./gradlew --quiet test
     fi
-    if wants lint; then
+    if wants lint && linter_on detekt; then
       run "lint (detekt)" ./gradlew --quiet detekt
     fi
-    if wants format; then
+    if wants format && linter_on ktlint; then
       need ktlint "brew install ktlint" || exit 1
       run "format (ktlint)" ktlint
     fi
@@ -458,18 +488,20 @@ case "$platform" in
     if wants build; then
       # warnings-as-errors: tsc under "strict": true reports every problem as
       # an error, and eslint runs with --max-warnings 0 below.
-      if [ -f tsconfig.json ] && [ "$(python3 "$checks/jsonc.py" tsconfig.json compilerOptions.strict 2>/dev/null)" != true ]; then
-        echo "FAIL pre-push tsconfig.json:0:warnings-as-errors: compilerOptions.strict is not true — the shipped tsconfig seed sets it" >&2
-        exit 1
+      if linter_on tsc; then
+        if [ -f tsconfig.json ] && [ "$(python3 "$checks/jsonc.py" tsconfig.json compilerOptions.strict 2>/dev/null)" != true ]; then
+          echo "FAIL pre-push tsconfig.json:0:warnings-as-errors: compilerOptions.strict is not true — the shipped tsconfig seed sets it" >&2
+          exit 1
+        fi
+        run "typecheck (tsc --noEmit, warnings-as-errors)" npx --no-install tsc --noEmit
       fi
-      run "typecheck (tsc --noEmit, warnings-as-errors)" npx --no-install tsc --noEmit
       if python3 -c 'import json,sys; sys.exit(0 if "build" in json.load(open("package.json")).get("scripts",{}) else 1)' 2>/dev/null; then
         run "build (npm run build)" npm run --silent build
       fi
     fi
     wants tests && run "tests (npm test)" npm test --silent
-    wants lint && run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
-    wants format && run "format (prettier --check)" npx --no-install prettier --check .
+    wants lint && linter_on eslint && run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
+    wants format && linter_on prettier && run "format (prettier --check)" npx --no-install prettier --check .
     ;;
   python)
     if wants tests; then
@@ -485,15 +517,19 @@ case "$platform" in
       fi
     fi
     if wants lint; then
-      need ruff "pip install ruff" || exit 1
-      run "lint (ruff check)" ruff check .
-      need mypy "pip install mypy" || exit 1
-      run "types (mypy)" mypy .
+      if linter_on ruff; then
+        need ruff "pip install ruff" || exit 1
+        run "lint (ruff check)" ruff check .
+      fi
+      if linter_on mypy; then
+        need mypy "pip install mypy" || exit 1
+        run "types (mypy)" mypy .
+      fi
     fi
-    wants format && run "format (ruff format --check)" ruff format --check .
+    wants format && linter_on ruff && run "format (ruff format --check)" ruff format --check .
     ;;
   *)
-    echo "FAIL pre-push .coast/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2
+    echo "FAIL pre-push $state/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2
     exit 1
     ;;
 esac
@@ -527,11 +563,11 @@ if wants rules-scan; then
   fi
   [ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
   # The first push after adoption carries commits written before the checks existed. Lines
-  # added before the commit that adopted (the one that added .coast/platform) are legacy and
+  # added before the commit that adopted (the one that added the platform file) are legacy and
   # belong to the baselines; the scan starts at the adoption commit. Found on Coast, where the
   # other lane's commits landed between the measurement and the push.
   since_adoption() {  # <base> <tip>
-    adopted=$(git log --diff-filter=A --format=%H --reverse "$1..$2" -- .coast/platform 2>/dev/null | head -n 1)
+    adopted=$(git log --diff-filter=A --format=%H --reverse "$1..$2" -- "$state/platform" 2>/dev/null | head -n 1)
     if [ -n "$adopted" ]; then git rev-parse "$adopted^" 2>/dev/null || echo "$1"; else echo "$1"; fi
   }
   for range in $ranges; do
@@ -567,7 +603,7 @@ jscpd_seat() {
     echo "FAIL pre-push toolchain:0:jscpd: jscpd is not installed — npm install -g jscpd@5.1.2 (enforcement/TOOLCHAIN.md), or set JSCPD_BIN" >&2
     return 1
   fi
-  baseline=.coast/jscpd-baseline.json
+  baseline=$state/jscpd-baseline.json
   if [ ! -f "$baseline" ]; then
     echo "FAIL pre-push $baseline:0:jscpd: no clone baseline — run enforcement/adopt.py with jscpd installed to write it" >&2
     return 1
@@ -592,9 +628,8 @@ print("past" if past else "open")
       echo "FAIL pre-push $baseline:0:jscpd: the baseline deadline is not a date (YYYY-MM-DD)" >&2
       return 1 ;;
   esac
-  # code only — keep in step with JSCPD_IGNORE in enforcement/adopt.py
-  ignore='**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,**/*.min.js,**/*.lock,**/Package.resolved,**/*.md,**/*.markdown,**/*.txt,**/*.json,**/*.jsonl,**/*.yml,**/*.yaml,**/*.toml,**/*.html,**/*.svg,**/*.xml,**/*.plist,**/*.strings,**/*.xcstrings,**/*.stringsdict'
-  scratch=${TMPDIR:-/tmp}/coast-jscpd.$$
+  ignore=$layout_jscpd_ignore   # the layout table's list, rendered into layout.sh (adopt.py measures with the same one)
+  scratch=${TMPDIR:-/tmp}/${layout_temp_prefix}jscpd.$$
   mkdir -p "$scratch"
   if [ "$verdict" = past ]; then
     printf 'jscpd: the baseline deadline has passed — every clone now refuses (decision 2)\n'

@@ -8,11 +8,27 @@ Run from anywhere::
                                  [--by <name>] [--today YYYY-MM-DD]
                                  [--secret-scan] [--jscpd-bin <path>]
                                  [--measure-tools [build,format,lint,tests]]
+                                 [--checks-dir <path>] [--init | --yes]
+                                 [--owner <name>] [--product <name>] [--org <name>]
 
 What it installs, and who owns each file afterwards:
 
+Every path named below is the layout table's default (``enforcement/checks/
+layout.json``, task E5.1) — the one home of the layer's paths. A project's
+config overrides a key under ``layout`` (``--checks-dir`` writes one), and
+``<state dir>/layout.sh`` is the table rendered for the ``sh`` hooks.
+
+The config (task E5.3): ``<state dir>/config.json``, GOVERNING, written on the
+first adoption from ``checks/config.default.json`` — after the on/off
+questions, asked once (``--init`` asks again; ``--yes`` takes every default;
+a run with no terminal takes the defaults without asking) — and read by every
+check from then on. ``--owner``, ``--product`` and ``--org`` fill its ``owner``
+keys, which is where every sentence that names a person or a product reads
+them from (task E5.5). A later run never rewrites the switches: the file is
+the founder's decision, recorded.
+
 * GOVERNED (replaced on every run, never the founder's to edit):
-  ``Scripts/checks/`` — the scanner and its modules and tables
+  the checks dir (``.coast/checks/``) — the scanner and its modules and tables
   (``check_rules.py``, ``literals.py``, ``import_matrix.py``, …,
   ``rules_signatures.json``, ``paths.json``, and ``check_doc_comments.py``
   once E1.5 ships it); ``.githooks/pre-commit``, ``pre-push``,
@@ -34,7 +50,7 @@ What it installs, and who owns each file afterwards:
   and untouched. A CLAUDE.md with no markers gets the block appended once;
   markers in any other arrangement refuse the run before anything is written.
 * ``.coast/installed.json``: the governed files this run put under
-  ``Scripts/checks/``, ``.githooks/`` and ``Scripts/hooks/``; a later run
+  the checks dir, the git hooks dir and the session hook's dir; a later run
   removes any of them a newer release stops shipping.
 * Baselines (decision 2: written once, the count may only fall, the
   deadline 90 days from the day it was written and never moved here):
@@ -51,7 +67,7 @@ What it installs, and who owns each file afterwards:
   ``"clones": null`` with a note when jscpd is not installed. On a re-run a
   count that fell is lowered (dates kept); a count that rose is left as it
   is and reported — nothing here raises a baseline.
-* The Claude Code session layer (E2.1, E2.8): ``Scripts/hooks/claude-hook.py``
+* The Claude Code session layer (E2.1, E2.8): ``.coast/hooks/claude-hook.py``
   (GOVERNED) and ``.claude/settings.json`` — its ``hooks`` and
   ``disableAllHooks`` keys are governed and rewritten from
   ``enforcement/hooks/claude-settings.json``, the shipped ``permissions.deny``
@@ -104,16 +120,19 @@ LATEST_RELEASE_API = f"https://api.github.com/repos/{RELEASES_REPO}/releases/lat
 CACHE_DIR = os.environ.get("COAST_STANDARDS_CACHE") or os.path.join(
     os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"), "coast-standards")
 
-PROJECT_CHECKS_DIR = "Scripts/checks"
-PROJECT_HOOKS_DIR = ".githooks"
-PROJECT_CLAUDE_HOOK = "Scripts/hooks/claude-hook.py"   # the path claude-settings.json's commands name
-PROJECT_CLAUDE_SETTINGS = ".claude/settings.json"
+sys.path.insert(0, CHECKS_DIR)
+import layout as layout_table  # noqa: E402 — the one table of the paths the layer names (E5.1)
+import config as config_table  # noqa: E402 — the one loader of a project's config (E5.3)
+
 HOOK_NAMES = ("pre-commit", "pre-push", "commit-msg")
-# The folders whose every file is the installer's: what a release stops shipping is removed
-# from them on the next run (.coast/installed.json records what this one put there).
-GOVERNED_FOLDERS = (PROJECT_CHECKS_DIR + "/", PROJECT_HOOKS_DIR + "/", os.path.dirname(PROJECT_CLAUDE_HOOK) + "/")
-INSTALLED_MANIFEST = ".coast/installed.json"
+# The one line a sh hook carries before it has the table: the state dir it finds layout.sh in,
+# the environment's <prefix>STATE_DIR first. Rendered at install when the layout differs.
+def hook_bootstrap(table):
+    return f"${{{table.env('STATE_DIR')}:-{table['state_dir']}}}"
 CHECKS_NOT_SHIPPED = {"verify_rules.py", "battery.json", "verify-baseline.json"}  # they read this repo, not a project
+# The folders of the layout before 1.1.0. A project adopted then may carry no manifest (installed.json
+# came later), so a shipped file's twin found there is the installer's and is moved out on a re-adopt.
+LEGACY_FOLDERS = ("Scripts/checks/", "Scripts/hooks/")
 
 
 def number_label():
@@ -124,16 +143,31 @@ def number_label():
     except (OSError, ValueError, KeyError):
         return "enforced by a check"
 PLATFORMS = ("ios", "macos", "android", "react-native", "web", "python")
-RATCHET_DAYS = 90
+# The session hook ids a config can switch off, with the one sentence each question shows (E5.6).
+SESSION_HOOKS = (
+    ("governing-edit", "refuse an agent's edit to a file that defines the checks"),
+    ("chained-cd", "refuse a `cd X && …` chain (one command with absolute paths instead)"),
+    ("infra-command", "refuse infrastructure commands except their read-only forms"),
+    ("no-verify", "refuse --no-verify and every other way round the hooks"),
+    ("force-push", "refuse a force push"),
+    ("scan-at-commit", "scan the staged diff before an agent's commit"),
+    ("scan-on-edit", "scan a file after an agent edits it"),
+    ("unpushed-at-stop", "refuse to end a turn with unpushed commits"),
+    ("rules-at-start", "print the rules and the number at the start of a session"),
+    ("attribution-trailer", "a commit from an agent session names the model that did the work"),
+)
+SEATS = (
+    ("build", "build with warnings as errors"), ("tests", "the platform's test runner"),
+    ("lint", "the platform's linter with the shipped config"), ("format", "the formatter in check mode"),
+    ("rules-scan", "the rules scanner on what is pushed and on the tree"),
+    ("doc-comments", "the whole-tree doc-comment count (advisory)"),
+    ("jscpd", "no new duplicated code"), ("gh-ruleset", "the default branch is protected"),
+)
 JSCPD_PIN = "5.1.2"
 JSCPD_MIN_TOKENS = "50"
-# Code only: DRY-5 is about duplicated code, and a plan, a transcript or a data file
-# repeats itself on purpose (a handoff note on Coast read as ten new clones).
-# Keep in step with the `ignore=` line of enforcement/hooks/pre-push.
-JSCPD_IGNORE = ("**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,"
-                "**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,"
-                "**/*.min.js,**/*.lock,**/Package.resolved,"
-                "**/*.md,**/*.markdown,**/*.txt,**/*.json,**/*.jsonl,**/*.yml,**/*.yaml,**/*.toml,**/*.html,**/*.svg,**/*.xml,**/*.plist,**/*.strings,**/*.xcstrings,**/*.stringsdict")
+# The jscpd ignore list (code only: DRY-5 is about duplicated code, and a plan, a transcript or a
+# data file repeats itself on purpose) is the layout table's `jscpd_ignore`; pre-push reads the
+# same list from the rendered layout.sh.
 BLOCK_BEGIN = "<!-- coast-standards: begin"
 BLOCK_END = "<!-- coast-standards: end -->"
 # The markers before the rename; a re-adopt replaces a block written under them.
@@ -308,9 +342,12 @@ def fetch_release(version):
 
 
 class Adoption:
-    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan, measure_tools=None):
+    def __init__(self, project, platform, dry_run, by, today, jscpd_bin, secret_scan, measure_tools=None, layout=None,
+                 config=None):
         self.project = project
         self.platform = platform
+        self.layout = layout or layout_table.load(project)
+        self.config = config or config_table.load(project)
         self.dry_run = dry_run
         self.by = by
         self.today = today
@@ -319,15 +356,15 @@ class Adoption:
         self.measure_tools = measure_tools
         self.lines = []
         self.changed = 0
-        self.first_adoption = not os.path.isfile(self.path(".coast/platform"))
+        self.first_adoption = not os.path.isfile(self.path(self.state("platform")))
         if self.measure_tools is None:
             # A first adoption always measures. An existing repository has warnings, lint
             # findings and formatter findings already; without their baselines its first
             # push meets a strict toolchain and refuses everything, which is not a choice
             # anyone should have to make — it is just what adopting an existing repo means.
             self.measure_tools = "build,format,lint,tests" if self.first_adoption else ""
-        self.seeds = self.load_json(".coast/seeds.json") or {}
-        self.installed = []   # the governed files this run put under GOVERNED_FOLDERS
+        self.seeds = self.load_json(self.state("seeds.json")) or {}
+        self.installed = []   # the governed files this run put under the governed folders
         self.standards_commit = self.standards_version()
         self.rules_document = None   # the document the number is counted from, once install_seeds decides
 
@@ -335,6 +372,16 @@ class Adoption:
 
     def path(self, relative):
         return os.path.join(self.project, relative)
+
+    def state(self, name):
+        """A file in the state dir, by the layout's name for it."""
+        return self.layout.state_file(name)
+
+    @property
+    def governed_folders(self):
+        """The folders whose every file is the installer's: what a release stops shipping is removed
+        from them on the next run (the state dir's installed.json records what this one put there)."""
+        return (self.layout["checks_dir"] + "/", self.layout["hooks_dir"] + "/", self.layout.session_hook_dir + "/")
 
     def load_json(self, relative):
         full = self.path(relative)
@@ -356,7 +403,7 @@ class Adoption:
     def put(self, relative, data: bytes, executable=False, governed=True):
         """Write a governed file when its content differs; report what happened."""
         full = self.path(relative)
-        if governed and relative.startswith(GOVERNED_FOLDERS):
+        if governed and relative.startswith(self.governed_folders):
             self.installed.append(relative)
         exists = os.path.isfile(full)
         same = exists and read_bytes(full) == data and (not executable or os.access(full, os.X_OK))
@@ -408,14 +455,16 @@ class Adoption:
     def note_case_folded_collision(self):
         """macOS folds case: writing Scripts/ beside an existing scripts/ lands the checks inside scripts/,
         git records them there, and a Linux clone — where the two spellings are different folders —
-        finds nothing at the path the hooks and settings name. Said out loud; the layout is not yet
-        configurable (enforcement/README.md, review of 2026-09-07)."""
-        wanted = PROJECT_CHECKS_DIR.split("/")[0]
+        finds nothing at the path the hooks and settings name. Said out loud, with the way out:
+        ``--checks-dir`` puts the checks inside the folder the project already has (E5.1)."""
+        checks = self.layout["checks_dir"]
+        wanted = checks.split("/")[0]
         for name in os.listdir(self.project):
             if name != wanted and name.lower() == wanted.lower() and os.path.isdir(self.path(name)):
                 self.say("note", f"{wanted}/", f"this project already has {name}/ — on this case-folding filesystem the "
-                         f"checks land inside it and git records them as {name}/checks; a Linux clone will not find "
-                         f"them at {wanted}/checks. Rename {name}/ before adopting if the project is built anywhere but a Mac")
+                         f"checks land inside it and git records them as {name}/{checks[len(wanted) + 1:]}; a Linux clone "
+                         f"will not find them at {checks}. Adopt with --checks-dir {name}/{checks[len(wanted) + 1:]} "
+                         f"(or rename {name}/) if the project is built anywhere but a Mac")
 
     def install_checks(self):
         self.note_case_folded_collision()
@@ -425,17 +474,39 @@ class Adoption:
                 continue
             if not name.endswith((".py", ".json")):
                 continue
-            self.put(f"{PROJECT_CHECKS_DIR}/{name}", read_bytes(source), executable=name.endswith(".py"))
+            self.put(f"{self.layout['checks_dir']}/{name}", read_bytes(source), executable=name.endswith(".py"))
+
+    def render_hook(self, data: bytes) -> bytes:
+        """A shipped sh hook carries one name of its own — the state dir it sources layout.sh from,
+        written as the table's default; a project whose layout differs gets it rendered."""
+        shipped, own = hook_bootstrap(layout_table.defaults()), hook_bootstrap(self.layout)
+        return data if shipped == own else data.replace(shipped.encode("utf-8"), own.encode("utf-8"))
+
+    def install_config(self):
+        """The config: written once from the defaults (the answers, the owner flags and the layout
+        overrides folded in), then left alone — a later run only writes the keys a flag names.
+        The switches are the founder's, recorded in a GOVERNING file. Then the layout rendered for the
+        sh hooks, which carries the config's switches too."""
+        self.config["layout"] = self.layout.overrides()
+        data = config_table.dump(self.config).encode("utf-8")
+        relative = self.state(config_table.FILE_NAME)
+        exists = os.path.isfile(self.path(relative))
+        self.put(relative, data)
+        if not exists:
+            self.say("note", relative, "the project's switches and names — a person's file to edit; an agent cannot")
+        self.put(self.state(layout_table.SCRIPT_FILE), self.layout.to_sh().encode("utf-8"))
 
     def install_hooks(self):
+        hooks = self.layout["hooks_dir"]
         for name in HOOK_NAMES:
             source = os.path.join(HOOKS_DIR, name)
             if not os.path.isfile(source):
-                self.say("note", f"{PROJECT_HOOKS_DIR}/{name}", "not shipped by the standards repo yet")
+                self.say("note", f"{hooks}/{name}", "not shipped by the standards repo yet")
                 continue
-            self.put(f"{PROJECT_HOOKS_DIR}/{name}", read_bytes(source), executable=True)
-        self.put(".coast/platform", (self.platform + "\n").encode("utf-8"))
-        self.put(".coast/standards-version", (self.standards_commit + "\n").encode("utf-8"))
+            self.put(f"{hooks}/{name}", self.render_hook(read_bytes(source)), executable=True)
+        self.install_config()
+        self.put(self.state("platform"), (self.platform + "\n").encode("utf-8"))
+        self.put(self.state("standards-version"), (self.standards_commit + "\n").encode("utf-8"))
         self.install_claude_hooks()
 
     def install_claude_hooks(self):
@@ -444,13 +515,15 @@ class Adoption:
         the shipped template; every other key in an existing settings file is the founder's and kept."""
         entry = os.path.join(HOOKS_DIR, "claude-hook.py")
         template = os.path.join(HOOKS_DIR, "claude-settings.json")
+        settings = self.layout["settings_file"]
         if not os.path.isfile(entry) or not os.path.isfile(template):
-            self.say("note", PROJECT_CLAUDE_SETTINGS, "the Claude Code hooks are not shipped by the standards repo yet")
+            self.say("note", settings, "the Claude Code hooks are not shipped by the standards repo yet")
             return
-        self.put(PROJECT_CLAUDE_HOOK, read_bytes(entry), executable=True)
+        self.put(self.layout["session_hook"], read_bytes(entry), executable=True)
+        # rendered, not copied: every path in the template is a {key} of the layout table
         with open(template, encoding="utf-8") as handle:
-            shipped = json.load(handle)
-        existing = self.load_json(PROJECT_CLAUDE_SETTINGS) or {}
+            shipped = json.loads(self.layout.expand(handle.read()))
+        existing = self.load_json(settings) or {}
         merged = dict(existing)
         merged["hooks"] = shipped["hooks"]
         merged["_comment"] = shipped.get("_comment", "")
@@ -465,24 +538,38 @@ class Adoption:
             own = [rule for rule in (permissions.get("deny") or []) if rule not in shipped_deny]
             permissions["deny"] = shipped_deny + own
             merged["permissions"] = permissions
-        self.put_json(PROJECT_CLAUDE_SETTINGS, merged)
+        self.put_json(settings, merged)
 
     def remove_stale_governed(self):
-        """A module renamed or dropped upstream leaves its old file in Scripts/checks/ (or a hook in
-        .githooks/) for ever, and a stale module still imports. The manifest says what the last run
-        installed; whatever it named that this release did not ship is removed. Only files under the
-        governed folders are ever touched, and only ones the installer itself wrote."""
-        previous = self.load_json(INSTALLED_MANIFEST) or {}
-        for relative in sorted(set(previous.get("files", []))):
-            if relative in self.installed or not relative.startswith(GOVERNED_FOLDERS):
+        """A module renamed or dropped upstream leaves its old file in the checks dir (or a hook in
+        the hooks dir) for ever, and a stale module still imports. The manifest says what the last run
+        installed; whatever it named that this run did not put back is removed — a file a release
+        stopped shipping, or one the layout moved (a project adopted before 1.1.0 carried the checks
+        under a Scripts/ folder; the manifest names them, so the move leaves nothing behind). Only
+        files the installer itself wrote are ever touched, and a folder emptied by that is removed."""
+        previous = self.load_json(self.state("installed.json")) or {}
+        listed = set(previous.get("files", []))
+        shipped_names = {os.path.basename(relative) for relative in self.installed}
+        for folder in LEGACY_FOLDERS:
+            if os.path.isdir(self.path(folder)):
+                listed.update(folder + name for name in os.listdir(self.path(folder)) if name in shipped_names)
+        emptied = set()
+        for relative in sorted(listed):
+            if relative in self.installed:
                 continue
             full = self.path(relative)
             if not os.path.isfile(full):
                 continue
-            self.say("would remove" if self.dry_run else "removed", relative, "this release no longer ships it")
+            self.say("would remove" if self.dry_run else "removed", relative,
+                     "this release no longer ships it" if relative.startswith(self.governed_folders) else "the layout moved it")
             if not self.dry_run:
                 os.remove(full)
-        self.put_json(INSTALLED_MANIFEST, {
+                emptied.add(os.path.dirname(full))
+        for folder in sorted(emptied, key=len, reverse=True):
+            while folder and folder != self.project and os.path.isdir(folder) and not os.listdir(folder):
+                os.rmdir(folder)
+                folder = os.path.dirname(folder)
+        self.put_json(self.state("installed.json"), {
             "_comment": "The governed files adopt.py installed; a later run removes any of them a newer release stops shipping.",
             "files": sorted(set(self.installed))})
 
@@ -490,6 +577,9 @@ class Adoption:
         battery = json.loads(read_bytes(BATTERY))
         linters = battery.get("platforms", {}).get(self.platform, {}).get("linters", {})
         for linter, entry in linters.items():
+            if config_table.is_off(self.config, "linters", linter):
+                self.say("note", linter, "OFF in the config (linters.off) — no config seeded, the seat skips it")
+                continue
             config = entry.get("config", "")
             name = os.path.basename(config)
             source = os.path.join(STANDARDS_ROOT, config)
@@ -502,7 +592,7 @@ class Adoption:
         if os.path.isfile(rules_doc):
             self.put_rules_document(read_bytes(rules_doc))
         else:
-            self.say("note", "docs/domain-rules.md", f"no rules document for {self.platform} in the standards repo")
+            self.say("note", self.layout["rules_document"], f"no rules document for {self.platform} in the standards repo")
 
     @staticmethod
     def corpus_version(data):
@@ -517,7 +607,7 @@ class Adoption:
         sat at version 7 with three check tags, so its number read 0 of 54). An older stamp is
         upgraded and the copy it replaces is written beside it, so nothing a founder wrote is lost.
         A copy at the current version that differs is a founder's edit, and is left alone."""
-        relative = "docs/domain-rules.md"
+        relative = self.layout["rules_document"]
         full = self.path(relative)
         shipped_path = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
         if not os.path.isfile(full):
@@ -530,7 +620,8 @@ class Adoption:
             return
         have, want = self.corpus_version(current), self.corpus_version(shipped)
         if have is not None and want is not None and have < want:
-            kept = f"docs/domain-rules.v{have}.md"
+            base, extension = os.path.splitext(relative)
+            kept = f"{base}.v{have}{extension}"
             self.put(kept, current, governed=False)
             self.put(relative, shipped, governed=False)
             self.say("note", relative, f"corpus version {have} → {want}; the copy it replaced is {kept}, "
@@ -542,19 +633,25 @@ class Adoption:
 
     def rules_number(self):
         """verify_rules.py on the project's rules document (the corpus document when it has none)."""
-        document = self.rules_document or self.path("docs/domain-rules.md")
+        document = self.rules_document or self.path(self.layout["rules_document"])
         if not os.path.isfile(document):
             document = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
-        done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "verify_rules.py"), "--document", document,
-                               "--platform", self.platform, "--json"], cwd=STANDARDS_ROOT, capture_output=True, text=True)
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+            handle.write(config_table.dump(self.config))   # the project's switches, as they will be on disk (a dry run too)
+            config_file = handle.name
+        try:
+            done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "verify_rules.py"), "--document", document,
+                                   "--platform", self.platform, "--json", "--config", config_file],
+                                  cwd=STANDARDS_ROOT, capture_output=True, text=True)
+        finally:
+            os.remove(config_file)
         try:
             totals = json.loads(done.stdout)["totals"]
         except (ValueError, KeyError):
             totals = {}
-        return {key: totals.get(key, 0) for key in ("machine", "partly", "advisory", "review", "process", "open", "total")}
+        return {key: totals.get(key, 0) for key in ("machine", "partly", "advisory", "review", "process", "off", "open", "total")}
 
-    @staticmethod
-    def block_span(text):
+    def block_span(self, text):
         """Where the standards block sits in CLAUDE.md: (start, end) of the last begin marker and the
         first end marker after it, None when the file has no markers. Both marker names count (a
         block written under the old ``up-coast-standards`` name is replaced, not doubled). Markers
@@ -571,7 +668,7 @@ class Adoption:
         elif ends[0][0] < begins[0]:
             problem = "the end marker comes before the begin marker"
         if problem:
-            raise SystemExit("adopt.py: CLAUDE.md has " + problem + " — keep exactly one "
+            raise SystemExit(f"adopt.py: {self.layout['context_file']} has " + problem + " — keep exactly one "
                              f"'{BLOCK_BEGIN} … -->' … '{BLOCK_END}' pair (or none) and run again; nothing was written")
         return begins[-1], ends[0][1]
 
@@ -579,14 +676,23 @@ class Adoption:
         counts = self.rules_number()
         template = read_bytes(TEMPLATE).decode("utf-8")
         filled = template
+        owner = self.config.get("owner") or {}
         for key, value in {"STANDARDS_PATH": STANDARDS_ROOT, "PLATFORM": self.platform,
-                           "STANDARDS_COMMIT": self.standards_commit, "RULES_DOCUMENT": "docs/domain-rules.md",
+                           "STANDARDS_COMMIT": self.standards_commit, "RULES_DOCUMENT": self.layout["rules_document"],
                            "ENFORCED": counts["machine"], "TOTAL": counts["total"], "PARTLY": counts["partly"],
                            "ADVISORY": counts["advisory"], "REVIEW": counts["review"], "PROCESS": counts["process"],
-                           "OPEN": counts["open"]}.items():
+                           "OFF": counts["off"], "OPEN": counts["open"],
+                           "SWITCHED_OFF": f" ({counts['off']} switched off in the config)" if counts["off"] else "",
+                           "OWNER": owner.get("name") or "the owner", "PRODUCT": owner.get("product") or "this project",
+                           "CHECKS_DIR": self.layout["checks_dir"], "HOOKS_DIR": self.layout["hooks_dir"],
+                           "STATE_DIR": self.layout["state_dir"], "SESSION_HOOK": self.layout["session_hook"],
+                           "SETTINGS_FILE": self.layout["settings_file"], "CONFIG_FILE": self.state(config_table.FILE_NAME),
+                           "EXCEPTIONS_FILE": self.state("rules-exceptions.json"),
+                           "TODAY": self.today.isoformat(), "UNTIL": (self.today + _dt.timedelta(days=14)).isoformat()}.items():
             filled = filled.replace("{{" + key + "}}", str(value))
         block = filled.strip("\n")
-        full = self.path("CLAUDE.md")
+        context = self.layout["context_file"]
+        full = self.path(context)
         if os.path.isfile(full):
             existing = read_bytes(full).decode("utf-8")
             span = self.block_span(existing)
@@ -597,8 +703,8 @@ class Adoption:
                 new = existing.rstrip("\n") + "\n\n" + block + "\n"
         else:
             new = f"# {os.path.basename(self.project)} — Agent Context\n\n{block}\n"
-        self.put("CLAUDE.md", new.encode("utf-8"), governed=False)
-        self.say("note", "CLAUDE.md", f"rules {number_label()} {counts['machine']} of {counts['total']}")
+        self.put(context, new.encode("utf-8"), governed=False)
+        self.say("note", context, f"rules {number_label()} {counts['machine']} of {counts['total']}")
 
     def bind_theme(self):
         """An existing app already has a theme file, almost never at the platform's default
@@ -606,7 +712,7 @@ class Adoption:
         first, sorted, when there are several — the others are then real second theme files)
         as the project's own `theme` class, and its folder as `ui_lib`, in .coast/paths.json.
         Written once; a founder edits it from there (it is GOVERNING: agents never do)."""
-        if self.load_json(".coast/paths.json") is not None:
+        if self.load_json(self.state("paths.json")) is not None:
             return
         done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--tree", "--platform", self.platform],
                               cwd=self.project, capture_output=True, text=True, env=clean_git_env())
@@ -625,14 +731,14 @@ class Adoption:
         classes = {"theme": siblings}
         if folder:
             classes["ui_lib"] = [folder + "/**"]
-        self.put_json(".coast/paths.json", {
+        self.put_json(self.state("paths.json"), {
             "_comment": "This project's own path-class bindings, merged over the platform's defaults (enforcement/README.md section 4.2). Written once by adopt.py from the theme file it found; a founder edits it from here.",
             "platforms": {self.platform: {"classes": classes}}})
-        self.say("note", ".coast/paths.json", "bound the theme " + ", ".join(siblings)
+        self.say("note", self.state("paths.json"), "bound the theme " + ", ".join(siblings)
                  + (f" (the folder {folder}/ is the UI library)" if folder else ""))
         elsewhere = [f for f in found if f not in siblings]
         if elsewhere:
-            self.say("note", ".coast/paths.json", "theme-shaped files outside that folder still refuse as second theme files: "
+            self.say("note", self.state("paths.json"), "theme-shaped files outside that folder still refuse as second theme files: "
                      + ", ".join(elsewhere))
 
     def measure_tool_counts(self):
@@ -640,11 +746,11 @@ class Adoption:
         home of the build and format commands): {id: count}. A tool that cannot run is a note."""
         if not self.measure_tools:
             return {}
-        hook = self.path(f"{PROJECT_HOOKS_DIR}/pre-push")
+        hook = self.path(f"{self.layout['hooks_dir']}/pre-push")
         if not os.path.isfile(hook):
             self.say("note", "tool ratchets", "the pre-push hook is not installed, so nothing was measured")
             return {}
-        env = dict(os.environ, COAST_CHECKS_DIR=self.path(PROJECT_CHECKS_DIR))
+        env = dict(os.environ, **{self.layout.env("CHECKS_DIR"): self.path(self.layout["checks_dir"])})
         for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX"):
             env.pop(name, None)
         done = subprocess.run(["sh", hook, "--measure", self.measure_tools], cwd=self.project, capture_output=True, text=True, env=env)
@@ -654,7 +760,7 @@ class Adoption:
             self.say("note", "tool ratchets", "a tool did not finish, so its count was not measured: " + ("; ".join(failed[-2:]) or "see the build output"))
         for signature_id, count in sorted(counts.items()):
             self.say("note", "tool ratchets", f"{signature_id} measured {count}" + ("" if count else " — the seat stays strict"))
-        existing = self.load_json(".coast/ratchet-baseline.json") or {}
+        existing = self.load_json(self.state("ratchet-baseline.json")) or {}
         held = {e.get("id") for e in existing.get("baselines", []) if isinstance(e, dict)}
         # a count of zero writes nothing (the seat stays strict) unless an entry exists to lower
         return {k: v for k, v in counts.items() if v > 0 or k in held}
@@ -680,22 +786,22 @@ class Adoption:
         for match in re.finditer(r"^(?:OK|FAIL) ratchet (\S+): (\d+) in the tree", done.stdout, re.M):
             counts[match.group(1)] = int(match.group(2))
         counts.update(self.measure_tool_counts())
-        existing = self.load_json(".coast/ratchet-baseline.json") or {}
+        existing = self.load_json(self.state("ratchet-baseline.json")) or {}
         entries = {e["id"]: e for e in existing.get("baselines", []) if isinstance(e, dict) and "id" in e}
-        deadline = (self.today + _dt.timedelta(days=RATCHET_DAYS)).isoformat()
+        deadline = (self.today + _dt.timedelta(days=self.config["ratchet_days"])).isoformat()
         for signature_id, count in sorted(counts.items()):
             entry = entries.get(signature_id)
             if entry is None:
                 entries[signature_id] = {"id": signature_id, "count": count, "deadline": deadline,
                                          "written": self.today.isoformat(), "by": self.by, "moves": []}
             elif count < entry.get("count", 0):
-                self.say("note", ".coast/ratchet-baseline.json", f"{signature_id} fell {entry.get('count')} → {count}; lowered (its deadline {entry.get('deadline')} stays)")
+                self.say("note", self.state("ratchet-baseline.json"), f"{signature_id} fell {entry.get('count')} → {count}; lowered (its deadline {entry.get('deadline')} stays)")
                 entry["count"] = count
             elif count > entry.get("count", 0):
-                self.say("note", ".coast/ratchet-baseline.json", f"{signature_id} is {count} in the tree, above its baseline of {entry.get('count')} — NOT raised; the push will refuse until it comes down")
+                self.say("note", self.state("ratchet-baseline.json"), f"{signature_id} is {count} in the tree, above its baseline of {entry.get('count')} — NOT raised; the push will refuse until it comes down")
         data = {"_comment": "Ratchet baselines (enforcement/README.md decision 2): each count may only fall; past its deadline the check blocks. Only a person moves a deadline, recorded under moves.",
                 "baselines": [entries[k] for k in sorted(entries)]}
-        self.put_json(".coast/ratchet-baseline.json", data)
+        self.put_json(self.state("ratchet-baseline.json"), data)
 
     def find_jscpd(self):
         if self.jscpd_bin:
@@ -714,9 +820,9 @@ class Adoption:
         return None
 
     def write_jscpd_baseline(self):
-        relative = ".coast/jscpd-baseline.json"
+        relative = self.state("jscpd-baseline.json")
         existing = self.load_json(relative)
-        deadline = (self.today + _dt.timedelta(days=RATCHET_DAYS)).isoformat()
+        deadline = (self.today + _dt.timedelta(days=self.config["ratchet_days"])).isoformat()
         command = self.find_jscpd()
         if command is None:
             if existing is None:
@@ -728,7 +834,7 @@ class Adoption:
             return
         with tempfile.TemporaryDirectory() as scratch:
             scratch_baseline = os.path.join(scratch, "baseline.json")
-            done = subprocess.run([*command, ".", "--min-tokens", JSCPD_MIN_TOKENS, "--ignore", JSCPD_IGNORE,
+            done = subprocess.run([*command, ".", "--min-tokens", JSCPD_MIN_TOKENS, "--ignore", self.layout.jscpd_ignore,
                                    "--baseline", scratch_baseline, "--update-baseline",
                                    "--reporters", "json", "--output", scratch, "--silent"],
                                   cwd=self.project, capture_output=True, text=True)
@@ -753,40 +859,41 @@ class Adoption:
         self.put_json(relative, data)
 
     def set_hooks_path(self):
+        hooks = self.layout["hooks_dir"]
         current = git(self.project, "config", "--get", "core.hooksPath", check=False)
-        if current and current != PROJECT_HOOKS_DIR:
+        if current and current != hooks:
             self.keep_existing_hooks(current)
         elif not current:
             # No hooksPath means git runs the hooks in its own hooks directory (pre-commit-framework,
-            # lefthook and the old husky install there). Pointing core.hooksPath at .githooks would
-            # switch them off without a word — §4.8 promises they are not.
+            # lefthook and the old husky install there). Pointing core.hooksPath at our hooks dir
+            # would switch them off without a word — §4.8 promises they are not.
             git_hooks = git(self.project, "rev-parse", "--git-path", "hooks", check=False)
             if git_hooks and any(os.access(os.path.join(self.project, git_hooks, name), os.X_OK)
                                  and os.path.isfile(os.path.join(self.project, git_hooks, name)) for name in HOOK_NAMES):
                 self.keep_existing_hooks(git_hooks)
-        if current == PROJECT_HOOKS_DIR:
-            self.say("unchanged", "git config core.hooksPath", PROJECT_HOOKS_DIR)
+        if current == hooks:
+            self.say("unchanged", "git config core.hooksPath", hooks)
             return
-        self.say("would set" if self.dry_run else "set", "git config core.hooksPath", PROJECT_HOOKS_DIR)
+        self.say("would set" if self.dry_run else "set", "git config core.hooksPath", hooks)
         if not self.dry_run:
-            git(self.project, "config", "core.hooksPath", PROJECT_HOOKS_DIR)
+            git(self.project, "config", "core.hooksPath", hooks)
 
     def keep_existing_hooks(self, current):
         """A project that already had hooks keeps them: ours run first, then its own.
         one adopting web project's pre-push ran gitleaks, a real secret scanner this layer does not
-        have, and pointing core.hooksPath at .githooks switched it off without a word."""
+        have, and pointing core.hooksPath at our hooks dir switched it off without a word."""
         existing = os.path.join(self.project, current)
         kept = [name for name in HOOK_NAMES if os.path.isfile(os.path.join(existing, name))]
         if not kept:
             return
-        self.put(".coast/previous-hooks-path", (current + "\n").encode("utf-8"))
-        self.say("note", ".coast/previous-hooks-path",
+        self.put(self.state("previous-hooks-path"), (current + "\n").encode("utf-8"))
+        self.say("note", self.state("previous-hooks-path"),
                  f"this project already had {', '.join(kept)} in {current}/ — they are kept and run after ours")
         installer = self.package_script_setting_hooks_path()
         if installer:
             self.say("note", "package.json",
                      f'its "{installer}" script sets core.hooksPath back to {current} — change that one word to '
-                     f'{PROJECT_HOOKS_DIR} or the next install turns these checks off')
+                     f'{self.layout["hooks_dir"]} or the next install turns these checks off')
 
     def package_script_setting_hooks_path(self):
         """The npm script that resets core.hooksPath, if the project has one."""
@@ -812,8 +919,8 @@ class Adoption:
         return findings
 
     def check_claude_md(self):
-        """Refuse before anything is written when CLAUDE.md's markers make no sense."""
-        full = self.path("CLAUDE.md")
+        """Refuse before anything is written when the context file's markers make no sense."""
+        full = self.path(self.layout["context_file"])
         if os.path.isfile(full):
             self.block_span(read_bytes(full).decode("utf-8"))
 
@@ -828,8 +935,8 @@ class Adoption:
         self.bind_theme()
         self.write_ratchet_baseline()
         self.write_jscpd_baseline()
-        if self.seeds or os.path.isfile(self.path(".coast/seeds.json")):
-            self.put_json(".coast/seeds.json", dict(sorted(self.seeds.items())))
+        if self.seeds or os.path.isfile(self.path(self.state("seeds.json"))):
+            self.put_json(self.state("seeds.json"), dict(sorted(self.seeds.items())))
         self.set_hooks_path()
         secrets = []
         if self.first_adoption or self.secret_scan:
@@ -838,11 +945,74 @@ class Adoption:
         return secrets
 
 
+def ask_off(group, entries, ask=input, out=print):
+    """One screen: the group's entries with a sentence each, one question, the names typed to switch off.
+    Every default is on; an empty answer keeps them all. A name that is not in the list is said and asked again."""
+    known = [name for name, _ in entries]
+    out("")
+    out(f"{group} — everything is ON unless you switch it off here (you can edit the config file later):")
+    for name, sentence in entries:
+        out(f"  {name:<24} {sentence}")
+    while True:
+        answer = ask(f"{group} to switch OFF (names separated by spaces; Enter keeps every one on): ").strip()
+        names = answer.replace(",", " ").split()
+        unknown = [name for name in names if name not in known]
+        if not unknown:
+            return names
+        out(f"  not in the list: {', '.join(unknown)} — the names are the ones shown above")
+
+
+def ask_once(config, ask=input, out=print):
+    """The on/off questions (E5.6), one screen per group, into the config. Called on the first adoption
+    with a terminal, or by --init; never again after that."""
+    out("Coast Standards — the switches. Each group is one question; Enter takes every default (on).")
+    signatures = flatten_rows(json.loads(read_bytes(os.path.join(CHECKS_DIR, "rules_signatures.json"))))
+    config["rules"]["off"] = ask_off("rules", [(row["id"], row.get("words", "")) for row in signatures], ask, out)
+    config["seats"]["off"] = ask_off("seats", SEATS, ask, out)
+    config["session_hooks"]["off"] = ask_off("session hooks", SESSION_HOOKS, ask, out)
+    return config
+
+
+def flatten_rows(document):
+    """The signature rows in table order, one per id (the words are shared across platforms)."""
+    return [row for row in document.get("signatures", []) if isinstance(row, dict) and row.get("id")]
+
+
+def build_config(project, args, first_adoption):
+    """The project's config for this run: the file merged over the defaults, the owner flags laid on,
+    and — on --init, or a first adoption at a terminal without --yes — the answers to the questions."""
+    try:
+        config = config_table.load(project)
+    except config_table.ConfigError as error:
+        raise SystemExit(f"adopt.py: {error}")
+    for key in ("owner", "product", "org"):
+        value = getattr(args, key, None)
+        if value is not None:
+            config["owner"]["name" if key == "owner" else key] = value
+    config_exists = os.path.isfile(config_table.config_path(project))
+    asks = args.init or (first_adoption and not config_exists and not args.yes and not args.dry_run
+                         and sys.stdin.isatty() and sys.stdout.isatty())
+    if asks:
+        ask_once(config)
+    return config
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Install the Coast Standards enforcement layer into a project, idempotently.")
     parser.add_argument("project", help="the project's root (a git repository)")
-    parser.add_argument("--platform", choices=PLATFORMS, help="one word; default: the project's .coast/platform, else detected from its manifests")
+    parser.add_argument("--platform", choices=PLATFORMS, help="one word; default: the project's platform file in its state dir, else detected from its manifests")
+    parser.add_argument("--checks-dir", metavar="PATH",
+                        help="where the checks go, instead of the layout table's default (a project that already has a "
+                             "folder the default folds into by case, scripts/ beside Scripts/, adopts with --checks-dir "
+                             "scripts/checks); remembered in the state dir's layout.json for every later run")
     parser.add_argument("--dry-run", action="store_true", help="print what would change and write nothing")
+    parser.add_argument("--init", action="store_true",
+                        help="ask the on/off questions (rules, seats, session hooks) and write the answers to the config; "
+                             "a first adoption at a terminal asks anyway, once")
+    parser.add_argument("--yes", action="store_true", help="take every default without asking (everything on)")
+    parser.add_argument("--owner", metavar="NAME", help="the owner's name, for every sentence that says who to ask (config owner.name)")
+    parser.add_argument("--product", metavar="NAME", help="the product's name (config owner.product)")
+    parser.add_argument("--org", metavar="NAME", help="the organisation's name (config owner.org)")
     parser.add_argument("--by", help="who is adopting (recorded in the baselines); default: git user.name")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     parser.add_argument("--secret-scan", action="store_true", help="run the tracked-tree secret scan even after the first adoption")
@@ -885,9 +1055,11 @@ def main(argv=None):
         return 2
     project = os.path.realpath(top)
 
+    layout = layout_table.load(project, overrides={"checks_dir": args.checks_dir})
     platform = args.platform
-    if not platform and os.path.isfile(os.path.join(project, ".coast", "platform")):
-        platform = read_bytes(os.path.join(project, ".coast", "platform")).decode("utf-8").strip()
+    platform_file = os.path.join(project, layout.state_file("platform"))
+    if not platform and os.path.isfile(platform_file):
+        platform = read_bytes(platform_file).decode("utf-8").strip()
     if not platform:
         platform = detect_platform(project)
     if platform not in PLATFORMS:
@@ -896,14 +1068,17 @@ def main(argv=None):
 
     by = args.by or git(project, "config", "--get", "user.name", check=False) or os.environ.get("USER", "unknown")
     today = _dt.date.fromisoformat(args.today) if args.today else _dt.date.today()
-    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan, args.measure_tools)
+    first_adoption = not os.path.isfile(platform_file)
+    config = build_config(project, args, first_adoption)
+    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan, args.measure_tools,
+                        layout, config)
     secrets = adoption.run()
 
     print(f"adopt.py — {project} ({platform}){' — DRY RUN, nothing written' if args.dry_run else ''}")
     for line in adoption.lines:
         print("  " + line)
     print(f"{adoption.changed} file(s) {'would change' if args.dry_run else 'changed'}. "
-          f"Coast Standards {adoption.standards_commit} — the version this project now carries (.coast/standards-version).")
+          f"Coast Standards {adoption.standards_commit} — the version this project now carries ({layout.state_file('standards-version')}).")
     if secrets:
         print("Secrets in the tracked tree — do not push until these are out of the history:")
         for line in secrets:

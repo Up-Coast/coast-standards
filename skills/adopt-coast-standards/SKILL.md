@@ -39,6 +39,12 @@ Installer: `enforcement/adopt.py` inside any release.
    - Any check the project cannot run on this machine yet (a build that needs secrets, for
      example). That becomes a dated skip in `.coast/rules-exceptions.json`, never a
      permanent switch.
+   - The owner's and the product's names (`--owner`, `--product`), which every refusal
+     sentence and the `CLAUDE.md` block use; and whether any rule, push-gate seat or
+     session hook should be OFF for this project. The installer asks those on/off
+     questions itself at a terminal; from an agent session pass `--yes` (everything on)
+     and put the user's answers into `.coast/config.json` afterwards — or run `--init`
+     in a terminal the user drives.
 
 4. **Install**, then commit what it wrote and push. The first push runs every check.
 
@@ -61,7 +67,10 @@ python3 ~/.cache/coast-standards/<any version>/enforcement/adopt.py <project> --
 
 ## Rules for the agent
 
-- Never edit `Scripts/checks/`, `.githooks/`, `.claude/settings.json` or the rules
-  document by hand; they are the project's governed files. Change them by upgrading.
+- Never edit `.coast/` (the checks, the session hook, the config, the baselines),
+  `.githooks/`, `.claude/settings.json` or the rules document by hand; they are the
+  project's governed files. Change the checks by upgrading; the config and the
+  exceptions are the user's to edit, so relay what they should write rather than
+  writing it.
 - Never pass `--no-verify`. When a check stops you, read `docs/when-a-check-stops-you.md`
   in the release, or the refusal line itself: it names the rule and the door.

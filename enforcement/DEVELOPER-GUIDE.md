@@ -1,6 +1,6 @@
 # Coast Standards Enforcement — Internal Developer Guide
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
 
 **Audience: people working on this layer itself** — the scanner, the hooks, the installer.
 It is the full technical reference: how a rule is held, what is installed into a project,
@@ -89,21 +89,26 @@ omitted when the project's manifest makes it obvious (see §10.2).
 
 A first adoption:
 
-1. copies the checks to `Scripts/checks/` and the three git hooks to `.githooks/`;
-2. installs the Claude Code session layer (`Scripts/hooks/claude-hook.py`; the `hooks`,
-   `disableAllHooks` and `permissions.deny` keys of `.claude/settings.json`);
-3. writes the platform's linter seeds and `docs/domain-rules.md` if absent;
-4. binds the theme file it finds into `.coast/paths.json`;
-5. **measures** the tree: scanner ratchets (`check_rules.py --tree`), then the build's
+1. copies the checks to `.coast/checks/` and the three git hooks to `.githooks/`;
+2. installs the Claude Code session layer (`.coast/hooks/claude-hook.py`; the `hooks`,
+   `disableAllHooks` and `permissions.deny` keys of `.claude/settings.json`, rendered
+   from the template with the layout's paths);
+3. writes `.coast/config.json` (§10.5) — at a terminal it asks the on/off questions first,
+   one screen per group; `--yes` takes every default — and `.coast/layout.sh`, the layout
+   table rendered for the `sh` hooks;
+4. writes the platform's linter seeds (not the ones the config switches off) and
+   `docs/domain-rules.md` if absent;
+5. binds the theme file it finds into `.coast/paths.json`;
+6. **measures** the tree: scanner ratchets (`check_rules.py --tree`), then the build's
    warnings, the formatter's and linter's findings, and whether a test target exists
    (`pre-push --measure build,format,lint,tests`); writes them to
-   `.coast/ratchet-baseline.json` with a 90-day deadline;
-6. writes `.coast/jscpd-baseline.json` from jscpd's fingerprints;
-7. rewrites the marked block in `CLAUDE.md` with the platform, the release and the
-   number;
-8. sets `git config core.hooksPath .githooks`, recording any previous hooks path so those
+   `.coast/ratchet-baseline.json` with a deadline `ratchet_days` (default 90) out;
+7. writes `.coast/jscpd-baseline.json` from jscpd's fingerprints;
+8. rewrites the marked block in `CLAUDE.md` with the platform, the release, the names
+   from the config and the number (with the count switched off);
+9. sets `git config core.hooksPath .githooks`, recording any previous hooks path so those
    hooks keep running;
-9. runs a secret scan over every tracked file and exits 1 if it finds anything.
+10. runs a secret scan over every tracked file and exits 1 if it finds anything.
 
 Then commit what it wrote and push. The first push runs the whole battery; the scanner
 starts at the adoption commit, so lines committed before the checks existed are legacy and
@@ -122,17 +127,17 @@ re-measured; `--measure-tools format,lint` re-measures without a build.
 
 ```bash
 # the scanner, from the project root
-python3 Scripts/checks/check_rules.py --tree --platform ios
-python3 Scripts/checks/check_rules.py --staged --platform ios
-python3 Scripts/checks/check_rules.py origin/main HEAD --platform ios
-python3 Scripts/checks/check_rules.py --files Sources/App/HomeView.swift --platform ios
+python3 .coast/checks/check_rules.py --tree --platform ios
+python3 .coast/checks/check_rules.py --staged --platform ios
+python3 .coast/checks/check_rules.py origin/main HEAD --platform ios
+python3 .coast/checks/check_rules.py --files Sources/App/HomeView.swift --platform ios
 
 # one seat of the push battery
 sh .githooks/pre-push --seat lint
 sh .githooks/pre-push --seat build,tests
 
-# the number, from the standards repo
-python3 enforcement/checks/verify_rules.py --document /path/to/project/docs/domain-rules.md --platform ios
+# the number, from the standards repo (with the project's switches applied)
+python3 enforcement/checks/verify_rules.py --document /path/to/project/docs/domain-rules.md --platform ios --config /path/to/project/.coast/config.json
 ```
 
 ---
@@ -217,7 +222,10 @@ check_rules.py --has-baseline <id>              exit 0 when the baseline has an 
 Options: `--only id[,id]` runs only the named signatures (used by the installer's secret
 scan; git never passes it); `--paths-override <file>` names a project's own path bindings
 (default `.coast/paths.json`). The platform also comes from `COAST_PLATFORM`. Run from the
-repository root.
+repository root. The project's config (§10.5) is read on every run: a signature in
+`rules.off` is not in the list, a severity in `rules.severity` is lowered, and the
+`retired_words` join the `retired-wording` pattern; a config that asks to raise a
+severity is refused with a `FAIL config` line and exit 1.
 
 The whole-tree pass with the ratchets is `--tree` alone, and the push runs it once. Every
 other mode judges the change: the added-scope signatures on the added lines, the tree-scope
@@ -469,7 +477,10 @@ for `CLAUDE.md`.
 ## 8. The git hooks
 
 All three are POSIX `sh`, installed at `.githooks/` with `core.hooksPath` pointed there.
-Every refusal is a `FAIL` line on stderr. Every hook clears git's `GIT_DIR`-family variables
+Each sources `.coast/layout.sh` (the layout table rendered at adoption — the one name a
+hook carries is the state dir) and evaluates `config.py --sh` from the checks dir, so a
+seat, a linter or the attribution check the config switches off prints `gate: <name> OFF
+(config)` and runs nothing. Every refusal is a `FAIL` line on stderr. Every hook clears git's `GIT_DIR`-family variables
 first so the checks act on the right repository, and exports `PYTHONDONTWRITEBYTECODE=1`
 so no `__pycache__` lands in the project.
 
@@ -564,8 +575,11 @@ The installer also warns when a `package.json` `prepare` script would set the ol
 ## 9. The Claude Code session hooks
 
 Committed in `.claude/settings.json` (the `hooks`, `disableAllHooks` and `permissions.deny`
-keys; other keys are the founder's). One entry point, `Scripts/hooks/claude-hook.py
+keys; other keys are the founder's). One entry point, `.coast/hooks/claude-hook.py
 <hook-id>`, reads the event JSON on stdin and exits 2 with the reason on stderr to refuse.
+A hook id in the config's `session_hooks.off` exits 0 with a one-line note on stderr and
+checks nothing; "ask the owner in one line first" says the owner's name when the config
+gives one.
 Every behaviour was verified against Anthropic's hooks reference
 (https://code.claude.com/docs/en/hooks) and the quotes are in the file's docstring.
 
@@ -582,7 +596,8 @@ Every behaviour was verified against Anthropic's hooks reference
 | `rules-at-start` | SessionStart | — | nothing; prints the platform, the ratchet counts and what will refuse, as context |
 
 The platform comes from `.coast/platform` or `COAST_PLATFORM`; the checks resolve from
-`../checks/` (the standards repo layout) then `Scripts/checks/` (the installed layout).
+`../checks/` beside the hook (the standards repo's layout and the installed one alike) then
+the checks dir the project's config names under `layout`.
 
 How a Bash hook reads the command. A backslash-newline continuation is joined first. The
 text is split, outside quotes, on `&&`, `||`, `;`, `|`, `|&`, `&` and newlines; the bodies of
@@ -602,8 +617,8 @@ forms — `Bash(git push --force*)`, `Bash(git * --no-verify *)`, `Bash(fly depl
 `Bash(fly * destroy*)`, `Bash(terraform apply*)`, `Bash(aws * delete*)`, `Bash(gh repo
 delete*)`, `Bash(nsupdate*)` — never a whole program, because "a deny rule can't carry
 allowlist exceptions" and the read-only forms must stay open; `Edit(./.claude/settings.json)`,
-`Edit(./Scripts/checks/**)` and the other fixed governing paths are denied to the edit tools
-too. The hook still runs first and explains the refusal in words. `disableAllHooks: false`
+`Edit(./.coast/**)` and the other governing paths are denied to the edit tools too (the
+template carries them as layout placeholders; the installer renders them). The hook still runs first and explains the refusal in words. `disableAllHooks: false`
 in the project file overrides a `true` in the user's settings (the hooks page says so), so a
 user setting cannot switch the hooks off; only `claude --settings '{"disableAllHooks": true}'`
 on the command line can, for one run — that is the human's own machine, and the git hooks
@@ -621,6 +636,8 @@ adopt.py <project> [--platform ios|macos|android|react-native|web|python]
                    [--dry-run] [--by <name>] [--secret-scan]
                    [--jscpd-bin <path>] [--measure-tools [build,format,lint,tests]]
                    [--release <version>|latest]
+                   [--init | --yes] [--owner <name>] [--product <name>] [--org <name>]
+                   [--checks-dir <path>]
 ```
 
 | Flag | What it does |
@@ -632,6 +649,10 @@ adopt.py <project> [--platform ios|macos|android|react-native|web|python]
 | `--jscpd-bin <path>` | the jscpd executable to use |
 | `--measure-tools [list]` | re-measure the tool baselines; a list without `build` skips the build |
 | `--release <version>` | fetch that published release (`1.1.0`, or `latest`) into the cache and run its own installer with the other flags forwarded. The one thing in the installer that touches the network. |
+| `--init` | ask the on/off questions (§10.5) and write the answers to the config; a first adoption at a terminal asks anyway, once |
+| `--yes` | take every default without asking (everything on); a run with no terminal does the same |
+| `--owner`, `--product`, `--org` | the names in the config's `owner` object, which every sentence that names a person or a product reads |
+| `--checks-dir <path>` | put the checks elsewhere than the layout's default; recorded under `layout.checks_dir` in the config |
 
 The cache is `~/.cache/coast-standards/<version>/`, or `COAST_STANDARDS_CACHE` when set.
 `COAST_STANDARDS_RELEASES` overrides the address the tarballs are fetched from (the
@@ -654,15 +675,17 @@ otherwise web; `pyproject.toml`/`requirements.txt`/`setup.py` → python.
 
 | Path | Ownership | Contents |
 |---|---|---|
-| `Scripts/checks/*.py`, `*.json` | governed | the scanner, its modules and tables (not the verifier) |
-| `Scripts/hooks/claude-hook.py` | governed | the session hooks' entry point |
+| `.coast/checks/*.py`, `*.json` | governed | the scanner, its modules and tables, `layout.py`/`layout.json`, `config.py`/`config.default.json` (not the verifier) |
+| `.coast/hooks/claude-hook.py` | governed | the session hooks' entry point |
+| `.coast/config.json` | governed, written once, human-edited | the switches and names (§10.5); a later run rewrites only the keys a flag names |
+| `.coast/layout.sh` | governed | the layout table rendered for the `sh` hooks |
 | `.githooks/pre-commit`, `commit-msg`, `pre-push` | governed | the git hooks |
 | `.claude/settings.json` → `hooks`, `disableAllHooks` | governed keys | the session hook wiring, replaced from the template; other keys kept |
 | `.claude/settings.json` → `permissions.deny` | merged | the shipped deny rules first, once each, then the project's own; `allow` and `ask` untouched |
 | `.coast/platform` | governed | one word |
 | `.coast/standards-version` | governed | the release adopted: `1.0.0` from a release tarball or a clone at the tag, `1.0.0+<commit>` from a clone that is not at a release tag |
 | `.coast/seeds.json` | governed | sha256 of each seed as shipped, with the date |
-| `.coast/installed.json` | governed | every governed file under `Scripts/checks/`, `.githooks/` and `Scripts/hooks/` the last run installed; a later run removes any of them a newer release stops shipping (a file the founder put there is not listed and stays) |
+| `.coast/installed.json` | governed | every governed file the last run installed; a later run removes any of them it did not put back — a file a newer release stops shipping, or one the layout moved (a project adopted before 1.1.0 carried them under `Scripts/`); a file the founder put there is not listed and stays |
 | `.coast/paths.json` | governed, written once | the project's path-class bindings (theme, plans, ui) |
 | `.coast/ratchet-baseline.json` | governed | the ratchet counts and deadlines |
 | `.coast/jscpd-baseline.json` | governed | jscpd fingerprints plus `clones`, `deadline`, `written`, `by`, `moves` |
@@ -679,6 +702,60 @@ otherwise web; `pyproject.toml`/`requirements.txt`/`setup.py` → python.
 Running twice on the same tree produces no change the second time. The tests prove it:
 adopt twice and diff, `--dry-run` writes nothing, founder text outside the block survives,
 an edited seed is kept while an unedited one takes the new version.
+
+### 10.5 Configuration — `.coast/config.json`
+
+One file, GOVERNING, read by one loader (`config.py`, shipped beside the scanner) from
+the scanner, the verifier, the session hook, the installer and the git hooks (`config.py
+--sh` renders the switches as shell variables). The shape is `config.default.json`:
+
+```json
+{"version": 1,
+ "owner": {"name": "", "product": "", "org": ""},
+ "rules": {"off": [], "severity": {}, "retired_words": []},
+ "seats": {"off": []},
+ "session_hooks": {"off": []},
+ "linters": {"off": []},
+ "ratchet_days": 90,
+ "layout": {}}
+```
+
+Merge order: the shipped defaults, then the project's file (an object merges key by key,
+a list replaces the default list), then the flags of the run (`--owner`, `--product`,
+`--org`, `--checks-dir`). Validation refuses, with a sentence: a severity above the
+table's (`rules.severity` may only lower — block → ratchet → advisory), a `layout.state_dir`
+(the anchor the hooks find the file by), a non-list `off`, a `ratchet_days` that is not a
+whole number.
+
+What `off` does, and where it shows:
+
+| Switch | Effect | In the number |
+|---|---|---|
+| `rules.off: [id]` | the scanner never runs the signature (`--only` cannot bring it back) | every rule whose only machine check it was is `off`; a rule with another live check is `partly` |
+| `seats.off: [name]` | `pre-push` prints `gate: <name> OFF (config)` and runs nothing for it; `--measure` measures nothing for it | a `tool:` reference on that seat is off (`tool:jscpd` → `jscpd`, `tool:gh-ruleset` → `gh-ruleset`, `tool:warnings-as-errors` → `build`) |
+| `linters.off: [name]` | the seat skips that linter; the installer seeds no config for it | every `<linter>:<rule>` reference is off |
+| `session_hooks.off: [id]` | the session hook exits 0 with a note; `attribution-trailer` in `commit-msg` prints `OFF (config)` | every `session:<id>` reference is off |
+
+`verify_rules.py --config <file>` applies the switches (the installer passes the project's
+config, a dry run included); the headline reads `enforced by a check 21 of 74 (3 switched
+off)`, the `off` bin is in `--json`'s totals and each rule's `off` list names the
+references switched off. The `CLAUDE.md` block and `rules-at-start` say the same number.
+
+The questions (`--init`, or a first adoption at a terminal): one screen per group — the
+signatures with their `words`, the eight seats, the ten session hook ids — each a list
+with a sentence and one question, "names to switch OFF, Enter keeps every one on". An
+unknown name is said and asked again. `--yes` writes `config.default.json` byte-for-byte
+(`test_config.py` holds it to that).
+
+The layout (`layout.json` beside the checks) is the one home of every path the layer
+names: `checks_dir`, `hooks_dir`, `session_hook`, `settings_file`, `state_dir`,
+`rules_document`, `ai_rules_document`, `context_file`, `lock_name`, `temp_prefix`,
+`env_prefix` and the jscpd ignore list. A value may name another key as `{key}`;
+`paths.json`'s governing classes and `claude-settings.json` are written that way and
+rendered when read or installed. A project overrides a key under the config's `layout`
+(never `state_dir`); `layout.sh` in the state dir is the table rendered for the `sh` hooks,
+which carry one name of their own — the state dir — and source the rest. `test_config.py`
+greps every shipped file for the old literals and fails on any.
 
 ---
 
@@ -731,6 +808,8 @@ reads each config and fails when a cited rule is not named there.
    the changelog, and publishes the GitHub release with the entry as its notes.
 5. Re-adopt the reference implementation and the adopted apps against it:
    `adopt.py <project> --release <number>` in each, then commit and push what changed.
+   A project adopted before 1.1.0 carried the checks under `Scripts/`; the re-adopt moves
+   them under `.coast/` and removes the old copies (the manifest names them).
 
 ---
 
@@ -766,7 +845,7 @@ the simulator.
 
 **The session hooks never fire.** They fire only for a session started at the repository
 root. Check `.claude/settings.json` has the `hooks` key and `"disableAllHooks": false`, and
-that `Scripts/hooks/claude-hook.py` exists. A user-level `disableAllHooks: true` does not
+that `.coast/hooks/claude-hook.py` exists. A user-level `disableAllHooks: true` does not
 turn them off (the project `false` wins); `claude --settings '{"disableAllHooks": true}'` does.
 
 **The secret scan flagged a test fixture.** A value beginning `test-`, `fake_`, `dummy.`,
@@ -835,7 +914,8 @@ repo root. About two minutes; jscpd must be installed or the jscpd test fails ou
 | `test_corpus_sections.py` | every app document carries DRY-1..7, L-1..12, DES-1..4 |
 | `test_lint_configs.py` | every config exists and every linter tag the corpus cites is enabled in it; the ESLint seed loads under `node` with and without a stub hooks plugin (node must be installed — fails out loud) |
 | `test_claude_hooks.py` | every session hook fed the documented stdin JSON in a fixture repo with a bare origin |
-| `test_hooks_and_adopt.py` | adopt twice = no diff, dry-run writes nothing, seeds kept/replaced, the secret scan, each git hook as installed, the jscpd seat, seat exceptions, previous hooks |
+| `test_hooks_and_adopt.py` | adopt twice = no diff, dry-run writes nothing, seeds kept/replaced, the secret scan, each git hook as installed, the jscpd seat, seat exceptions, previous hooks, a `scripts/` folder beside the state dir, the move from the pre-1.1.0 layout |
+| `test_config.py` | the layout table (no old literal in any shipped file or document, the settings template and governing classes render), every switch (rule, severity, retired words, seat, linter, session hook), the verifier's `off` bin and `--config`, the names from the config, the prompt driven by a scripted answer file, `--yes` byte-for-byte |
 
 ---
 

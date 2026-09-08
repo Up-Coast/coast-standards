@@ -16,11 +16,11 @@ name; ``verify_rules.py`` resolves it by finding the id in this file and in
 
 * ``governing-edit`` — PreToolUse on Edit|Write|MultiEdit|NotebookEdit.
   Refuses a path in the platform's GOVERNING class (``paths.json`` beside the
-  scanner is the one table: ``Scripts/checks/**``, ``.githooks/**``,
-  ``.github/**``, ``.coast/**``, the rules documents, the linter configs),
-  ``.claude/settings.json`` and ``.claude/settings.local.json`` (this
-  layer's own wiring and the file that sits above it, which no path class
-  names). Agents never edit the files that define their own checks.
+  scanner is the one table: the state dir with the checks and this hook in
+  it, the git hooks dir, ``.github/**``, the rules documents, the linter
+  configs), and the settings file with its ``.local`` twin (this layer's own
+  wiring and the file that sits above it, which no path class names).
+  Agents never edit the files that define their own checks.
 * ``chained-cd`` — PreToolUse on Bash. Refuses a ``cd`` or ``pushd`` that is
   followed by another command: ``cd X && …``, ``cd X; …``, ``if cd X; then``,
   ``builtin cd X && …``, a ``cd`` line followed by more. A bare ``cd`` alone,
@@ -39,7 +39,8 @@ name; ``verify_rules.py`` resolves it by finding the id in this file and in
   beside it: ``fly status``, ``aws s3 ls``, ``terraform plan`` pass;
   ``fly deploy``, ``aws s3 rb``, ``terraform apply`` do not. ``dig`` and
   ``nslookup`` only read DNS and pass; the DNS writer is ``nsupdate``. The
-  sentence: "this changes infrastructure — ask the owner in one line first".
+  sentence: "this changes infrastructure — ask the owner in one line first"
+  (the owner's name when the project's config gives one, E5.5).
 
 * ``no-verify`` — PreToolUse on Bash. Refuses ``--no-verify`` in any git
   command, ``git commit -n`` (its short form) and ``-c core.hooksPath=…``.
@@ -58,10 +59,14 @@ name; ``verify_rules.py`` resolves it by finding the id in this file and in
   ``stop_hook_active: true`` → exit 0 (no loop); no upstream → exit 0 with a
   note.
 * ``rules-at-start`` — SessionStart. Prints, as context: the platform and
-  project type from ``.coast/platform``, the enforced/total number for the
-  project's ``docs/domain-rules.md`` (else the corpus TOTAL line), the
-  review-only rules in one list, and the ratchet counts from
-  ``.coast/ratchet-baseline.json``. Always exits 0.
+  project type from the state dir's platform file, the enforced/total number
+  for the project's rules document (else the corpus TOTAL line), the
+  review-only rules in one list, and the ratchet counts from the state dir's
+  ratchet baseline. Always exits 0.
+
+A hook the project's config switches off (``session_hooks.off`` in the state
+dir's ``config.json``, task E5.3) exits 0 with a one-line note on stderr and
+does nothing; the config is GOVERNING, so only a person can write that.
 
 How the Bash hooks read a command (E2.8, 2026-09-07). A backslash-newline
 continuation is joined first. The text is then split, outside quotes, on
@@ -105,12 +110,18 @@ is a governing file too (``ALWAYS_GOVERNING``).
 
 Where things are:
 
+* Every path this hook names comes from the layout table (``layout.json``
+  beside the checks, read through ``layout.py``; task E5.1). The hook carries
+  two names of its own before it has the table — the state dir and the
+  environment prefix, the table's defaults — because the project's own
+  config (``<state dir>/config.json``, written by ``adopt.py``; its
+  ``layout`` key overrides the table) lives in the state dir.
 * The checks resolve relative to this file first (``../checks/`` — the
-  standards repo's layout), then ``Scripts/checks/`` under the repo root
-  (the installed layout ``adopt.py`` writes).
-* The platform comes from ``.coast/platform`` (a one-line text file: the
-  platform name, optionally followed by the project type letter — ``ios A``)
-  or the ``COAST_PLATFORM`` environment variable.
+  standards repo's layout, and the installed one when the session hook sits
+  beside the checks), then the checks dir the project's layout names.
+* The platform comes from the state dir's ``platform`` file (a one-line text
+  file: the platform name, optionally followed by the project type letter —
+  ``ios A``) or the ``<prefix>PLATFORM`` environment variable.
 * The repo root is ``git rev-parse --show-toplevel`` from the event's ``cwd``.
 
 What the primary source says (Anthropic's Claude Code hooks reference,
@@ -175,14 +186,13 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLATFORM_FILE = ".coast/platform"
-RATCHET_BASELINE_FILE = ".coast/ratchet-baseline.json"
-RULES_DOCUMENT = "docs/domain-rules.md"
-ALWAYS_GOVERNING = (".claude/settings.json", ".claude/settings.local.json")
+# The two names carried before the table is at hand (see "Where things are"); a test proves they are its defaults.
+ENV_PREFIX = "COAST_"
+STATE_DIR = os.environ.get(ENV_PREFIX + "STATE_DIR") or ".coast"
 NOT_PRODUCT_SOURCE = {"git", "governing", "plans", "generated", "docs", "design_bundle"}
 INFRA_PROGRAMS = {"fly", "flyctl", "wrangler", "cloudflared", "terraform", "tofu", "pulumi",
                   "doctl", "aws", "gcloud", "az", "nsupdate"}
-INFRA_SENTENCE = "this changes infrastructure — ask the owner in one line first"
+INFRA_SENTENCE = "this changes infrastructure — ask {owner} in one line first"
 # The read-only forms of the infrastructure programs: the verb sits among the first three words that
 # are not options, and no mutating verb sits beside it. Everything else is refused.
 INFRA_READ_ONLY_VERB = re.compile(r"^(status|logs?|version|help|whoami|ls|list|show|plan|preview|validate|output|graph"
@@ -249,24 +259,92 @@ def repo_root(event):
     return result.stdout.strip() or None if result.returncode == 0 else None
 
 
+def project_config_file(root):
+    return os.path.join(root, STATE_DIR, "config.json")
+
+
+def project_checks_dir(root):
+    """The checks dir the project's own config names under ``layout``, or None (the default is beside this hook)."""
+    try:
+        with open(project_config_file(root), encoding="utf-8") as handle:
+            own = json.load(handle)
+        return (own.get("layout") or {}).get("checks_dir") or None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def checks_dir(root):
-    for candidate in (os.path.join(HERE, "..", "checks"), os.path.join(root or "", "Scripts", "checks")):
+    candidates = [os.path.join(HERE, "..", "checks")]
+    own = project_checks_dir(root) if root else None
+    if own:
+        candidates.append(os.path.join(root, own))
+    for candidate in candidates:
         if os.path.isfile(os.path.join(candidate, "check_rules.py")):
             return os.path.normpath(candidate)
     return None
 
 
+def config_of(root):
+    """The project's config (config.py beside the checks), the shipped defaults when no checks or no
+    file is at hand, and None when the file refuses to load (the refusal is said on stderr)."""
+    checks = checks_dir(root)
+    if not checks:
+        return None
+    if checks not in sys.path:
+        sys.path.insert(0, checks)
+    try:
+        import config  # noqa: E402  (beside the checks; one loader for everyone)
+    except ImportError:
+        return None
+    try:
+        return config.load(root)
+    except config.ConfigError as error:
+        sys.stderr.write(f"config: {error}\n")
+        return None
+
+
+def owner_name(root):
+    """Who to ask: the owner's name from the config, else the general words."""
+    table = config_of(root)
+    name = ((table or {}).get("owner") or {}).get("name") if table else ""
+    return name.strip() if isinstance(name, str) and name.strip() else "the owner"
+
+
+def hook_is_off(hook_id, root):
+    table = config_of(root)
+    return bool(table) and hook_id in ((table.get("session_hooks") or {}).get("off") or [])
+
+
+def layout_of(root):
+    """The project's layout table (layout.py beside the checks), or None when no checks are at hand."""
+    checks = checks_dir(root)
+    if not checks:
+        return None
+    if checks not in sys.path:
+        sys.path.insert(0, checks)
+    try:
+        import layout  # noqa: E402  (beside the checks; one table for everyone)
+    except ImportError:
+        return None
+    return layout.load(root)
+
+
+def platform_file(root):
+    table = layout_of(root)
+    return table.state_file("platform") if table else os.path.join(STATE_DIR, "platform")
+
+
 def platform_of(root):
-    """(platform, project type) from .coast/platform, else COAST_PLATFORM; either may be None."""
+    """(platform, project type) from the state dir's platform file, else <prefix>PLATFORM; either may be None."""
     if root:
         try:
-            with open(os.path.join(root, PLATFORM_FILE), encoding="utf-8") as handle:
+            with open(os.path.join(root, platform_file(root)), encoding="utf-8") as handle:
                 words = handle.readline().split()
             if words:
                 return words[0], (words[1] if len(words) > 1 else None)
         except OSError:
             pass
-    return os.environ.get("COAST_PLATFORM") or None, None
+    return os.environ.get(ENV_PREFIX + "PLATFORM") or None, None
 
 
 def scanner_module(checks):
@@ -488,7 +566,9 @@ def governing_edit(event):
     rel = relative_to_root(path, root)
     if rel is None:
         return PASS
-    governed = rel in ALWAYS_GOVERNING
+    table = layout_of(root)
+    always = (table["settings_file"], table.settings_local_file) if table else ()
+    governed = rel in always
     checks = checks_dir(root)
     if not governed and checks:
         os.chdir(root)
@@ -497,7 +577,7 @@ def governing_edit(event):
     if not governed:
         return PASS
     return refuse(f"governing-edit: {rel} defines the checks (a governing file). Agents never edit the files "
-                  "that define their own checks — say what needs to change and ask the owner to change it.")
+                  f"that define their own checks — say what needs to change and ask {owner_name(root)} to change it.")
 
 
 def chained_cd(event):
@@ -555,9 +635,10 @@ def infra_command(event):
     for segment, program, args in commands(command_of(event)):
         infra = program in INFRA_PROGRAMS and not infra_read_only(args)
         if infra or (program == "gh" and gh_is_infrastructure(args)):
-            return refuse(f"infra-command: `{segment.strip()}` — {INFRA_SENTENCE}. Read-only forms pass (status, "
+            sentence = INFRA_SENTENCE.format(owner=owner_name(repo_root(event)))
+            return refuse(f"infra-command: `{segment.strip()}` — {sentence}. Read-only forms pass (status, "
                           "logs, list, show, describe, get, plan, preview, validate, output, whoami, version); "
-                          "creating, changing or destroying anything does not without her word.")
+                          "creating, changing or destroying anything does not without that word.")
     return PASS
 
 
@@ -590,7 +671,7 @@ def force_push(event):
                       or re.fullmatch(r"-[a-zA-Z]*f[a-zA-Z]*", token) or (token.startswith("+") and len(token) > 1))
             if forced:
                 return refuse("force-push: a force push rewrites history the remote already shares. Push a new "
-                              "commit instead; if a branch truly needs rewriting, ask the owner in one line first.")
+                              f"commit instead; if a branch truly needs rewriting, ask {owner_name(repo_root(event))} in one line first.")
     return PASS
 
 
@@ -630,14 +711,15 @@ def scan_at_commit(event):
         pointed_root = pointed.stdout.strip() if pointed.returncode == 0 else None
         if pointed_root and os.path.realpath(pointed_root) != os.path.realpath(root or ""):
             root = pointed_root
-            checks = os.path.join(root, "Scripts", "checks")
-            if not os.path.isfile(os.path.join(checks, "check_rules.py")):
+            table = layout_of(root)
+            checks = os.path.join(root, table["checks_dir"]) if table else None
+            if not checks or not os.path.isfile(os.path.join(checks, "check_rules.py")):
                 return PASS
     if not root or not checks:
         return PASS
     platform, _ = platform_of(root)
     if not platform:
-        sys.stderr.write("scan-at-commit: the platform is not known (.coast/platform missing, COAST_PLATFORM unset) "
+        sys.stderr.write(f"scan-at-commit: the platform is not known ({platform_file(root)} missing, {ENV_PREFIX}PLATFORM unset) "
                          "— the staged diff was not scanned.\n")
         return PASS
     result = run([sys.executable, os.path.join(checks, "check_rules.py"), "--staged", "--platform", platform], cwd=root)
@@ -713,38 +795,43 @@ def number_labels(checks):
         return "enforced by a check", ["enforced by a check", "held by a machine"]
 
 
-def rules_number_from_claude_md(root, checks):
-    """The number adopt.py wrote into the CLAUDE.md block (the verifier itself stays in the standards repo)."""
+def rules_number_from_claude_md(root, checks, table):
+    """The number adopt.py wrote into the context file's block (the verifier itself stays in the standards repo)."""
     label, known = number_labels(checks)
+    context, document = table["context_file"], table["rules_document"]
     try:
-        with open(os.path.join(root, "CLAUDE.md"), encoding="utf-8") as handle:
+        with open(os.path.join(root, context), encoding="utf-8") as handle:
             text = handle.read()
     except OSError:
-        return f"rules {label}: unknown (no CLAUDE.md block — run adopt.py)"
+        return f"rules {label}: unknown (no {context} block — run adopt.py)"
     any_label = "|".join(re.escape(name) for name in known)
-    match = re.search(r"Rules (?:" + any_label + r"): (\d+) of (\d+)\*\*\s+in that document\s*\((.*?)\)", text, re.DOTALL | re.IGNORECASE)
+    match = re.search(r"Rules (?:" + any_label + r"): (\d+) of (\d+)\*\*\s+in that document(?:\s*\([^)]*switched off[^)]*\))?\s*\((.*?)\)",
+                      text, re.DOTALL | re.IGNORECASE)
     if not match:
-        return f"rules {label}: unknown (no CLAUDE.md block — run adopt.py)"
+        return f"rules {label}: unknown (no {context} block — run adopt.py)"
     detail = " ".join(match.group(3).split())
-    return f"rules {label}: {match.group(1)} of {match.group(2)} in docs/domain-rules.md ({detail}) — as of the last adopt.py run"
+    return f"rules {label}: {match.group(1)} of {match.group(2)} in {document} ({detail}) — as of the last adopt.py run"
 
 
 def rules_number(root, checks, platform):
     """(lines for the context, review-only titles) from verify_rules.py, or a plain sentence when it cannot run."""
     verifier = os.path.join(checks, "verify_rules.py")
     label = number_labels(checks)[0]
+    table = layout_of(root)
     if not os.path.isfile(verifier):
-        return [rules_number_from_claude_md(root, checks)], []
+        return [rules_number_from_claude_md(root, checks, table)], []
     battery = os.path.join(checks, "battery.json")
     args = [sys.executable, verifier, "--root", os.path.dirname(os.path.dirname(checks)), "--json"]
     if os.path.isfile(battery):
         args += ["--battery", battery]
-    document = os.path.join(root, RULES_DOCUMENT)
-    scope = "this project's docs/domain-rules.md"
+    if os.path.isfile(project_config_file(root)):
+        args += ["--config", project_config_file(root)]
+    document = os.path.join(root, table["rules_document"])
+    scope = f"this project's {table['rules_document']}"
     if os.path.isfile(document) and platform:
         args += ["--document", document, "--platform", platform]
     else:
-        scope = "the whole rules corpus (this project has no docs/domain-rules.md yet)"
+        scope = f"the whole rules corpus (this project has no {table['rules_document']} yet)"
     result = run(args, cwd=root)
     try:
         report = json.loads(result.stdout)
@@ -755,18 +842,21 @@ def rules_number(root, checks, platform):
     if not totals.get("total"):
         return [f"rules {label}: unavailable (no rule document was found to count)"], []
     review = [rule["title"] for doc in report["documents"] for rule in doc["rules"] if rule["category"] == "review"]
-    line = (f"rules {label}: {totals['machine']} of {totals['total']} ({scope}) · partly {totals['partly']} "
+    off = f" ({totals['off']} switched off in the config)" if totals.get("off") else ""
+    line = (f"rules {label}: {totals['machine']} of {totals['total']}{off} ({scope}) · partly {totals['partly']} "
             f"· advisory {totals['advisory']} · reviewer-judged {totals['review']} · process {totals['process']} "
             f"· open {totals['open']}")
     return [line], review
 
 
 def ratchet_line(root):
+    table = layout_of(root)
+    baseline_file = table.state_file("ratchet-baseline.json") if table else os.path.join(STATE_DIR, "ratchet-baseline.json")
     try:
-        with open(os.path.join(root, RATCHET_BASELINE_FILE), encoding="utf-8") as handle:
+        with open(os.path.join(root, baseline_file), encoding="utf-8") as handle:
             baselines = json.load(handle).get("baselines", [])
     except (OSError, ValueError):
-        return f"ratchet baselines: none ({RATCHET_BASELINE_FILE} is absent) — every ratchet signature counts from 0"
+        return f"ratchet baselines: none ({baseline_file} is absent) — every ratchet signature counts from 0"
     if not baselines:
         return "ratchet baselines: none listed — every ratchet signature counts from 0"
     parts = [f"{b.get('id')} {b.get('count')} (deadline {b.get('deadline')})" for b in baselines]
@@ -780,9 +870,9 @@ def rules_at_start(event):
     lines = ["Coast Standards — what this session is held to:"]
     if platform:
         lines.append(f"platform: {platform}" + (f" · project type {project_type}" if project_type else "")
-                     + f" (from {PLATFORM_FILE})")
+                     + f" (from {platform_file(root)})")
     else:
-        lines.append(f"platform: unknown — {PLATFORM_FILE} is missing and COAST_PLATFORM is unset; the scanner hooks "
+        lines.append(f"platform: unknown — {platform_file(root)} is missing and {ENV_PREFIX}PLATFORM is unset; the scanner hooks "
                      "cannot run until one names the platform")
     if checks:
         number, review = rules_number(root, checks, platform)
@@ -791,10 +881,14 @@ def rules_at_start(event):
             lines.append(f"review-only rules ({len(review)}, a reviewer judges these — no machine holds them): "
                          + "; ".join(review))
     else:
-        lines.append(f"rules {number_labels(checks)[0]}: unknown (no check_rules.py beside this hook or under Scripts/checks)")
+        lines.append(f"rules {number_labels(checks)[0]}: unknown (no check_rules.py beside this hook or in the checks dir the layout names)")
     lines.append(ratchet_line(root))
     lines.append("session hooks that will refuse: edits to governing files, chained cd, infrastructure commands, "
                  "--no-verify, force pushes, a red scan at commit, and ending a turn with unpushed commits.")
+    table = config_of(root)
+    off = ((table or {}).get("session_hooks") or {}).get("off") or []
+    if off:
+        lines.append("session hooks switched off in the config (a person's decision, recorded there): " + ", ".join(off))
     print("\n".join(lines))
     return PASS
 
@@ -817,7 +911,11 @@ def main(argv=None):
     if len(argv) != 1 or argv[0] not in HOOKS:
         sys.stderr.write("usage: claude-hook.py <hook-id>   one of: " + ", ".join(HOOKS) + "\n")
         return 1
-    return HOOKS[argv[0]](read_event())
+    event = read_event()
+    if hook_is_off(argv[0], repo_root(event)):
+        sys.stderr.write(f"{argv[0]}: OFF in the project's config (session_hooks.off) — nothing was checked.\n")
+        return PASS
+    return HOOKS[argv[0]](event)
 
 
 if __name__ == "__main__":

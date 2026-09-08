@@ -66,6 +66,16 @@ when a machine check and a review/process/advisory reference share the rule;
 reference, an unresolved reference — is ``open``. "Enforced by a check" counts
 only the ``machine`` bin; the number is honest or it is nothing.
 
+The project's config (``--config <file>``, default the project's own
+``config.json`` in its state dir; task E5.4) can switch a check off, and the
+verifier tells the truth about that: a rule whose every machine reference is
+switched off is ``off``, not ``machine``; a rule with one of several references
+off is ``partly``. The headline says how many: "enforced by a check 21 of 74
+(3 switched off)". A signature id in ``rules.off``, a linter in
+``linters.off``, a tool whose seat is in ``seats.off`` (``tool:jscpd`` and
+``tool:gh-ruleset`` are their own seats, ``tool:warnings-as-errors`` is the
+build seat) or a hook id in ``session_hooks.off`` is off.
+
 Also a gap: a signature in the signatures file that no rule names.
 
 Output: one summary line per document, then ``FAIL verify-rules
@@ -101,6 +111,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 from check_rules import flatten_signatures  # noqa: E402 — the one reader of the signature file (E5.2)
+import config as _config  # noqa: E402 — the one loader of a project's config (E5.3)
 
 CHECK_NAME = "verify-rules"
 SKIPPED_SECTION_TITLES = {"sources"}
@@ -231,6 +242,7 @@ class Ref:
     name: str = ""  # signature id, rule name, tool name, hook id, or linter kind
     linter: str = ""  # the linter kind for kind == "linter"
     severity: str = ""  # for kind == "scan": block | ratchet | advisory
+    off: bool = False  # the project's config switched this check off (E5.4)
 
 
 def parse_ref(raw, linter_kinds):
@@ -531,19 +543,39 @@ class Battery:
 # ---------------------------------------------------------------- verification
 
 
+TOOL_SEATS = {"warnings-as-errors": "build"}   # a tool whose pre-push seat has another name
+
+
+def ref_is_off(ref, config):
+    """Whether the project's config switches this reference off (E5.4)."""
+    if ref.kind == "scan":
+        return ref.name in config["rules"]["off"]
+    if ref.kind == "linter":
+        return _config.is_off(config, "linters", ref.linter)
+    if ref.kind == "tool":
+        return _config.is_off(config, "seats", TOOL_SEATS.get(ref.name, ref.name))
+    if ref.kind == "session":
+        return _config.is_off(config, "session_hooks", ref.name)
+    return False
+
+
 def categorize(rule):
     kinds = {ref.kind for ref in rule.refs}
     if rule.gaps:
         return "open"
     if "context" in kinds:
         return "context"
-    advisory = any(ref.kind == "scan" and ref.severity == "advisory" for ref in rule.refs)
-    machine = any(ref.kind in MACHINE_KINDS and not (ref.kind == "scan" and ref.severity == "advisory") for ref in rule.refs)
+    live = [ref for ref in rule.refs if not ref.off]
+    switched_off = any(ref.off for ref in rule.refs)
+    advisory = any(ref.kind == "scan" and ref.severity == "advisory" for ref in live)
+    machine = any(ref.kind in MACHINE_KINDS and not (ref.kind == "scan" and ref.severity == "advisory") for ref in live)
     soft = advisory or bool(kinds & {"review", "process"})
-    if machine and not soft:
+    if machine and not soft and not switched_off:
         return "machine"
     if machine:
         return "partly"
+    if switched_off:
+        return "off"   # every machine reference is switched off: no check holds this rule any more
     if advisory:
         return "advisory"
     if "review" in kinds:
@@ -551,10 +583,11 @@ def categorize(rule):
     return "process"
 
 
-BINS = ("machine", "partly", "advisory", "review", "process", "open")
+BINS = ("machine", "partly", "advisory", "review", "process", "off", "open")
 
 
-def verify_document(path, text, platforms, battery):
+def verify_document(path, text, platforms, battery, config=None):
+    config = config or _config.defaults()
     rules = parse_document(text, path)
     for rule in rules:
         tag = rule.tag_text
@@ -568,6 +601,7 @@ def verify_document(path, text, platforms, battery):
                 rule.gaps.append("'context' cannot share a tag with a check")
             for ref in rule.refs:
                 rule.gaps.extend(battery.resolve(ref, platforms))
+                ref.off = ref_is_off(ref, config)
         rule.category = categorize(rule)
     return rules
 
@@ -590,15 +624,17 @@ def number_label():
 
 
 def summary_line(label, counts):
-    return (f"{label}: {number_label()} {counts['machine']} of {counts['total']} · partly {counts['partly']}"
+    off = f" ({counts['off']} switched off)" if counts.get("off") else ""
+    return (f"{label}: {number_label()} {counts['machine']} of {counts['total']}{off} · partly {counts['partly']}"
             f" · advisory {counts['advisory']} · reviewer {counts['review']} · process {counts['process']}"
             f" · open {counts['open']}")
 
 
-def run(root, manifest_path, documents_override=None, platforms_override=None):
+def run(root, manifest_path, documents_override=None, platforms_override=None, config=None):
     with open(manifest_path, encoding="utf-8") as handle:
         manifest = json.load(handle)
     battery = Battery(manifest, root)
+    config = config or _config.defaults()
     if documents_override:
         declared = platforms_override or "all"
         documents = [{"path": path, "platforms": declared} for path in documents_override]
@@ -619,7 +655,7 @@ def run(root, manifest_path, documents_override=None, platforms_override=None):
             report["gaps"].append({"path": path, "line": 0, "id": "-", "words": "document does not exist"})
             continue
         with open(full, encoding="utf-8") as handle:
-            rules = verify_document(path, handle.read(), platforms, battery)
+            rules = verify_document(path, handle.read(), platforms, battery, config)
         for rule in rules:
             for ref in rule.refs:
                 if ref.kind == "scan":
@@ -631,7 +667,8 @@ def run(root, manifest_path, documents_override=None, platforms_override=None):
         report["documents"].append({
             "path": path, "platforms": platforms, "counts": counts,
             "rules": [{"id": r.id, "line": r.line, "title": r.title, "kind": r.kind, "category": r.category,
-                       "checks": [ref.raw for ref in r.refs], "gaps": r.gaps} for r in rules],
+                       "checks": [ref.raw for ref in r.refs], "off": [ref.raw for ref in r.refs if ref.off],
+                       "gaps": r.gaps} for r in rules],
         })
         all_rules.extend(rules)
     # A signature no rule names is a gap of the CORPUS: only the whole manifest can say it.
@@ -679,6 +716,8 @@ def main(argv=None):
     parser.add_argument("--document", action="append", help="verify this document instead of the manifest's list (repeatable)")
     parser.add_argument("--platform", action="append", help="platform(s) a --document applies to (repeatable; default all)")
     parser.add_argument("--baseline", help="ratchet mode: pass only while the gap count equals this file's count")
+    parser.add_argument("--config", help="the project's config.json, whose switches make a rule 'off' (default: the "
+                                         "state dir's config.json under the working directory when one exists, else the shipped defaults)")
     parser.add_argument("--summary", action="store_true", help="print the per-document lines and totals only")
     parser.add_argument("--json", action="store_true", help="print the full report as JSON")
     parser.add_argument("--today", help=argparse.SUPPRESS)
@@ -688,7 +727,12 @@ def main(argv=None):
     if not os.path.isfile(manifest_path):
         print(f"FAIL {CHECK_NAME} {manifest_path}:0:-: the battery manifest does not exist")
         return 1
-    report = run(args.root, manifest_path, args.document, args.platform)
+    try:
+        config = _config.load(path=args.config) if args.config else _config.load()
+    except _config.ConfigError as error:
+        print(f"FAIL {CHECK_NAME} {args.config or _config.config_path()}:0:config: {error}")
+        return 1
+    report = run(args.root, manifest_path, args.document, args.platform, config)
 
     if not args.json:
         for document in report["documents"]:

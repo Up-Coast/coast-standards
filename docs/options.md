@@ -1,6 +1,6 @@
 # Options
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
 
 Everything you can change today, and where. All of it lives in a `.coast/` folder in
 your project, which the installer creates.
@@ -15,6 +15,10 @@ your project, which the installer creates.
 | `--by <name>` | The name recorded on the starting lines. Defaults to your git name. |
 | `--secret-scan` | Run the whole-project secret scan again. |
 | `--release VERSION` | Fetch that published release (`1.1.0`, or `latest`) into the cache and install from it, instead of from the copy you ran. See below. |
+| `--init` | Ask the on/off questions again (rules, push-gate seats, session hooks) and write the answers to `.coast/config.json`. A first install at a terminal asks them once anyway. |
+| `--yes` | Take every default without asking: everything on. |
+| `--owner NAME`, `--product NAME`, `--org NAME` | The names every refusal sentence and the `CLAUDE.md` block use ("ask Pat Lee in one line first"). Recorded in `.coast/config.json`. |
+| `--checks-dir PATH` | Put the checks somewhere other than `.coast/checks/`. Recorded under `layout` in the config. |
 
 ## The version your project carries
 
@@ -132,9 +136,45 @@ at install with their dates. You do not edit these by hand. To lower a count tha
 fallen, run the installer again. To move a date, a person edits the file and records who
 and why under `moves`.
 
-## What you cannot switch off today
+## Switch a rule, a check or a guard-rail off
 
-Individual rules, checks, and agent guard-rails are all on for your platform. Per-rule
-on/off switches and severity settings are planned and will appear here when they ship.
-Until then, the two exception shapes above are the sanctioned ways to set something
-aside, and both are dated and signed.
+`.coast/config.json` holds the switches. The installer writes it on the first install —
+after asking you, one screen per group, at a terminal — and never rewrites your answers.
+Everything is on until you say otherwise. Edit the file and the next commit, push or
+agent action reads it; no re-install is needed.
+
+```json
+{
+  "version": 1,
+  "owner": {"name": "Pat Lee", "product": "Example App", "org": ""},
+  "rules": {
+    "off": ["scrim-modal"],
+    "severity": {"inline-comment": "advisory"},
+    "retired_words": ["synergy"]
+  },
+  "seats": {"off": ["gh-ruleset"]},
+  "session_hooks": {"off": []},
+  "linters": {"off": []},
+  "ratchet_days": 90,
+  "layout": {}
+}
+```
+
+| Key | What it does |
+|---|---|
+| `owner` | the names every refusal sentence uses; blank means "the owner" and "this project" |
+| `rules.off` | scanner signatures that do not run at all. The ids are the ones in a FAIL line (`:scrim-modal:`) |
+| `rules.severity` | lower a signature: `block` → `ratchet` → `advisory`. Raising one is refused with a sentence; the table decides what blocks |
+| `rules.retired_words` | words the retired-wording check refuses, on top of the shipped one |
+| `seats.off` | push-gate seats that print `gate: <name> OFF (config)` and run nothing: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset` |
+| `session_hooks.off` | agent guard-rails that exit without checking: `governing-edit`, `chained-cd`, `infra-command`, `no-verify`, `force-push`, `scan-at-commit`, `scan-on-edit`, `unpushed-at-stop`, `rules-at-start`, `attribution-trailer` |
+| `linters.off` | linters the seats skip and the installer does not seed: `swiftlint`, `swiftformat`, `detekt`, `ktlint`, `androidlint`, `eslint`, `tsc`, `prettier`, `ruff`, `mypy` |
+| `ratchet_days` | how far out a new starting line's deadline is written |
+| `layout` | where the layer's files live, for a project that must move them (`checks_dir`, `hooks_dir`, `session_hook`, `settings_file`, `rules_document`, `context_file`) |
+
+A switch is counted. A rule whose every check is off shows as **switched off** in the
+"enforced by a check" number and the `CLAUDE.md` block ("24 of 74 (3 switched off)"), so
+nobody reads a rule as held when nothing holds it. The file is governed: an AI agent is
+refused when it tries to write it, which is the point — a switch is a person's decision.
+The two dated exception shapes above are still the right tool for setting one thing
+aside for a while; a switch is for a rule that does not apply to your project at all.

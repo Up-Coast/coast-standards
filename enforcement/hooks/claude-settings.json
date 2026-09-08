@@ -1,5 +1,5 @@
 {
-  "_comment": "The committed .claude/settings.json every adopted repo carries (enforcement/README.md section 4.4, decision 3). Three keys. `hooks`: one entry point, claude-hook.py, run with the hook's id; it reads the event JSON on stdin and exits 2 with the reason on stderr to refuse. Schema, matchers and the exit-code contract are the ones Anthropic documents at https://code.claude.com/docs/en/hooks (quoted in claude-hook.py's docstring). adopt.py installs claude-hook.py at Scripts/hooks/claude-hook.py, which is the path these commands name; the checks it runs live beside it at Scripts/checks/. Each statusMessage names the hook's id, which is how verify_rules.py resolves a rule's session:<id> reference. `permissions.deny`: the hard denies, in the syntax of https://code.claude.com/docs/en/permissions — Anthropic says to use the permission system, not a hook, for a hard deny; Claude Code applies a deny rule inside subshells, $(...) and loops and past VAR=value, whatever a hook says. The rules name the mutating forms (deploy, destroy, delete, create, apply, ...) and not the programs, because a deny rule cannot carry exceptions and the read-only forms (fly status, aws s3 ls, terraform plan) must stay open; the hook explains a refusal in words. The Edit rules hold the governing paths every platform shares. `disableAllHooks: false`: a project false overrides a user true, so a user setting cannot switch these hooks off (only `--settings '{\"disableAllHooks\": true}'` on the command line can). adopt.py writes all three: hooks and disableAllHooks replaced from here, the deny list merged in front of the project's own; every other key is the founder's and kept.",
+  "_comment": "The committed settings file ({settings_file}) every adopted repo carries (enforcement/README.md section 4.4, decision 3). Three keys. `hooks`: one entry point, claude-hook.py, run with the hook's id; it reads the event JSON on stdin and exits 2 with the reason on stderr to refuse. Schema, matchers and the exit-code contract are the ones Anthropic documents at https://code.claude.com/docs/en/hooks (quoted in claude-hook.py's docstring). Every path in this file is a placeholder naming a key of the layout table (layout.json beside the checks, task E5.1), filled by adopt.py when it writes the project's settings: it installs claude-hook.py at {session_hook}, which is the path these commands name, and the checks it runs at {checks_dir}. Each statusMessage names the hook's id, which is how verify_rules.py resolves a rule's session:<id> reference. `permissions.deny`: the hard denies, in the syntax of https://code.claude.com/docs/en/permissions — Anthropic says to use the permission system, not a hook, for a hard deny; Claude Code applies a deny rule inside subshells, $(...) and loops and past VAR=value, whatever a hook says. The rules name the mutating forms (deploy, destroy, delete, create, apply, ...) and not the programs, because a deny rule cannot carry exceptions and the read-only forms (fly status, aws s3 ls, terraform plan) must stay open; the hook explains a refusal in words. The Edit rules hold the governing paths every platform shares. `disableAllHooks: false`: a project false overrides a user true, so a user setting cannot switch these hooks off (only `--settings '{\"disableAllHooks\": true}'` on the command line can). adopt.py writes all three: hooks and disableAllHooks replaced from here, the deny list merged in front of the project's own; every other key is the founder's and kept.",
   "disableAllHooks": false,
   "permissions": {
     "deny": [
@@ -127,13 +127,13 @@
       "Bash(gh variable set*)",
       "Bash(gh variable delete*)",
       "Bash(gh variable remove*)",
-      "Edit(./.claude/settings.json)",
-      "Edit(./.claude/settings.local.json)",
-      "Edit(./Scripts/checks/**)",
-      "Edit(./Scripts/hooks/**)",
-      "Edit(./.githooks/**)",
+      "Edit(./{settings_file})",
+      "Edit(./{settings_local_file})",
+      "Edit(./{checks_dir}/**)",
+      "Edit(./{session_hook_dir}/**)",
+      "Edit(./{hooks_dir}/**)",
       "Edit(./.github/**)",
-      "Edit(./.coast/**)"
+      "Edit(./{state_dir}/**)"
     ]
   },
   "hooks": {
@@ -143,7 +143,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" governing-edit",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" governing-edit",
             "statusMessage": "rules: governing-edit",
             "timeout": 30
           }
@@ -154,31 +154,31 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" chained-cd",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" chained-cd",
             "statusMessage": "rules: chained-cd",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" infra-command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" infra-command",
             "statusMessage": "rules: infra-command",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" no-verify",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" no-verify",
             "statusMessage": "rules: no-verify",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" force-push",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" force-push",
             "statusMessage": "rules: force-push",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-at-commit",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" scan-at-commit",
             "statusMessage": "rules: scan-at-commit (scanning the staged diff)",
             "timeout": 300
           }
@@ -191,7 +191,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-on-edit",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" scan-on-edit",
             "statusMessage": "rules: scan-on-edit",
             "timeout": 300
           }
@@ -203,7 +203,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" unpushed-at-stop",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" unpushed-at-stop",
             "statusMessage": "rules: unpushed-at-stop",
             "timeout": 30
           }
@@ -215,7 +215,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" rules-at-start",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/{session_hook}\" rules-at-start",
             "statusMessage": "rules: rules-at-start",
             "timeout": 120
           }

@@ -1,6 +1,6 @@
 # Coast Standards
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
 
 Engineering rules for software built with AI coding agents, and the checks that enforce
 them. Point an agent at this repository, or install it into a project, and the agent
@@ -73,12 +73,16 @@ Source-available, not open source: see [License](#license) below, and
 6. Run `python3 enforcement/adopt.py <project-dir> --measure-tools` (`--dry-run` first if
    you like). The installer can be run from a fetched release rather than a clone: the
    [quickstart](docs/quickstart.md) has the one command that fetches the newest release
-   into `~/.cache/coast-standards/<version>/`. It installs the checks under `Scripts/checks/`, the
+   into `~/.cache/coast-standards/<version>/`. It installs the checks under `.coast/checks/`, the
    three git hooks under `.githooks/` with `core.hooksPath` set, the Claude Code session
-   hooks (`Scripts/hooks/claude-hook.py` and `.claude/settings.json`), the platform's
-   linter seeds, `docs/domain-rules.md` when the project has none, the baselines under
-   `.coast/`, and the standards block in the project's `CLAUDE.md` with the "enforced by a
-   check" number. `--measure-tools` builds the project once so an existing repository's
+   hooks (`.coast/hooks/claude-hook.py` and `.claude/settings.json`), the platform's
+   linter seeds, `docs/domain-rules.md` when the project has none, the baselines and the
+   config under `.coast/`, and the standards block in the project's `CLAUDE.md` with the
+   "enforced by a check" number. A first install at a terminal asks the on/off questions
+   once — one screen each for the rules, the push-gate seats and the session hooks, every
+   default on, Enter takes them all — and writes the answers to `.coast/config.json`; `--yes`
+   skips the questions, `--init` asks them again, `--owner "Pat Lee" --product "Example App"`
+   fills the names every refusal sentence uses. `--measure-tools` builds the project once so an existing repository's
    warnings, formatter and linter findings — and a missing test target — start as
    baselines instead of refusing the first push. Re-run it to take a newer version — it
    replaces governed files, keeps anything you edited, lowers a baseline that fell, and
@@ -97,6 +101,10 @@ evidence), **process** (held by the pipeline or by a person). `verify_rules.py` 
 bins and fails the commit when a rule names no check or names one nothing runs; the
 corpus stands at **enforced by a check 170 of 643** (4 September 2026), and each project's
 own number comes from its `docs/domain-rules.md`.
+
+A rule whose check a person switched off in `.coast/config.json` is counted as **switched
+off**, never as enforced: the number reads "24 of 74 (3 switched off)", because the number
+is honest or it is nothing.
 
 What refuses, and where: `.githooks/pre-commit` (the scanner on the staged diff — added
 lines only, in seconds), `.githooks/commit-msg` (a subject under 100 characters; an agent

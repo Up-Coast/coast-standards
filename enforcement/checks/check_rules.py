@@ -22,11 +22,15 @@ Every mode but ``--tree`` judges the change: the added-scope signatures on the a
 and the tree-scope block signatures on the changed files, no ratchets. The whole-tree pass
 with the ratchets is ``--tree`` alone, so a push runs it once.
     check_rules.py --ratchet <id> --count <n> --platform <p>   # a tool's count judged as a ratchet (build-warnings, format-findings)
-    check_rules.py --has-baseline <id>               # exit 0 when .coast/ratchet-baseline.json carries an entry for <id>
+    check_rules.py --has-baseline <id>               # exit 0 when the state dir's ratchet-baseline.json carries an entry for <id>
     … --only <id>[,<id>]                             # run only the named signatures (adopt.py's first-push secret scan)
 
-The platform also comes from ``COAST_PLATFORM``. Run from the repository
-root. Exit 0 = pass; any failure prints
+The platform also comes from ``<prefix>PLATFORM`` (``COAST_PLATFORM`` by
+default; every path and name here comes from the layout table, ``layout.json``
+beside this file). The project's config (``config.json`` in the state dir, read
+through ``config.py``) can switch a signature off, lower its severity or add
+retired words; a signature switched off is simply not in the list this runs.
+Run from the repository root. Exit 0 = pass; any failure prints
 ``FAIL <check> <path>:<line>:<id>: <words> [<rule>]`` and exits 1 — the
 line format the battery, the hooks, CI and Coast parse. The last line is a
 JSON summary (``{"result": "pass"|"fail", ...}``).
@@ -36,7 +40,7 @@ Severities:
 * ``block`` — any hit on an added line (scope ``added``) or anywhere in the
   tree (scope ``tree``) fails, unless an exception covers it.
 * ``ratchet`` — counted over the whole tree and compared with
-  ``.coast/ratchet-baseline.json`` (``{"baselines": [{id, count, deadline,
+  the state dir's ``ratchet-baseline.json`` (``{"baselines": [{id, count, deadline,
   written, by, moves}]}``). A count above the baseline fails; a count below
   it fails until the baseline is lowered in the same commit (the message
   says the number); a signature with no baseline entry has a baseline of 0;
@@ -49,7 +53,7 @@ Exceptions (agents cannot write either):
 * the plan's approved native deviations — Coast's mechanism, unchanged: the
   operative (last) plan-bar verdict in ``plans/<feature>/proof.json`` carries
   ``approved_native_deviations: [{file, signatures: [ids]}]``;
-* ``.coast/rules-exceptions.json`` — ``{"exceptions": [{id, path, reason,
+* the state dir's ``rules-exceptions.json`` — ``{"exceptions": [{id, path, reason,
   who, when}]}`` for repos without a plan; ``path`` is an exact path or a
   ``dir/**`` glob.
 
@@ -72,9 +76,12 @@ import unicodedata
 HERE = os.path.dirname(os.path.abspath(__file__))
 SIGNATURES_FILE = os.path.join(HERE, "rules_signatures.json")
 PATHS_FILE = os.path.join(HERE, "paths.json")
-BASELINE_FILE = ".coast/ratchet-baseline.json"
-EXCEPTIONS_FILE = ".coast/rules-exceptions.json"
-PATHS_OVERRIDE_FILE = ".coast/paths.json"  # a project's own class bindings, merged over the platform's (GOVERNING)
+import layout as _layout  # noqa: E402 — the one table of the paths the layer names (E5.1), beside this file
+import config as _config  # noqa: E402 — the one loader of the project's config (E5.3), beside this file
+LAYOUT = _layout.load()   # the project's layout, read from the working directory (the repository root)
+BASELINE_FILE = LAYOUT.state_file("ratchet-baseline.json")
+EXCEPTIONS_FILE = LAYOUT.state_file("rules-exceptions.json")
+PATHS_OVERRIDE_FILE = LAYOUT.state_file("paths.json")  # a project's own class bindings, merged over the platform's (GOVERNING)
 WORKTREE = "WORKTREE"
 HEAVY_DIRECTORIES = {".git", ".gradle", "node_modules", ".build", "intermediates", "Pods", ".idea",
                      "DerivedData", "caches", "tmp", ".venv", "__pycache__"}
@@ -135,7 +142,8 @@ class PathClasses:
     def __init__(self, table):
         self.extensions = tuple(table.get("extensions", []))
         self.order = table.get("order", [])
-        self.classes = table.get("classes", {})
+        # a {key} in a glob is a layout key (paths.json's governing classes name the layer's own folders that way)
+        self.classes = {name: [LAYOUT.expand(pattern) for pattern in patterns] for name, patterns in table.get("classes", {}).items()}
 
     def classify(self, path):
         for name in self.order:
@@ -750,8 +758,26 @@ def load_signature_tables(path=None):
         return flatten_signatures(json.load(handle))
 
 
-def load_tables(platform, paths_override=None):
+def load_config():
+    """The project's config (config.py), or a FAIL line and exit 1 when the file refuses to load."""
+    try:
+        return _config.load()
+    except _config.ConfigError as error:
+        print(f"FAIL config {LAYOUT.state_file(_config.FILE_NAME)}:0:config: {error}")
+        sys.exit(1)
+
+
+def load_tables(platform, paths_override=None, config=None):
+    """(signatures, PathClasses) for the platform, under the project's config (E5.3): the
+    signatures the config switches off are gone from the list, the severities it lowers are
+    lowered, and its retired words join the retired-wording pattern."""
     tables = load_signature_tables()
+    config = config or load_config()
+    try:
+        tables = {name: _config.apply_to_signatures(config, entries) for name, entries in tables.items()}
+    except _config.ConfigError as error:
+        print(f"FAIL config {LAYOUT.state_file(_config.FILE_NAME)}:0:severity: {error}")
+        sys.exit(1)
     with open(PATHS_FILE, encoding="utf-8") as handle:
         paths = json.load(handle)["platforms"]
     override = paths_override or (PATHS_OVERRIDE_FILE if os.path.isfile(PATHS_OVERRIDE_FILE) else None)
@@ -765,7 +791,7 @@ def load_tables(platform, paths_override=None):
             merged["extensions"] = own["extensions"]
         paths[platform] = merged
     if platform is None:
-        raise SystemExit("check_rules.py: the project's platform is not known — set COAST_PLATFORM "
+        raise SystemExit(f"check_rules.py: the project's platform is not known — set {LAYOUT.env('PLATFORM')} "
                          "(the shipped workflow does) or pass --platform <name>; expected one of " + ", ".join(sorted(tables)))
     if platform not in tables or platform not in paths:
         raise SystemExit(f"check_rules.py: unknown platform '{platform}' (expected one of {', '.join(sorted(tables))})")
@@ -776,11 +802,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="The rules scanner.")
     parser.add_argument("base", nargs="?")
     parser.add_argument("head", nargs="?")
-    parser.add_argument("--platform", default=os.environ.get("COAST_PLATFORM") or None)
+    parser.add_argument("--platform", default=LAYOUT.env_value("PLATFORM"))
     parser.add_argument("--staged", action="store_true")
     parser.add_argument("--files", nargs="+")
     parser.add_argument("--tree", action="store_true")
-    parser.add_argument("--paths-override", help="a project's own path-class bindings (default: .coast/paths.json when present)")
+    parser.add_argument("--paths-override", help=f"a project's own path-class bindings (default: {PATHS_OVERRIDE_FILE} when present)")
     parser.add_argument("--only", metavar="ID[,ID]", help="run only these signature ids (adopt.py's first-push secret scan uses it; not a bypass — git never passes it)")
     parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings, lint-findings or tests-missing (with --count)")
     parser.add_argument("--count", type=int, help="the count the tool produced (with --ratchet)")

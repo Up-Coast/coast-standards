@@ -5,13 +5,15 @@
 # line, the doc-comment check among them (the scanner's `doc-comments`
 # built-in holds DOC-1 on added declarations; a legacy file's old debt is
 # the whole-tree advisory at push, never a refusal here — decision 2). The
-# full battery runs at push (.githooks/pre-push). Refusals are the checks'
+# full battery runs at push (the pre-push hook beside this one). Refusals are the checks'
 # own FAIL lines, so a human and an agent meet the same wall (README §4.4).
 #
-# Installed by enforcement/adopt.py, which also sets
-#   git config core.hooksPath .githooks
-# The platform is one word in .coast/platform (or COAST_PLATFORM); the
-# checks live under Scripts/checks/ (COAST_CHECKS_DIR overrides, for tests).
+# Installed by enforcement/adopt.py, which also points git's core.hooksPath
+# at the hooks dir the layout names.
+# Every path this hook names comes from the layout table (layout.json beside
+# the checks), rendered by adopt.py as layout.sh in the state dir; the state
+# dir is the one name the hook carries, and it is the table's default. The
+# platform is one word in the state dir's platform file (or the environment).
 # GOVERNING: agents never edit the files that define their own checks.
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -21,13 +23,24 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
 export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
 
-checks=${COAST_CHECKS_DIR:-Scripts/checks}
-platform=${COAST_PLATFORM:-}
-if [ -z "$platform" ] && [ -f .coast/platform ]; then
-  platform=$(tr -d '[:space:]' < .coast/platform)
+state=${COAST_STATE_DIR:-.coast}
+if [ ! -f "$state/layout.sh" ]; then
+  echo "FAIL pre-commit $state/layout.sh:0:missing: the layout file is not written — run enforcement/adopt.py from the standards repo" >&2
+  exit 1
+fi
+. "./$state/layout.sh"
+# The config's switches (seats, linters, session hooks off), read fresh from config.json each run.
+if [ -f "$layout_checks_dir/config.py" ]; then
+  switches=$(python3 "$layout_checks_dir/config.py" --sh) || { echo "FAIL pre-commit $state/config.json:0:config: the config refuses to load — see the line above" >&2; exit 1; }
+  eval "$switches"
+fi
+checks=$layout_checks_dir
+platform=$layout_platform
+if [ -z "$platform" ] && [ -f "$state/platform" ]; then
+  platform=$(tr -d '[:space:]' < "$state/platform")
 fi
 if [ -z "$platform" ]; then
-  echo "FAIL pre-commit .coast/platform:0:platform: no platform named — write one word (ios, macos, android, react-native, web, python) to .coast/platform, or run adopt.py" >&2
+  echo "FAIL pre-commit $state/platform:0:platform: no platform named — write one word (ios, macos, android, react-native, web, python) to $state/platform, or run adopt.py" >&2
   exit 1
 fi
 if [ ! -f "$checks/check_rules.py" ]; then
@@ -49,8 +62,8 @@ run "rules-scan (staged)" python3 "$checks/check_rules.py" --staged --platform "
 # A project that had its own hooks keeps them: ours ran, now its own does. An executable
 # hook runs as itself (its shebang may say python or bash); only one that is not
 # executable is handed to sh.
-if [ -f .coast/previous-hooks-path ]; then
-  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+if [ -f "$state/previous-hooks-path" ]; then
+  previous=$(tr -d '[:space:]' < "$state/previous-hooks-path")
   if [ -n "$previous" ] && [ -f "$previous/pre-commit" ]; then
     printf 'gate: %s/pre-commit (this project had it before it adopted)\n' "$previous"
     if [ -x "$previous/pre-commit" ]; then

@@ -14,7 +14,20 @@
 # It cannot know who typed a human's commit; it refuses only what is
 # provably wrong. Refusals print as FAIL lines. GOVERNING file.
 set -u
+export PYTHONDONTWRITEBYTECODE=1   # the config reader leaves no __pycache__ in the project
 file=$1
+# The layout (the state dir's name is the one the hook carries; the rest is the table adopt.py rendered).
+state=${COAST_STATE_DIR:-.coast}
+if [ ! -f "$state/layout.sh" ]; then
+  echo "FAIL commit-msg $state/layout.sh:0:missing: the layout file is not written — run enforcement/adopt.py from the standards repo" >&2
+  exit 1
+fi
+. "./$state/layout.sh"
+# The config's switches (seats, linters, session hooks off), read fresh from config.json each run.
+if [ -f "$layout_checks_dir/config.py" ]; then
+  switches=$(python3 "$layout_checks_dir/config.py" --sh) || { echo "FAIL commit-msg $state/config.json:0:config: the config refuses to load — see the line above" >&2; exit 1; }
+  eval "$switches"
+fi
 if [ ! -f "$file" ]; then
   echo "FAIL commit-msg $file:0:missing: no commit message file was given" >&2
   exit 1
@@ -53,9 +66,16 @@ if [ "$gits_own" = 0 ] && [ "$length" -gt 100 ]; then
   exit 1
 fi
 
-# session:attribution-trailer — the model that did the work is named.
+# session:attribution-trailer — the model that did the work is named. A project whose config
+# switches the hook off (session_hooks.off, rendered into layout.sh) says so and skips it.
+attribution=on
+case " ${config_session_hooks_off:-} " in
+  *" attribution-trailer "*) printf 'gate: attribution-trailer OFF (config)\n'; attribution=off ;;
+esac
 model_trailer='^Co-Authored-By: Claude [A-Z][A-Za-z]+ [0-9][0-9.]* <[^>]+>[[:space:]]*$'
-if message | grep -q -i '^Co-Authored-By:[[:space:]]*Claude'; then
+if [ "$attribution" = off ]; then
+  :
+elif message | grep -q -i '^Co-Authored-By:[[:space:]]*Claude'; then
   if ! message | grep -E -q "$model_trailer"; then
     echo "FAIL commit-msg $file:0:attribution-trailer: a Claude trailer must name the model that did the work, like 'Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' — 'Claude' or 'Claude Code' alone mis-attributes the commit" >&2
     exit 1
@@ -65,8 +85,8 @@ elif [ -n "${CLAUDECODE:-}" ] && [ "$gits_own" = 0 ]; then
   exit 1
 fi
 # A project that had its own hooks keeps them: ours ran, now its own does.
-if [ -f .coast/previous-hooks-path ]; then
-  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+if [ -f "$state/previous-hooks-path" ]; then
+  previous=$(tr -d '[:space:]' < "$state/previous-hooks-path")
   if [ -n "$previous" ] && [ -f "$previous/commit-msg" ]; then
     printf 'gate: %s/commit-msg (this project had it before it adopted)\n' "$previous"
     if [ -x "$previous/commit-msg" ]; then

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import-matrix checker — absorbed from Coast (Templates/throwaway/Scripts/checks/check_import_matrix.py) under the rules scanner in E1.1; the judgments are unchanged, check_rules.py calls failures_for(). Original docstring follows.
+"""Import-matrix checker — absorbed from Coast's own check_import_matrix.py under the rules scanner in E1.1; the judgments are unchanged, check_rules.py calls failures_for(). Original docstring follows.
 
 Coast import-matrix checker — the deterministic layering gate (taxonomy §2; M5 H54a).
 
@@ -13,7 +13,7 @@ forbidden import:
     as Domain protocols);
   - Domain imports nothing app-side — no other module, no UI or data framework.
 
-Module KINDS come from `.coast/module-kinds.json` when the project wrote one
+Module KINDS come from the state dir's `module-kinds.json` when the project wrote one
 ({"app": [...], "feature": [...], "shared": [...]}), else from the taxonomy's
 standard names: Domain, Data, DesignSystem, Strings, AppFoundation, Shared and
 SharedUI are shared; a target named App or ending in "App" is the app target;
@@ -40,7 +40,8 @@ import os
 import re
 import sys
 
-KINDS_FILE = ".coast/module-kinds.json"
+import layout as _layout  # noqa: E402 — the state dir's name comes from the layout table (E5.1)
+KINDS_FILE = _layout.load().state_file("module-kinds.json")
 SHARED_NAMES = {"Domain", "Data", "DesignSystem", "Strings", "AppFoundation", "Shared", "SharedUI"}
 DOMAIN = "Domain"
 DATA = "Data"

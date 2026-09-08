@@ -156,15 +156,15 @@ class GoverningEdit(HookCase):
         self.assertPassed(self.edit("Sources/App/HomeView.swift", tool="Write"))
 
     def test_every_governing_class_is_refused(self):
-        for relative in (".claude/settings.json", ".claude/settings.local.json", "Scripts/checks/check_rules.py",
-                         "Scripts/hooks/claude-hook.py",
+        for relative in (".claude/settings.json", ".claude/settings.local.json", ".coast/checks/check_rules.py",
+                         ".coast/hooks/claude-hook.py",
                          "docs/domain-rules.md", "docs/ai-features-rules.md", ".swiftlint.yml", ".swift-format",
                          ".github/workflows/ci.yml", ".coast/ratchet-baseline.json", ".coast/platform"):
             with self.subTest(path=relative):
                 self.assertRefused(self.edit(relative), relative)
 
     def test_notebook_edit_reads_notebook_path(self):
-        self.assertRefused(self.edit("Scripts/checks/notes.ipynb", tool="NotebookEdit"), "Scripts/checks/notes.ipynb")
+        self.assertRefused(self.edit(".coast/checks/notes.ipynb", tool="NotebookEdit"), ".coast/checks/notes.ipynb")
 
     def test_path_outside_the_repo_passes(self):
         outside = os.path.join(self.repo.dir.name, "elsewhere", ".githooks", "pre-push")
@@ -403,12 +403,12 @@ class ScanOnEdit(HookCase):
         self.assertPassed(result)
         self.assertPassed(self.post_edit("Sources/App/Missing.swift"))
 
-    def test_installed_layout_resolves_the_checks_under_scripts(self):
-        """The hook copied into a project (no ../checks beside it) finds Scripts/checks/."""
-        installed = os.path.join(self.repo.path, "Scripts", "hooks", "claude-hook.py")
+    def test_installed_layout_resolves_the_checks_beside_the_hook(self):
+        """The hook copied into a project finds the checks beside it, where the layout puts them."""
+        installed = os.path.join(self.repo.path, ".coast", "hooks", "claude-hook.py")
         os.makedirs(os.path.dirname(installed))
         shutil.copy(HOOK, installed)
-        shutil.copytree(CHECKS_DIR, os.path.join(self.repo.path, "Scripts", "checks"),
+        shutil.copytree(CHECKS_DIR, os.path.join(self.repo.path, ".coast", "checks"),
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
         self.repo.write("Sources/App/HomeView.swift", LITERAL_VIEW)
         path = os.path.join(self.repo.path, "Sources/App/HomeView.swift")
@@ -502,7 +502,7 @@ class SettingsFile(unittest.TestCase):
             for group in groups:
                 for entry in group["hooks"]:
                     self.assertEqual(entry["type"], "command")
-                    self.assertIn("claude-hook.py", entry["command"])
+                    self.assertIn("{session_hook}", entry["command"], "rendered at adoption from the layout table (E5.1)")
                     self.assertTrue(set(entry) <= {"type", "command", "if", "timeout", "statusMessage"}, entry)
 
     def test_the_permission_layer_uses_the_documented_syntax(self):
@@ -522,7 +522,7 @@ class SettingsFile(unittest.TestCase):
                 self.assertFalse(rule.startswith("Bash(*"), "the `*` never stands in for the program")
         for expected in ("Bash(git push --force*)", "Bash(git push * -f)", "Bash(git * --no-verify)", "Bash(fly deploy*)",
                          "Bash(terraform apply*)", "Bash(aws s3 rb*)", "Bash(gh repo delete*)", "Bash(nsupdate*)",
-                         "Edit(./.claude/settings.json)", "Edit(./.claude/settings.local.json)", "Edit(./Scripts/checks/**)"):
+                         "Edit(./{settings_file})", "Edit(./{settings_local_file})", "Edit(./{checks_dir}/**)", "Edit(./{state_dir}/**)"):
             self.assertIn(expected, deny)
         for program in ("fly", "flyctl", "wrangler", "cloudflared", "terraform", "tofu", "pulumi", "doctl", "aws", "gcloud", "az"):
             self.assertTrue(any(rule.startswith(f"Bash({program} ") for rule in deny), f"{program} has a deny rule")

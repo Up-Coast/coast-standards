@@ -1,9 +1,37 @@
 # Changelog
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
 
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
+
+## 1.1.0 — 2026-09-08
+
+The switches, the config file, and one folder for the layer.
+
+- **One folder.** The checks and the Claude Code session hook now live under `.coast/`
+  (`.coast/checks/`, `.coast/hooks/claude-hook.py`) instead of `Scripts/`. A project that
+  already had a `scripts/` folder no longer collides with them on a Mac. Re-running the
+  installer moves an existing project over and removes the old copies; the `CLAUDE.md`
+  block, `.claude/settings.json` and the hooks are rewritten to the new paths.
+- **A config file, asked once.** `.coast/config.json` holds the switches and the names.
+  A first install at a terminal asks the on/off questions once — one screen each for the
+  rules, the push-gate seats and the session hooks, every default on; `--yes` skips the
+  questions, `--init` asks them again. A switched-off rule is not run, a switched-off seat
+  prints `gate: <name> OFF (config)`, a switched-off session hook exits with a note, a
+  switched-off linter is neither run nor seeded. A severity may be lowered in the config,
+  never raised. `retired_words` add to the retired-wording check; `ratchet_days` sets the
+  starting-line deadline.
+- **The number stays honest.** A rule whose every check is switched off is counted as
+  `off`, not enforced: "enforced by a check 24 of 74 (3 switched off)" in the verifier, the
+  `CLAUDE.md` block and the session-start line.
+- **Names from the config.** `--owner`, `--product` and `--org` fill `owner` in the config;
+  every refusal sentence and the `CLAUDE.md` block read them ("ask Pat Lee in one line
+  first"), with general words when they are blank. No shipped file carries a name.
+- **The block title** now reads "Coast Standards — the standing rules, enforced by machines
+  where a machine can hold them".
+- **Docs.** The developer guide gains "Configuration" and the layout table; the options
+  page gains the switches.
 
 ## 1.0.0 — 2026-09-07
 

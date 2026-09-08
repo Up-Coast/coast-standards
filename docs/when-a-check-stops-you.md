@@ -1,6 +1,6 @@
 # When a check stops you
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
 
 Every refusal prints a line like this:
 
@@ -70,6 +70,7 @@ record. If you are using an AI agent, it is refused outright.
 
 ## "A file I need to edit is refused as governing"
 
-The files that define the checks (`Scripts/checks/`, `.githooks/`, `.coast/`, the rules
-file, the linter configuration, `.claude/settings.json`) are not an agent's to edit. A
-person can edit them. If an agent needs a change there, it should say so and stop.
+The files that define the checks (`.coast/` — the checks, the session hook, the config
+and the starting lines — `.githooks/`, the rules file, the linter configuration,
+`.claude/settings.json`) are not an agent's to edit. A person can edit them. If an agent
+needs a change there, it should say so and stop.

@@ -1,0 +1,25 @@
+{
+  "_comment": "The shipped defaults of a project's config (enforcement/README.md task E5.3). adopt.py writes <state_dir>/config.json from this file on the first adoption (asking the founder the on/off questions once, or taking every default with --yes) and every reader merges the project's file over these defaults through config.py. Everything is ON by default. An entry in an `off` list is the whole switch: the scanner skips the signature, the pre-push hook prints `gate: <seat> OFF (config)` and runs nothing for it, the session hook exits 0 with a note, adopt.py seeds no config for a linter that is off, and verify_rules.py counts the rule as `off` so the headline number stays honest. `severity` may only move a signature DOWN (block, ratchet, advisory); a raise is refused with a sentence. `retired_words` are added to the retired-wording signature. `ratchet_days` is the deadline adopt.py writes on a new baseline. `layout` overrides keys of layout.json (never state_dir). The file is GOVERNING: an agent cannot switch a rule off.",
+  "version": 1,
+  "owner": {
+    "name": "",
+    "product": "",
+    "org": ""
+  },
+  "rules": {
+    "off": [],
+    "severity": {},
+    "retired_words": []
+  },
+  "seats": {
+    "off": []
+  },
+  "session_hooks": {
+    "off": []
+  },
+  "linters": {
+    "off": []
+  },
+  "ratchet_days": 90,
+  "layout": {}
+}

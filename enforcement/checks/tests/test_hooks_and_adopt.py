@@ -102,7 +102,8 @@ class Project:
     def adopt(self, *extra):
         out = io.StringIO()
         with redirect_stdout(out):
-            code = adopt.main([self.path, "--platform", "ios", "--by", "Tester", "--today", "2026-09-04", *extra])
+            # --yes: a first adoption at a terminal asks the on/off questions, and a developer runs these tests at one
+            code = adopt.main([self.path, "--platform", "ios", "--by", "Tester", "--today", "2026-09-04", "--yes", *extra])
         return code, out.getvalue()
 
     def snapshot(self):
@@ -132,21 +133,46 @@ class AdoptTests(unittest.TestCase):
         self.project = Project()
         self.addCleanup(self.project.cleanup)
 
-    def test_a_folder_that_case_folds_to_scripts_is_said_out_loud(self):
-        # On a case-folding filesystem Scripts/checks lands inside an existing scripts/ and git
-        # records it there, so a Linux clone finds nothing at Scripts/checks. The report says so.
+    def test_a_project_with_a_scripts_folder_adopts_cleanly_into_the_state_dir(self):
+        # E5.1: the checks live under the state dir, so nothing case-folds against a scripts/ folder
+        # the project already has (the old .coast/checks landed inside it on a Mac and a Linux clone
+        # found nothing). The report says nothing about it and the checks land where the layout says.
         self.project.write("scripts/deploy.sh", "#!/bin/sh\n")
         self.project.commit("a scripts folder")
-        code, out = self.project.adopt("--dry-run")
+        code, out = self.project.adopt()
         self.assertEqual(code, 0, out)
-        self.assertIn("already has scripts/", out)
-        self.assertIn("a Linux clone will not find them", out)
+        self.assertNotIn("case-folding", out)
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/checks/check_rules.py")))
+        self.assertEqual(sorted(os.listdir(os.path.join(self.project.path, "scripts"))), ["deploy.sh"])
+        self.assertNotIn("Scripts", os.listdir(self.project.path))   # exists() would fold the case
+
+    def test_a_project_adopted_under_the_old_layout_is_moved_into_the_state_dir(self):
+        # E5.1: a project adopted before 1.1.0 carries the checks under Scripts/ and the manifest names
+        # them; the re-adopt puts them under the state dir and removes the old copies, folders included.
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        manifest = json.loads(self.project.read(".coast/installed.json"))
+        old = [f.replace(".coast/checks/", "Scripts/checks/").replace(".coast/hooks/", "Scripts/hooks/") for f in manifest["files"]]
+        for new, previous in zip(manifest["files"], old):
+            if new != previous:
+                target = os.path.join(self.project.path, previous)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.move(os.path.join(self.project.path, new), target)
+        os.remove(os.path.join(self.project.path, ".coast/installed.json"))   # a pre-1.1.0 project has no manifest either
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/checks/check_rules.py")))
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertIn("removed                Scripts/checks/check_rules.py — the layout moved it", out)
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, "Scripts")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/checks/check_rules.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/hooks/claude-hook.py")))
+        self.assertNotIn("Scripts/", json.dumps(json.loads(self.project.read(".coast/installed.json"))))
 
     def test_adopting_twice_changes_nothing_the_second_time(self):
         code, first = self.project.adopt()
         self.assertEqual(code, 0, first)
         before = self.project.snapshot()
-        self.assertIn("Scripts/checks/check_rules.py", before)
+        self.assertIn(".coast/checks/check_rules.py", before)
         for hook in ("pre-commit", "pre-push", "commit-msg"):
             self.assertIn(f".githooks/{hook}", before)
             self.assertTrue(os.access(os.path.join(self.project.path, ".githooks", hook), os.X_OK))
@@ -172,7 +198,7 @@ class AdoptTests(unittest.TestCase):
         self.project.write(".claude/settings.json", json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}, "model": "opus"}))
         code, _ = self.project.adopt()
         self.assertEqual(code, 0)
-        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/hooks/claude-hook.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/hooks/claude-hook.py")))
         settings = json.loads(self.project.read(".claude/settings.json"))
         self.assertEqual(settings["permissions"]["allow"], ["Bash(ls:*)"], "the founder's own settings must survive")
         self.assertEqual(settings["model"], "opus")
@@ -183,7 +209,7 @@ class AdoptTests(unittest.TestCase):
         for hook_id in ("governing-edit", "chained-cd", "infra-command", "no-verify", "force-push",
                         "scan-at-commit", "scan-on-edit", "unpushed-at-stop", "rules-at-start"):
             self.assertIn(hook_id, commands, f"the settings file must wire {hook_id}")
-        self.assertIn("Scripts/hooks/claude-hook.py", commands)
+        self.assertIn(".coast/hooks/claude-hook.py", commands)
 
     def test_adoption_merges_the_deny_rules_in_front_of_the_projects_own_and_resets_disable_all_hooks(self):
         # E2.8: the permission layer travels with the hooks. The shipped deny rules are written once each, before
@@ -196,6 +222,7 @@ class AdoptTests(unittest.TestCase):
         settings = json.loads(self.project.read(".claude/settings.json"))
         with open(os.path.join(REPO_ROOT, "enforcement", "hooks", "claude-settings.json"), encoding="utf-8") as handle:
             shipped = json.load(handle)["permissions"]["deny"]
+        shipped = [adopt.layout_table.defaults().expand(rule) for rule in shipped]   # rendered, not copied (E5.1)
         deny = settings["permissions"]["deny"]
         self.assertEqual(deny[:len(shipped)], shipped)
         self.assertEqual(deny[len(shipped):], ["Bash(rm -rf *)"])
@@ -215,7 +242,7 @@ class AdoptTests(unittest.TestCase):
         block = self.project.read("CLAUDE.md")
         self.assertRegex(block, r"Rules enforced by a check: \d+ of \d+")
         event = json.dumps({"session_id": "t", "cwd": self.project.path, "hook_event_name": "SessionStart", "source": "startup"})
-        done = subprocess.run([sys.executable, os.path.join(self.project.path, "Scripts/hooks/claude-hook.py"), "rules-at-start"],
+        done = subprocess.run([sys.executable, os.path.join(self.project.path, ".coast/hooks/claude-hook.py"), "rules-at-start"],
                               input=event, cwd=self.project.path, capture_output=True, text=True, env=clean_env())
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertRegex(done.stdout, r"rules enforced by a check: \d+ of \d+ in docs/domain-rules.md \(partly \d+")
@@ -505,7 +532,7 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("the plain commit-msg ran", out)
 
     def test_a_governed_file_the_new_release_no_longer_ships_is_removed(self):
-        # A module renamed upstream left its old file in Scripts/checks for ever. The manifest
+        # A module renamed upstream left its old file in .coast/checks for ever. The manifest
         # says what was installed; what this release does not ship is removed. A file the
         # founder put there is not the installer's and stays.
         with tempfile.TemporaryDirectory() as older:
@@ -516,21 +543,21 @@ class AdoptTests(unittest.TestCase):
             with unittest.mock.patch.object(adopt, "CHECKS_DIR", shipped):
                 code, out = self.project.adopt()
             self.assertEqual(code, 0, out)
-        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/checks/old_module.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/checks/old_module.py")))
         manifest = json.loads(self.project.read(".coast/installed.json"))
-        self.assertIn("Scripts/checks/old_module.py", manifest["files"])
+        self.assertIn(".coast/checks/old_module.py", manifest["files"])
         self.assertIn(".githooks/pre-push", manifest["files"])
-        self.project.write("Scripts/checks/mine.py", "# the founder's own\n")
+        self.project.write(".coast/checks/mine.py", "# the founder's own\n")
         code, out = self.project.adopt("--dry-run")
         self.assertIn("would remove", out)
-        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/checks/old_module.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/checks/old_module.py")))
         code, out = self.project.adopt()
         self.assertEqual(code, 0, out)
         self.assertIn("removed", out)
-        self.assertIn("Scripts/checks/old_module.py", out)
-        self.assertFalse(os.path.isfile(os.path.join(self.project.path, "Scripts/checks/old_module.py")))
-        self.assertTrue(os.path.isfile(os.path.join(self.project.path, "Scripts/checks/mine.py")))
-        self.assertNotIn("Scripts/checks/old_module.py", json.loads(self.project.read(".coast/installed.json"))["files"])
+        self.assertIn(".coast/checks/old_module.py", out)
+        self.assertFalse(os.path.isfile(os.path.join(self.project.path, ".coast/checks/old_module.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, ".coast/checks/mine.py")))
+        self.assertNotIn(".coast/checks/old_module.py", json.loads(self.project.read(".coast/installed.json"))["files"])
 
     def test_detect_platform_reads_the_pbxproj_of_an_xcodeproj_only_project(self):
         # Every one of the owner's apps is an .xcodeproj with no Package.swift; detection returned None for all of them.
@@ -612,7 +639,7 @@ class HookTests(unittest.TestCase):
         # meant no re-adoption to put them back.
         sh(self.project.path, "git", "reset", "-q")
         sh(self.project.path, "git", "checkout", "-q", "--", ".")
-        sh(self.project.path, "git", "clean", "-qfd", "--exclude=.coast", "--exclude=Scripts", "--exclude=.githooks",
+        sh(self.project.path, "git", "clean", "-qfd", "--exclude=.coast", "--exclude=.githooks",
            "--exclude=CLAUDE.md", "--exclude=docs")
 
     def test_pre_commit_refuses_a_staged_ui_string_literal_and_passes_a_clean_file(self):
@@ -629,7 +656,7 @@ class HookTests(unittest.TestCase):
         code, out = self.project.hook("pre-commit")
         self.assertEqual(code, 0, out)
         self.assertIn("every pre-commit check green", out)
-        self.assertFalse(os.path.isdir(os.path.join(self.project.path, "Scripts", "checks", "__pycache__")), "the hook must leave no __pycache__ in the project")
+        self.assertFalse(os.path.isdir(os.path.join(self.project.path, ".coast", "checks", "__pycache__")), "the hook must leave no __pycache__ in the project")
 
     def commit_msg(self, text, agent=False):
         path = os.path.join(self.project.path, "MSG")
