@@ -587,7 +587,9 @@ class Adoption:
             if not os.path.isfile(source):
                 self.say("note", dest, f"the {linter} config {config} is not shipped by the standards repo yet")
                 continue
-            self.put_seed(dest, read_bytes(source))
+            # rendered, not copied: a seed names the layer's own folder as a {key} of the
+            # layout table, so the project's linter never lints the checks (E5.1's shape).
+            self.put_seed(dest, self.layout.expand(read_bytes(source).decode("utf-8")).encode("utf-8"))
         rules_doc = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
         if os.path.isfile(rules_doc):
             self.put_rules_document(read_bytes(rules_doc))

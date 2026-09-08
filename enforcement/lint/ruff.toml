@@ -5,6 +5,14 @@
 # A rule set is named by its prefix; every code under it is on unless it is
 # listed under ignore. B006 is under B; keep B selected and out of ignore.
 line-length = 100
+# The enforcement layer's own folder is not the project's code: the checks and the
+# session hook ship as they are, so a project's linter never reports on them.
+# `{state_dir}` is filled from the layout table when this seed is installed.
+extend-exclude = ["{state_dir}"]
+# ...even when a path is handed to ruff directly, which is how a pre-commit run passes
+# staged files (`ruff check --help`: "Enforce exclusions, even for paths passed to Ruff
+# directly on the command-line").
+force-exclude = true
 
 [lint]
 select = [

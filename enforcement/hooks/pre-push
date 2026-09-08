@@ -516,17 +516,21 @@ case "$platform" in
         printf 'gate: tests — no tests directory found; nothing ran (add tests/ — rules/06)\n'
       fi
     fi
+    # The layer's own folder is the layer's, not the project's code: the seeds exclude it and
+    # so does the battery, so a seat stays right whatever a founder edits into a seed. The flags
+    # are the tools' own: ruff `--extend-exclude` ("adds additional files and directories on top
+    # of those already excluded"), mypy `--exclude` (a regular expression, hence the escaped name).
     if wants lint; then
       if linter_on ruff; then
         need ruff "pip install ruff" || exit 1
-        run "lint (ruff check)" ruff check .
+        run "lint (ruff check)" ruff check . --extend-exclude "$layout_state_dir"
       fi
       if linter_on mypy; then
         need mypy "pip install mypy" || exit 1
-        run "types (mypy)" mypy .
+        run "types (mypy)" mypy . --exclude "^$layout_state_dir_regex/"
       fi
     fi
-    wants format && linter_on ruff && run "format (ruff format --check)" ruff format --check .
+    wants format && linter_on ruff && run "format (ruff format --check)" ruff format --check . --extend-exclude "$layout_state_dir"
     ;;
   *)
     echo "FAIL pre-push $state/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2

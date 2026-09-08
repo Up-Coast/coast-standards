@@ -10,7 +10,9 @@ one table, ``layout.json`` beside this file (enforcement/README.md task E5.1).
   ``state_dir`` is the anchor the hooks find the config by, so it comes from
   the defaults (or ``<prefix>STATE_DIR``) and a project file cannot move it.
 * ``Layout.expand(text)`` fills ``{key}`` placeholders — the shape ``paths.json``'s
-  governing classes and ``claude-settings.json`` are written in.
+  governing classes, ``claude-settings.json`` and the linter seeds are written in
+  (a seed excludes the layer's own folder, so a project's linter never lints the
+  checks: ``{state_dir}``, or ``{state_dir_regex}`` where the tool wants a regex).
 * ``Layout.to_sh()`` is the ``layout.sh`` the installer writes beside the
   platform file, which a ``sh`` hook sources instead of carrying literals.
 
@@ -30,7 +32,7 @@ CONFIG_FILE = "config.json"    # the project's config, in its state dir; its "la
 SCRIPT_FILE = "layout.sh"      # the rendered table the sh hooks source, in its state dir
 KEYS = ("checks_dir", "hooks_dir", "session_hook", "settings_file", "state_dir", "rules_document",
         "ai_rules_document", "context_file", "lock_name", "temp_prefix", "env_prefix")
-DERIVED = ("session_hook_dir", "settings_local_file")
+DERIVED = ("session_hook_dir", "settings_local_file", "state_dir_regex")
 PLACEHOLDER = re.compile(r"\{(" + "|".join(KEYS + DERIVED) + r")\}")
 
 
@@ -45,6 +47,12 @@ class Layout(dict):
     def settings_local_file(self):
         base, extension = os.path.splitext(self.expand(self["settings_file"]))
         return f"{base}.local{extension}"
+
+    @property
+    def state_dir_regex(self):
+        r"""The state dir escaped for a tool whose exclude is a regular expression (mypy's
+        ``--exclude``, whose own help escapes the dot: ``--exclude '/setup\.py$'``)."""
+        return re.escape(self.expand(self["state_dir"]))
 
     def value(self, key):
         if key in DERIVED:
