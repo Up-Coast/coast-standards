@@ -5,6 +5,33 @@
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
 
+## 1.1.1 — 2026-09-08
+
+A project that runs Python can complete its first push.
+
+- **The linter stops reporting on the layer itself.** The seeded `ruff.toml` and `mypy.ini`
+  read the whole tree, so the checks and the session hook — which ship as they are and are
+  not the project's code — came back as the project's own findings, and a first push could
+  not go green. The seeds now exclude the layer's folder, and the push battery excludes it
+  too, so a seat stays right whatever is later edited into a seed. A Swift or Node project
+  was never affected: the layer holds no source of their kind.
+  *Upgrading:* re-run the installer. A seed you have edited is left alone, as always — so
+  add `extend-exclude = [".coast"]` to your `ruff.toml` and `exclude = ^\.coast/` to your
+  `mypy.ini` yourself, or the battery will pass while your own `ruff check .` keeps
+  reporting the layer.
+- **Seeds are rendered, not copied.** A linter seed may name a layout key as `{state_dir}`
+  the way the settings file and the governing classes already do, so a project that moves
+  the layer's folder gets a seed that matches. The layout table gains `state_dir_regex`
+  beside `state_dir`, for a tool whose exclude is a regular expression.
+- **The module-layering check reads Python.** `import-matrix` (ARCH-2) knew only the Swift,
+  Gradle and Node layouts, so on a Python project it stopped the push with "unknown
+  platform" — while the Python rules document promised the check. It now reads a Python
+  layout: one package (under `src/`, else the root) makes that package's subpackages the
+  modules and its root files the app target; several packages side by side each count as a
+  module. A `src.`-prefixed absolute import is tolerated, and module names are matched
+  without regard to case, so a lowercase `domain` package is the shared centre the rule
+  expects.
+
 ## 1.1.0 — 2026-09-08
 
 The switches, the config file, and one folder for the layer.
