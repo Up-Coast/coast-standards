@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Android Lint (developer.android.com/studio/write/lint: the lint.xml file).
+     Installed by Coast beside detekt.yml and .editorconfig; yours to edit.
+     The standard issue set applies; the lines here raise the issues the rule
+     documents name to errors so a clean `./gradlew lint` holds them.
+     Rules held here (enforcement/README.md section 5.2):
+       L-1 / ACC (Android) — HardcodedText: an android:text literal in layout XML. -->
+<lint>
+    <issue id="HardcodedText" severity="error" />
+</lint>

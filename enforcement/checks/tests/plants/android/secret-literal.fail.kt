@@ -1,0 +1,1 @@
+const val API_KEY = "AKIAABCDEFGHIJKLMNOP"

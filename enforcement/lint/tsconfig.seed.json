@@ -1,0 +1,20 @@
+{
+  "_comment": "TypeScript seed (typescriptlang.org/tsconfig). Installed by Coast as the project's tsconfig.json when it has none — a project that already has one keeps it, and the push gate reads compilerOptions.strict from whichever file is there; yours to edit. C-1 (Web, React Native) names tsc:strict: strict is on, which turns on noImplicitAny, strictNullChecks and the rest of the strict family (typescriptlang.org/tsconfig/#strict); noImplicitAny is also named on its own so it stays on even if strict is ever loosened. The rest is a working starter: source under src/, checked and never emitted (a bundler builds), the bundler resolution, React's automatic JSX runtime (harmless without React — jsx only touches .tsx files). The type-checked ESLint config beside this file (eslint.config.mjs) reads the project through TypeScript's project service, so this file is the one type source.",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "build"]
+}

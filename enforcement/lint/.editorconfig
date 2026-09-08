@@ -1,0 +1,8 @@
+# ktlint reads this file (its own documentation: properties under [*.{kt,kts}]).
+# Installed by Coast; yours to edit.
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+indent_size = 4
+max_line_length = 120

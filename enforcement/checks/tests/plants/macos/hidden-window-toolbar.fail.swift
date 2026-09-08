@@ -1,0 +1,1 @@
+.toolbar(.hidden, for: .windowToolbar)

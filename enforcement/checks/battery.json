@@ -1,0 +1,244 @@
+{
+  "_comment": "The battery manifest: what each platform's gate battery runs, as files on disk. verify_rules.py resolves every rule's [check: ...] tag against this file and the files it names, so a rule can never name a check nothing runs. The design is enforcement/README.md section 4.1; this file is the machine-readable side of it. Paths are relative to the repo root. A path listed here that does not exist yet is a gap the verifier reports, never a claim it believes.",
+  "scanner": "enforcement/checks/check_rules.py",
+  "signatures_file": "enforcement/checks/rules_signatures.json",
+  "session_hook_files": [
+    "enforcement/hooks/claude-settings.json",
+    "enforcement/hooks/commit-msg"
+  ],
+  "documents": [
+    {
+      "path": "rules/00-priority-rules.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/01-working-style.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/02-architecture-and-code.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/03-security-owasp.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/04-localization.md",
+      "platforms": [
+        "ios",
+        "macos",
+        "android",
+        "react-native",
+        "web"
+      ]
+    },
+    {
+      "path": "rules/05-design-and-ui.md",
+      "platforms": [
+        "ios",
+        "macos",
+        "android",
+        "react-native",
+        "web"
+      ]
+    },
+    {
+      "path": "rules/06-testing.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/07-documentation-git-process.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/08-auditing-and-completeness.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/09-models-and-agents.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/10-development-environment.md",
+      "platforms": "all"
+    },
+    {
+      "path": "rules/platform/domain-rules-ios.md",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "path": "rules/platform/domain-rules-macos.md",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "path": "rules/platform/domain-rules-android.md",
+      "platforms": [
+        "android"
+      ]
+    },
+    {
+      "path": "rules/platform/domain-rules-react-native.md",
+      "platforms": [
+        "react-native"
+      ]
+    },
+    {
+      "path": "rules/platform/domain-rules-web.md",
+      "platforms": [
+        "web"
+      ]
+    },
+    {
+      "path": "rules/platform/domain-rules-python.md",
+      "platforms": [
+        "python"
+      ]
+    },
+    {
+      "path": "rules/platform/ai-features.md",
+      "platforms": "all"
+    }
+  ],
+  "platforms": {
+    "ios": {
+      "linters": {
+        "swiftlint": {
+          "config": "enforcement/lint/swiftlint.yml"
+        },
+        "swiftformat": {
+          "config": "enforcement/lint/swift-format.json"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    },
+    "macos": {
+      "linters": {
+        "swiftlint": {
+          "config": "enforcement/lint/swiftlint.yml"
+        },
+        "swiftformat": {
+          "config": "enforcement/lint/swift-format.json"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    },
+    "android": {
+      "linters": {
+        "detekt": {
+          "config": "enforcement/lint/detekt.yml"
+        },
+        "ktlint": {
+          "config": "enforcement/lint/.editorconfig"
+        },
+        "androidlint": {
+          "config": "enforcement/lint/lint.xml"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    },
+    "react-native": {
+      "linters": {
+        "eslint": {
+          "config": "enforcement/lint/eslint.config.mjs"
+        },
+        "tsc": {
+          "config": "enforcement/lint/tsconfig.seed.json"
+        },
+        "prettier": {
+          "config": "enforcement/lint/.prettierrc.json"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    },
+    "web": {
+      "linters": {
+        "eslint": {
+          "config": "enforcement/lint/eslint.config.mjs"
+        },
+        "tsc": {
+          "config": "enforcement/lint/tsconfig.seed.json"
+        },
+        "prettier": {
+          "config": "enforcement/lint/.prettierrc.json"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    },
+    "python": {
+      "linters": {
+        "ruff": {
+          "config": "enforcement/lint/ruff.toml"
+        },
+        "mypy": {
+          "config": "enforcement/lint/mypy.ini"
+        }
+      },
+      "tools": {
+        "jscpd": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "gh-ruleset": {
+          "runner": "enforcement/hooks/pre-push"
+        },
+        "warnings-as-errors": {
+          "runner": "enforcement/hooks/pre-push"
+        }
+      }
+    }
+  }
+}

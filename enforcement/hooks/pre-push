@@ -1,0 +1,688 @@
+#!/bin/sh
+# Coast Standards — the project's pre-push hook: the full gate battery
+# for the platform (enforcement task E2.2; design enforcement/README.md
+# §4.4 and §5.3). Nothing is pushed unverified — a failure stays local.
+#
+# One script, a per-platform switch, one seat per check, each seat refusing
+# in its own lines and announced as `gate: <name>` (Coast's own hook shape):
+#
+#   build            with warnings-as-errors (tool:warnings-as-errors) —
+#                    swift build -Xswiftc -warnings-as-errors; gradle needs
+#                    allWarningsAsErrors in its build files; tsc --noEmit
+#                    under "strict"; eslint --max-warnings 0; Python tests
+#                    run with PYTHONWARNINGS=error. On a repository that
+#                    already carries warnings (a `build-warnings` entry in
+#                    .coast/ratchet-baseline.json, written by adopt.py
+#                    --measure-tools), the Swift build runs without the
+#                    switch and its warning count is a RATCHET: the rule is
+#                    "zero NEW warnings" (C-4), the count may only fall, and
+#                    past the deadline the switch comes back (decision 2)
+#   tests            the platform's test runner; an app adopted with no test
+#                    target at all carries a `tests-missing` entry (count 1,
+#                    with the deadline) instead of failing every push — the
+#                    real tests run the day a target exists (decision 2)
+#   lint / format    the shipped linter configs, format in check mode; the
+#                    Swift linter's and formatter's findings ratchet the same
+#                    way under `lint-findings` / `format-findings` entries
+#   rules-scan       check_rules.py on the lines added since the remote,
+#                    then on the whole tree (tree signatures + ratchets)
+#   doc-comments     held on ADDED lines by the rules-scan seat (the scanner's
+#                    doc-comments built-in); this seat prints the whole-tree
+#                    count as an advisory — a legacy tree's debt is not a
+#                    rewrite day nobody sanctioned (decision 2)
+#   jscpd            tool:jscpd — duplicated code; refuses NEW clones against
+#                    the committed baseline .coast/jscpd-baseline.json
+#                    (`--baseline … --fail-on-new-clones`, jscpd 5.1.2, see
+#                    enforcement/TOOLCHAIN.md); past the baseline's deadline
+#                    any clone refuses (`--exit-code`, decision 2)
+#   gh-ruleset       tool:gh-ruleset — read-only, through `gh api`: the
+#                    default branch carries an active ruleset with
+#                    pull_request, deletion and non_fast_forward rules and
+#                    no bypass actors (rules/07 protected main). Skipped
+#                    with a plain-words note when gh is absent or offline.
+#
+# git calls this as `pre-push <remote> <url>` with the ref lines on stdin.
+# Run by hand as `pre-push --seat <name>[,<name>]` to run named seats
+# (tests use this; git never passes --seat, so it is no bypass), or as
+# `pre-push --measure <name>[,<name>]` to run the build/format seats in
+# counting mode: each prints `MEASURE <id> <count>` instead of judging, so
+# adopt.py can write the ratchet baseline from what the tools report.
+# The platform is one word in .coast/platform (or COAST_PLATFORM); checks
+# live under Scripts/checks/ (COAST_CHECKS_DIR overrides). JSCPD_BIN names
+# a jscpd binary when it is not on PATH. GOVERNING: agents never edit the
+# files that define their own checks.
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
+export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
+export SWT_SF_SYMBOLS_ENABLED=0   # Swift Testing's marks paste as plain text
+
+checks=${COAST_CHECKS_DIR:-Scripts/checks}
+platform=${COAST_PLATFORM:-}
+if [ -z "$platform" ] && [ -f .coast/platform ]; then
+  platform=$(tr -d '[:space:]' < .coast/platform)
+fi
+if [ -z "$platform" ]; then
+  echo "FAIL pre-push .coast/platform:0:platform: no platform named — write one word to .coast/platform, or run adopt.py" >&2
+  exit 1
+fi
+
+seats=all
+measure=0
+push_remote=${1-}
+push_url=${2-}
+if [ "${1-}" = "--seat" ]; then
+  seats=${2:?--seat needs a name}
+  push_remote=""; push_url=""
+elif [ "${1-}" = "--measure" ]; then
+  seats=${2:?--measure needs a name}
+  measure=1
+  push_remote=""; push_url=""
+fi
+
+# A seat a PERSON has excused, with a reason and a date it runs again. The founder writes
+# these into .coast/rules-exceptions.json, which is GOVERNING — the session hooks refuse an
+# agent editing it, so this is a door only a human can open. It exists because a wrong check
+# would otherwise block every push with no sanctioned way out: the rules say never
+# --no-verify, and an agent that finds a false positive has nothing to do but stop. An entry
+# without an `until` date, or past it, is ignored and the seat runs.
+excused() {
+  [ -f .coast/rules-exceptions.json ] || return 1
+  python3 - "$1" <<'PY'
+import datetime, json, sys
+seat = sys.argv[1]
+try:
+    with open(".coast/rules-exceptions.json", encoding="utf-8") as handle:
+        entries = json.load(handle).get("exceptions", [])
+except (OSError, ValueError):
+    sys.exit(1)
+today = datetime.date.today()
+for entry in entries:
+    if not isinstance(entry, dict) or entry.get("seat") != seat:
+        continue
+    until = entry.get("until")
+    try:
+        expires = datetime.date.fromisoformat(until) if until else None
+    except (TypeError, ValueError):
+        expires = None
+    if expires is None:
+        print("the exception names no 'until' date (YYYY-MM-DD), so it is not honoured")
+        sys.exit(1)
+    if expires < today:
+        print(f"the exception expired {until}, so this seat runs again")
+        sys.exit(1)
+    print(f"excused by {entry.get('who', 'someone')} until {until} — {entry.get('reason', 'no reason given')}")
+    sys.exit(0)
+sys.exit(1)
+PY
+}
+
+wants_named() {  # <seat> — named on the command line (or every seat), excuses aside
+  case ",$seats," in
+    *,all,*|*",$1,"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+wants() {
+  wants_named "$1" || return 1
+  if excuse=$(excused "$1"); then
+    printf 'gate: %s SKIPPED — %s\n' "$1" "$excuse"
+    return 1
+  fi
+  [ -n "${excuse:-}" ] && printf 'gate: %s — %s\n' "$1" "$excuse"
+  return 0
+}
+
+# ---------------------------------------------------------------- one gate at a time
+# Two sessions sharing one checkout ran their gates at the same time and hurt each other
+# twice over: their incremental builds crossed (a warning count read 0 because the other
+# build had just made everything current), and the slower push spent twenty-five minutes
+# only to be rejected by a ref lock the faster one had taken. The gate is serialised per
+# checkout with a lock directory, which mkdir creates atomically. After the wait the hook
+# checks whether the remote moved: if it did, it says so in seconds instead of building
+# for half an hour and losing the race again.
+lock="$(git rev-parse --git-common-dir)/coast-push.lock"
+
+release_push_lock() { rm -rf "$lock"; }
+
+lock_age() {  # seconds since the lock directory was made — its own mtime, which exists the
+              # instant mkdir succeeds (a start-time file left a window in which a second
+              # push read "no start time", called the live lock stale and took it too)
+  python3 -c 'import os, sys, time
+try:
+    print(int(time.time() - os.stat(sys.argv[1]).st_mtime))
+except OSError:
+    print(0)' "$lock" 2>/dev/null || echo 0
+}
+
+take_push_lock() {
+  waited=0
+  while ! mkdir "$lock" 2>/dev/null; do
+    age=$(lock_age)
+    if [ "$age" -gt 3600 ]; then
+      printf 'gate: breaking a push lock left behind (%ss old)\n' "$age"
+      rm -rf "$lock"
+      continue
+    fi
+    [ "$waited" -eq 0 ] && printf 'gate: another push is running in this checkout — waiting for it to finish\n'
+    sleep 10
+    waited=$(( waited + 10 ))
+    if [ "$waited" -gt 2700 ]; then
+      echo "FAIL pre-push $lock:0:push-lock: another push has held this checkout for 45 minutes — check that it is still alive, then push again" >&2
+      return 1
+    fi
+  done
+  trap 'release_push_lock' EXIT
+  trap 'release_push_lock; trap - EXIT; exit 130' INT TERM   # a signal releases the lock AND stops the gate
+  [ "$waited" -gt 0 ] && printf 'gate: the other push finished after %ss; starting this one\n' "$waited"
+  return 0
+}
+
+remote_still_ours() {
+  upstream=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
+  git fetch -q "${push_remote:-origin}" 2>/dev/null || return 0
+  moved=$(git rev-parse --verify -q '@{upstream}' 2>/dev/null) || return 0
+  [ "$moved" = "$upstream" ] && return 0
+  if git merge-base --is-ancestor "$moved" HEAD 2>/dev/null; then
+    printf 'gate: the remote moved while this push waited, and this branch already contains it\n'
+    return 0
+  fi
+  echo "FAIL pre-push origin:0:remote-moved: the remote moved while this push waited — fetch and rebase, then push again. Nothing was built, so nothing was wasted." >&2
+  return 1
+}
+
+# The ref lines git hands a pre-push hook on stdin, kept in a file: the rules scan reads
+# them to know WHAT is being pushed, and the project's previous hook gets them again. A
+# `--seat rules-scan` run reads them too when they are piped in (the tests push a branch
+# that is not HEAD this way); --measure never reads stdin.
+refs_file=""
+if [ ! -t 0 ] && [ "$measure" = 0 ] && { [ "$seats" = all ] || wants_named rules-scan; }; then
+  refs_file=$(mktemp "${TMPDIR:-/tmp}/coast-refs.XXXXXX") || refs_file=""
+  [ -n "$refs_file" ] && cat > "$refs_file"
+fi
+
+if [ "$seats" = all ]; then
+  take_push_lock || exit 1
+  remote_still_ours || exit 1
+fi
+
+# A project that had its own hooks keeps them: ours run first, then its own, with the same
+# ref lines on stdin. adopt.py wrote the path it found into .coast/previous-hooks-path.
+# one adopting web project's pre-push ran gitleaks, and pointing core.hooksPath at .githooks switched
+# that off without a word — a check the founder chose is never dropped on the floor.
+previous_hooks() {
+  [ -f .coast/previous-hooks-path ] || return 0
+  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+  [ -n "$previous" ] && [ -f "$previous/pre-push" ] || return 0
+  printf 'gate: %s/pre-push (this project had it before it adopted)\n' "$previous"
+  # An executable hook runs as itself (its shebang may say python or bash); one that
+  # is not executable is handed to sh.
+  if [ -x "$previous/pre-push" ]; then set -- "$previous/pre-push"; else set -- sh "$previous/pre-push"; fi
+  if [ -n "$refs_file" ]; then
+    "$@" "$push_remote" "$push_url" < "$refs_file"
+  else
+    "$@" "$push_remote" "$push_url" < /dev/null
+  fi
+}
+
+run() {
+  name=$1; shift
+  printf 'gate: %s\n' "$name"
+  if ! "$@"; then
+    printf 'gate: %s failed — the push was refused. Fix what it printed, then push again.\n' "$name" >&2
+    exit 1
+  fi
+}
+
+need() {  # a battery member that is not installed is a refusal, never a silent pass
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "FAIL pre-push toolchain:0:$1: $1 is not installed — $2 (enforcement/TOOLCHAIN.md)" >&2
+    return 1
+  fi
+}
+
+# A tool ratchet (decision 2 on the tools): when the baseline carries an entry
+# for the tool — or in --measure mode — the tool runs without its strict switch
+# and its finding count is judged like any scanner ratchet by check_rules.py
+# (one baseline file, one verdict); with no entry it runs strict, so a fresh
+# repository is held at zero from its first push.
+ratcheted() {  # <id>
+  [ "$measure" = 1 ] || python3 "$checks/check_rules.py" --has-baseline "$1" >/dev/null 2>&1
+}
+judge() {  # <id> <count>
+  if [ "$measure" = 1 ]; then
+    printf 'MEASURE %s %s\n' "$1" "$2"
+    return 0
+  fi
+  python3 "$checks/check_rules.py" --ratchet "$1" --count "$2" --platform "$platform"
+}
+# A warning count is only comparable with the baseline on a FULL build: an incremental
+# build prints warnings only for the files it recompiles, so it would read as a fall
+# (refused: "lower the baseline") or hide a rise. Ratcheted builds therefore recompile
+# everything of the project's own — SwiftPM drops the package's own targets' build
+# products (dependencies stay built), xcodebuild runs `clean build`.
+own_targets_rebuild() {
+  names=$(swift package describe --type json 2>/dev/null | python3 -c 'import json, sys
+print(" ".join(t["name"] for t in json.load(sys.stdin).get("targets", [])))' 2>/dev/null) || names=""
+  if [ -z "$names" ]; then
+    swift package clean >/dev/null 2>&1
+    return 0
+  fi
+  for name in $names; do
+    rm -rf ".build/debug/$name.build"
+  done
+}
+count_warnings() {  # <log> — distinct `file:line:col: warning:` lines
+  grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: ' "$1" | sort -u | wc -l | tr -d ' '
+}
+count_format_findings() {  # <log> — swift-format's and swiftlint's `file:line:col: warning|error:` lines
+  grep -cE '^[^ ]+:[0-9]+:[0-9]+: (warning|error): ' "$1" | tr -d ' '
+}
+# <id> <counter> <command…>: run the tool into a log, echo the log, count, judge.
+ratcheted_run() {
+  id=$1; counter=$2; shift 2
+  log=$(mktemp "${TMPDIR:-/tmp}/coast-gate.XXXXXX") || return 1
+  "$@" > "$log" 2>&1
+  status=$?
+  if [ "$id" = build-warnings ] || [ "$measure" = 1 ]; then cat "$log"; else head -n 40 "$log"; fi
+  if [ "$id" = build-warnings ] && [ $status -ne 0 ]; then
+    rm -f "$log"
+    return 1
+  fi
+  n=$("$counter" "$log")
+  rm -f "$log"
+  judge "$id" "${n:-0}"
+}
+
+tests_missing() {  # 1 when the project has no test target at all, else 0 (the tests-missing baseline)
+  if [ -f Package.swift ]; then
+    swift package describe --type json 2>/dev/null | python3 -c 'import json,sys
+d = json.load(sys.stdin); sys.exit(0 if any(t.get("type") == "test" for t in d.get("targets", [])) else 1)' && echo 0 || echo 1
+  else
+    xcodebuild -list -json 2>/dev/null | python3 -c 'import json,sys
+d = json.load(sys.stdin); names = (d.get("project") or d.get("workspace") or {}).get("targets", [])
+sys.exit(0 if any(n.endswith(("Tests", "UITests")) for n in names) else 1)' && echo 0 || echo 1
+  fi
+}
+# <scheme>: the iOS/macOS test run. The iPhone simulator first; when xcodebuild can see
+# no simulator at all (one adopting app on a developer's Mac: only "Any iOS Simulator Device" and
+# "My Mac, Designed for iPad" were listed, every real device unmatched), the same tests
+# run on the Mac's Designed-for-iPad destination, which needs no simulator to boot.
+xcode_tests() {
+  scheme=$1
+  log=$(mktemp "${TMPDIR:-/tmp}/coast-tests.XXXXXX") || return 1
+  xcodebuild test -quiet -scheme "$scheme" -destination "$(xcode_test_destination)" CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+  status=$?
+  if [ $status -ne 0 ] && [ "$platform" = ios ] && grep -q 'Unable to find a device matching the provided destination' "$log"; then
+    printf 'tests: no iOS simulator matched, so the tests run on the Mac (Designed for iPad)\n'
+    xcodebuild test -quiet -scheme "$scheme" -destination 'platform=macOS,variant=Designed for [iPad,iPhone]' CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+    status=$?
+  fi
+  cat "$log"
+  rm -f "$log"
+  return $status
+}
+# <command…>: the tests seat. An existing app with no test target at all cannot pass
+# a test run; under a tests-missing entry (adopt.py --measure-tools wrote it, with the
+# deadline) the seat judges that instead, and runs the real tests the day a target exists.
+tests_seat() {
+  if ratcheted tests-missing; then
+    missing=$(tests_missing)
+    if [ "$missing" = 1 ] || [ "$measure" = 1 ]; then
+      judge tests-missing "$missing"
+      return $?
+    fi
+  fi
+  "$@"
+}
+
+xcode_scheme() {  # .coast/xcode-scheme, else the first scheme xcodebuild lists
+  if [ -f .coast/xcode-scheme ]; then
+    tr -d '[:space:]' < .coast/xcode-scheme
+    return 0
+  fi
+  first=$(xcodebuild -list 2>/dev/null | awk '/Schemes:/{flag=1; next} flag && NF {print $1; exit}')
+  if [ -z "$first" ]; then
+    echo "FAIL pre-push .coast/xcode-scheme:0:scheme: no scheme found — write the scheme name to .coast/xcode-scheme" >&2
+    return 1
+  fi
+  echo "$first"
+}
+
+xcode_build_destination() {
+  if [ "$platform" = "macos" ]; then echo "platform=macOS"; else echo "generic/platform=iOS Simulator"; fi
+}
+
+xcode_test_destination() {
+  if [ "$platform" = "macos" ]; then echo "platform=macOS"; return; fi
+  # The iPhone simulator on the NEWEST installed iOS runtime, by id: a device on an older
+  # runtime than the app's deployment target is invisible to xcodebuild (one adopting app, iOS 26,
+  # with iPhone 16 on iOS 18 — "no available devices matched the request").
+  udid=$(xcrun simctl list devices available -j 2>/dev/null | python3 -c 'import json, sys
+devices = json.load(sys.stdin)["devices"]
+def version(runtime):
+    tail = runtime.rsplit("iOS-", 1)[-1] if "iOS-" in runtime else ""
+    return tuple(int(part) for part in tail.split("-") if part.isdigit())
+best = None
+for runtime, entries in devices.items():
+    if "iOS" not in runtime:
+        continue
+    for device in entries:
+        if "iPhone" in device.get("name", "") and device.get("isAvailable", True):
+            key = (version(runtime), device["name"])
+            if best is None or key > best[0]:
+                best = (key, device["udid"])
+print(best[1] if best else "")' 2>/dev/null)
+  if [ -n "$udid" ]; then
+    echo "platform=iOS Simulator,id=$udid"
+  else
+    echo "platform=iOS Simulator,name=iPhone 16"
+  fi
+}
+
+# ------------------------------------------------------------------ build → tests → lint → format
+case "$platform" in
+  ios|macos)
+    if [ -f Package.swift ]; then
+      # A Swift package: build and test through SwiftPM.
+      if wants build; then
+        if ratcheted build-warnings; then
+          own_targets_rebuild
+          run "build (warnings ratchet, the package's own targets rebuilt)" ratcheted_run build-warnings count_warnings swift build
+        else
+          # warnings-as-errors: the Swift build fails on any warning.
+          run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
+        fi
+      fi
+      wants tests && run "tests" tests_seat swift test
+    else
+      # An Xcode project or workspace (xcodegen apps): build and test through
+      # xcodebuild. The scheme is .coast/xcode-scheme, else the first scheme
+      # xcodebuild lists; the destination is a generic simulator for the
+      # build and the first available iPhone (or the Mac) for the tests.
+      need xcodebuild "install Xcode" || exit 1
+      scheme=$(xcode_scheme) || exit 1
+      if wants build; then
+        if ratcheted build-warnings; then
+          run "build (warnings ratchet, clean build)" ratcheted_run build-warnings count_warnings \
+            xcodebuild clean build -quiet -scheme "$scheme" -destination "$(xcode_build_destination)" \
+            CODE_SIGNING_ALLOWED=NO
+        else
+          # warnings-as-errors: SWIFT_TREAT_WARNINGS_AS_ERRORS fails the build on any warning.
+          run "build (warnings-as-errors)" xcodebuild build -quiet -scheme "$scheme" \
+            -destination "$(xcode_build_destination)" SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            CODE_SIGNING_ALLOWED=NO
+        fi
+      fi
+      wants tests && run "tests" tests_seat xcode_tests "$scheme"
+    fi
+    if wants lint; then
+      need swiftlint "brew install swiftlint" || exit 1
+      if ratcheted lint-findings; then
+        run "lint (findings ratchet)" ratcheted_run lint-findings count_format_findings swiftlint lint --quiet
+      else
+        run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
+      fi
+    fi
+    if wants format; then
+      need swift-format "brew install swift-format" || exit 1
+      # every tracked Swift file, so an Xcode layout with no Sources/ folder is covered too
+      if ratcheted format-findings; then
+        run "format (findings ratchet)" ratcheted_run format-findings count_format_findings \
+          sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
+      else
+        run "format (swift-format lint)" sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
+      fi
+    fi
+    ;;
+  android)
+    if wants build; then
+      # warnings-as-errors: Kotlin's allWarningsAsErrors must be set in the build files.
+      if ! grep -rqs 'allWarningsAsErrors[[:space:]]*=[[:space:]]*true\|allWarningsAsErrors\.set(true)' --include='*.gradle' --include='*.gradle.kts' .; then
+        echo "FAIL pre-push build.gradle:0:warnings-as-errors: the Kotlin build does not set allWarningsAsErrors = true — add it to the module's kotlinOptions/compilerOptions" >&2
+        exit 1
+      fi
+      run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
+    elif wants tests; then
+      run "tests" ./gradlew --quiet test
+    fi
+    if wants lint; then
+      run "lint (detekt)" ./gradlew --quiet detekt
+    fi
+    if wants format; then
+      need ktlint "brew install ktlint" || exit 1
+      run "format (ktlint)" ktlint
+    fi
+    ;;
+  react-native|web)
+    if wants build; then
+      # warnings-as-errors: tsc under "strict": true reports every problem as
+      # an error, and eslint runs with --max-warnings 0 below.
+      if [ -f tsconfig.json ] && [ "$(python3 "$checks/jsonc.py" tsconfig.json compilerOptions.strict 2>/dev/null)" != true ]; then
+        echo "FAIL pre-push tsconfig.json:0:warnings-as-errors: compilerOptions.strict is not true — the shipped tsconfig seed sets it" >&2
+        exit 1
+      fi
+      run "typecheck (tsc --noEmit, warnings-as-errors)" npx --no-install tsc --noEmit
+      if python3 -c 'import json,sys; sys.exit(0 if "build" in json.load(open("package.json")).get("scripts",{}) else 1)' 2>/dev/null; then
+        run "build (npm run build)" npm run --silent build
+      fi
+    fi
+    wants tests && run "tests (npm test)" npm test --silent
+    wants lint && run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
+    wants format && run "format (prettier --check)" npx --no-install prettier --check .
+    ;;
+  python)
+    if wants tests; then
+      # warnings-as-errors: every Python warning fails the test run.
+      if [ -d tests ] || ls test_*.py >/dev/null 2>&1; then
+        if python3 -c 'import pytest' 2>/dev/null; then
+          run "tests (pytest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m pytest -q
+        else
+          run "tests (unittest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m unittest discover -q
+        fi
+      else
+        printf 'gate: tests — no tests directory found; nothing ran (add tests/ — rules/06)\n'
+      fi
+    fi
+    if wants lint; then
+      need ruff "pip install ruff" || exit 1
+      run "lint (ruff check)" ruff check .
+      need mypy "pip install mypy" || exit 1
+      run "types (mypy)" mypy .
+    fi
+    wants format && run "format (ruff format --check)" ruff format --check .
+    ;;
+  *)
+    echo "FAIL pre-push .coast/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2
+    exit 1
+    ;;
+esac
+
+# ------------------------------------------------------------------ the rules scanner
+if wants rules-scan; then
+  if [ ! -f "$checks/check_rules.py" ]; then
+    echo "FAIL pre-push $checks/check_rules.py:0:missing: the rules scanner is not installed — run enforcement/adopt.py" >&2
+    exit 1
+  fi
+  # The lines added by what is being PUSHED: git hands the refs on stdin
+  # (<local ref> <local sha> <remote ref> <remote sha>), and each local sha is
+  # the tip scanned — `git push origin feature` from main scans feature, not
+  # HEAD. A ref the remote has never seen is compared with the remote's
+  # default branch, or with the empty tree when there is none, so every line
+  # counts. Without ref lines (a `--seat` run by hand) HEAD against its upstream.
+  empty_tree=$(git hash-object -t tree /dev/null)
+  ranges=""
+  if [ -n "$refs_file" ]; then
+    while read -r _local_ref local_sha _remote_ref remote_sha; do
+      [ -z "${local_sha:-}" ] && continue
+      case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac  # a deletion
+      case "$remote_sha" in
+        0000000000000000000000000000000000000000|"")
+          base=$(git merge-base "$local_sha" "${push_remote:-origin}/HEAD" 2>/dev/null \
+                 || git merge-base "$local_sha" '@{upstream}' 2>/dev/null || echo "$empty_tree") ;;
+        *) base=$remote_sha ;;
+      esac
+      ranges="$ranges $base:$local_sha"
+    done < "$refs_file"
+  fi
+  [ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
+  # The first push after adoption carries commits written before the checks existed. Lines
+  # added before the commit that adopted (the one that added .coast/platform) are legacy and
+  # belong to the baselines; the scan starts at the adoption commit. Found on Coast, where the
+  # other lane's commits landed between the measurement and the push.
+  since_adoption() {  # <base> <tip>
+    adopted=$(git log --diff-filter=A --format=%H --reverse "$1..$2" -- .coast/platform 2>/dev/null | head -n 1)
+    if [ -n "$adopted" ]; then git rev-parse "$adopted^" 2>/dev/null || echo "$1"; else echo "$1"; fi
+  }
+  for range in $ranges; do
+    base=${range%%:*}; tip=${range#*:}
+    base=$(since_adoption "$base" "$tip")
+    run "rules-scan (added since $(git rev-parse --short "$base" 2>/dev/null || echo "$base") on $(git rev-parse --short "$tip" 2>/dev/null || echo "$tip"))" python3 "$checks/check_rules.py" "$base" "$tip" --platform "$platform"
+  done
+  # The whole tree with the ratchets, ONCE. Each diff scan above judges the added lines and
+  # the tree-scope signatures on the changed files only; a diff scan that judged the tree as
+  # well ran the half-minute pass twice on a large repository.
+  run "rules-scan (tree + ratchets)" python3 "$checks/check_rules.py" --tree --platform "$platform"
+fi
+
+if wants doc-comments; then
+  if [ -f "$checks/check_doc_comments.py" ]; then
+    printf 'gate: doc-comments (whole tree, advisory — added lines are held by rules-scan)\n'
+    count=$(python3 "$checks/check_doc_comments.py" --all --platform "$platform" 2>/dev/null | grep -c '^FAIL doc-comments ' || true)
+    printf 'ADVISORY doc-comments: %s public declaration(s) in the tree without a doc comment\n' "${count:-0}"
+  else
+    printf 'gate: doc-comments — not installed yet (check_doc_comments.py ships with E1.5); this seat is not held\n'
+  fi
+fi
+
+# ------------------------------------------------------------------ jscpd: no new duplicated code
+jscpd_seat() {
+  bin=${JSCPD_BIN:-}
+  if [ -z "$bin" ]; then
+    if command -v jscpd >/dev/null 2>&1; then bin=jscpd
+    elif npx --no-install jscpd --version >/dev/null 2>&1; then bin="npx --no-install jscpd"
+    fi
+  fi
+  if [ -z "$bin" ]; then
+    echo "FAIL pre-push toolchain:0:jscpd: jscpd is not installed — npm install -g jscpd@5.1.2 (enforcement/TOOLCHAIN.md), or set JSCPD_BIN" >&2
+    return 1
+  fi
+  baseline=.coast/jscpd-baseline.json
+  if [ ! -f "$baseline" ]; then
+    echo "FAIL pre-push $baseline:0:jscpd: no clone baseline — run enforcement/adopt.py with jscpd installed to write it" >&2
+    return 1
+  fi
+  verdict=$(python3 -c '
+import datetime, json, sys
+data = json.load(open(sys.argv[1]))
+if data.get("clones") is None:
+    print("unwritten"); sys.exit(0)
+deadline = data.get("deadline") or ""
+try:
+    past = datetime.date.fromisoformat(deadline) < datetime.date.today()
+except ValueError:
+    print("baddate"); sys.exit(0)
+print("past" if past else "open")
+' "$baseline")
+  case "$verdict" in
+    unwritten)
+      echo "FAIL pre-push $baseline:0:jscpd: the clone baseline was never written (jscpd was missing when adopt.py ran) — install jscpd and re-run adopt.py" >&2
+      return 1 ;;
+    baddate)
+      echo "FAIL pre-push $baseline:0:jscpd: the baseline deadline is not a date (YYYY-MM-DD)" >&2
+      return 1 ;;
+  esac
+  # code only — keep in step with JSCPD_IGNORE in enforcement/adopt.py
+  ignore='**/node_modules/**,**/.build/**,**/build/**,**/Pods/**,**/DerivedData/**,**/dist/**,**/.venv/**,**/__pycache__/**,**/.coast/**,**/Scripts/checks/**,**/.githooks/**,**/*.min.js,**/*.lock,**/Package.resolved,**/*.md,**/*.markdown,**/*.txt,**/*.json,**/*.jsonl,**/*.yml,**/*.yaml,**/*.toml,**/*.html,**/*.svg,**/*.xml,**/*.plist,**/*.strings,**/*.xcstrings,**/*.stringsdict'
+  scratch=${TMPDIR:-/tmp}/coast-jscpd.$$
+  mkdir -p "$scratch"
+  if [ "$verdict" = past ]; then
+    printf 'jscpd: the baseline deadline has passed — every clone now refuses (decision 2)\n'
+    # shellcheck disable=SC2086
+    $bin . --min-tokens 50 --ignore "$ignore" --reporters json --output "$scratch" --exit-code --silent
+    status=$?
+  else
+    # shellcheck disable=SC2086
+    $bin . --min-tokens 50 --ignore "$ignore" --baseline "$baseline" --fail-on-new-clones --reporters json --output "$scratch" --silent
+    status=$?
+  fi
+  if [ $status -ne 0 ]; then
+    echo "FAIL pre-push $baseline:0:jscpd: new duplicated code (jscpd found clones not in the baseline) — extract the shared piece; the count may only fall [DRY-5]" >&2
+    rm -rf "$scratch"
+    return 1
+  fi
+  python3 -c '
+import json, sys
+report = json.load(open(sys.argv[1]))["statistics"]["total"]["clones"]
+base = json.load(open(sys.argv[2])).get("clones")
+if isinstance(base, int) and report < base:
+    print(f"jscpd: {report} clones in the tree, below the baseline of {base} — lower it by re-running adopt.py (the deadline does not move)")
+else:
+    print(f"jscpd: {report} clones in the tree, none new against the baseline of {base}")
+' "$scratch/jscpd-report.json" "$baseline"
+  rm -rf "$scratch"
+  return 0
+}
+wants jscpd && run "jscpd (no new clones)" jscpd_seat
+
+# ------------------------------------------------------------------ gh-ruleset: main is protected
+gh_ruleset_seat() {
+  if ! command -v gh >/dev/null 2>&1; then
+    printf 'gh-ruleset: gh is not installed, so the ruleset on the default branch was not checked (brew install gh)\n'
+    return 0
+  fi
+  # Read-only: gh repo view, then GET /repos/{owner}/{repo}/rulesets and
+  # each active ruleset. Anything gh cannot answer is a note, not a refusal;
+  # an answer with no qualifying ruleset is a refusal.
+  python3 -c '
+import json, subprocess, sys
+
+def gh(*args):
+    done = subprocess.run(["gh", *args], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise RuntimeError(done.stderr.strip())
+    return done.stdout
+
+try:
+    repo = gh("repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner").strip()
+except RuntimeError:
+    print("gh-ruleset: gh could not reach the repository (offline, not signed in, or no GitHub remote) — the ruleset was not checked")
+    sys.exit(0)
+try:
+    rulesets = json.loads(gh("api", f"repos/{repo}/rulesets"))
+except (RuntimeError, ValueError):
+    print(f"gh-ruleset: the rulesets API did not answer for {repo} (offline, or rulesets are not available on this plan) — not checked")
+    sys.exit(0)
+try:
+    branch = json.loads(gh("api", f"repos/{repo}")).get("default_branch", "main")
+except (RuntimeError, ValueError):
+    branch = "main"
+protected = False
+for summary in rulesets:
+    if summary.get("enforcement") != "active":
+        continue
+    try:
+        rs = json.loads(gh("api", f"repos/{repo}/rulesets/{summary['id']}"))
+    except (RuntimeError, ValueError, KeyError):
+        continue
+    include = rs.get("conditions", {}).get("ref_name", {}).get("include", [])
+    if not any(i in ("~DEFAULT_BRANCH", f"refs/heads/{branch}") for i in include):
+        continue
+    types = {r.get("type") for r in rs.get("rules", [])}
+    if {"pull_request", "deletion", "non_fast_forward"} <= types and not rs.get("bypass_actors"):
+        protected = True
+        if "required_status_checks" not in types:
+            print(f"gh-ruleset: ruleset {rs.get('name')!r} protects {branch} but requires no status checks (fine for a repo with no CI)")
+if protected:
+    print(f"gh-ruleset: {branch} of {repo} is protected by an active ruleset (PR required, no deletion, no force-push, no bypass)")
+    sys.exit(0)
+print(f"FAIL pre-push github:0:gh-ruleset: no active ruleset on {repo} protects {branch} with pull_request, deletion and non_fast_forward rules and an empty bypass list — add one (rules/07 protected main)", file=sys.stderr)
+sys.exit(1)
+'
+}
+wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
+
+[ "$seats" = all ] && run "the hooks this project already had" previous_hooks
+[ -n "$refs_file" ] && rm -f "$refs_file"
+
+printf 'gate: every check green\n'

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Coast Standards — pre-commit. This repo has no CI; the hook is the battery.
+# 1. Every rule must name its check and every check must run — measured against
+#    the committed gap baseline, which may only fall (enforcement/README.md §4.1, decision 2).
+# 2. The enforcement checks' own tests must pass.
+# Installed per clone with:  git config core.hooksPath .githooks
+set -e
+cd "$(git rev-parse --show-toplevel)"
+# Git exports GIT_DIR and its siblings to a hook it runs from a linked worktree;
+# inherited by the tests, every fixture's git command would act on THIS repo
+# (a fixture's `git init --bare` flipped core.bare here on 2026-09-04). Clear them.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
+python3 enforcement/checks/verify_rules.py --baseline enforcement/checks/verify-baseline.json --summary
+python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py' -q

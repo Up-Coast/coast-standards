@@ -1,0 +1,1 @@
+<ActivityIndicator animating={loading} />

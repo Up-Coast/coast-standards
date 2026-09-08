@@ -1,0 +1,226 @@
+{
+  "_comment": "The committed .claude/settings.json every adopted repo carries (enforcement/README.md section 4.4, decision 3). Three keys. `hooks`: one entry point, claude-hook.py, run with the hook's id; it reads the event JSON on stdin and exits 2 with the reason on stderr to refuse. Schema, matchers and the exit-code contract are the ones Anthropic documents at https://code.claude.com/docs/en/hooks (quoted in claude-hook.py's docstring). adopt.py installs claude-hook.py at Scripts/hooks/claude-hook.py, which is the path these commands name; the checks it runs live beside it at Scripts/checks/. Each statusMessage names the hook's id, which is how verify_rules.py resolves a rule's session:<id> reference. `permissions.deny`: the hard denies, in the syntax of https://code.claude.com/docs/en/permissions — Anthropic says to use the permission system, not a hook, for a hard deny; Claude Code applies a deny rule inside subshells, $(...) and loops and past VAR=value, whatever a hook says. The rules name the mutating forms (deploy, destroy, delete, create, apply, ...) and not the programs, because a deny rule cannot carry exceptions and the read-only forms (fly status, aws s3 ls, terraform plan) must stay open; the hook explains a refusal in words. The Edit rules hold the governing paths every platform shares. `disableAllHooks: false`: a project false overrides a user true, so a user setting cannot switch these hooks off (only `--settings '{\"disableAllHooks\": true}'` on the command line can). adopt.py writes all three: hooks and disableAllHooks replaced from here, the deny list merged in front of the project's own; every other key is the founder's and kept.",
+  "disableAllHooks": false,
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git push +*)",
+      "Bash(git push * +*)",
+      "Bash(git * --no-verify)",
+      "Bash(git * --no-verify *)",
+      "Bash(git -c core.hooksPath=*)",
+      "Bash(git config * core.hooksPath*)",
+      "Bash(fly deploy*)",
+      "Bash(fly launch*)",
+      "Bash(fly * destroy*)",
+      "Bash(fly * delete*)",
+      "Bash(fly * create*)",
+      "Bash(fly secrets set*)",
+      "Bash(fly secrets unset*)",
+      "Bash(fly scale count*)",
+      "Bash(fly scale vm*)",
+      "Bash(fly scale memory*)",
+      "Bash(fly * fork*)",
+      "Bash(fly * extend*)",
+      "Bash(fly machine* run*)",
+      "Bash(fly machine* update*)",
+      "Bash(fly * import*)",
+      "Bash(flyctl deploy*)",
+      "Bash(flyctl launch*)",
+      "Bash(flyctl * destroy*)",
+      "Bash(flyctl * delete*)",
+      "Bash(flyctl * create*)",
+      "Bash(flyctl secrets set*)",
+      "Bash(flyctl secrets unset*)",
+      "Bash(flyctl scale count*)",
+      "Bash(flyctl scale vm*)",
+      "Bash(flyctl scale memory*)",
+      "Bash(flyctl * fork*)",
+      "Bash(flyctl * extend*)",
+      "Bash(flyctl machine* run*)",
+      "Bash(flyctl machine* update*)",
+      "Bash(flyctl * import*)",
+      "Bash(wrangler deploy*)",
+      "Bash(wrangler publish*)",
+      "Bash(wrangler delete*)",
+      "Bash(wrangler * delete*)",
+      "Bash(wrangler * create*)",
+      "Bash(wrangler * put*)",
+      "Bash(wrangler * upload*)",
+      "Bash(wrangler * deploy*)",
+      "Bash(wrangler rollback*)",
+      "Bash(cloudflared tunnel create*)",
+      "Bash(cloudflared tunnel delete*)",
+      "Bash(cloudflared tunnel route*)",
+      "Bash(cloudflared tunnel run*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(terraform import*)",
+      "Bash(terraform taint*)",
+      "Bash(terraform untaint*)",
+      "Bash(terraform state rm*)",
+      "Bash(terraform state mv*)",
+      "Bash(terraform state push*)",
+      "Bash(terraform workspace new*)",
+      "Bash(terraform workspace delete*)",
+      "Bash(tofu apply*)",
+      "Bash(tofu destroy*)",
+      "Bash(tofu import*)",
+      "Bash(tofu taint*)",
+      "Bash(tofu untaint*)",
+      "Bash(tofu state rm*)",
+      "Bash(tofu state mv*)",
+      "Bash(tofu state push*)",
+      "Bash(tofu workspace new*)",
+      "Bash(tofu workspace delete*)",
+      "Bash(pulumi up*)",
+      "Bash(pulumi destroy*)",
+      "Bash(pulumi refresh*)",
+      "Bash(pulumi import*)",
+      "Bash(pulumi stack rm*)",
+      "Bash(pulumi stack init*)",
+      "Bash(pulumi config set*)",
+      "Bash(pulumi config rm*)",
+      "Bash(pulumi state delete*)",
+      "Bash(aws * delete*)",
+      "Bash(aws * create*)",
+      "Bash(aws * put*)",
+      "Bash(aws * update*)",
+      "Bash(aws * modify*)",
+      "Bash(aws * terminate*)",
+      "Bash(aws * attach*)",
+      "Bash(aws * detach*)",
+      "Bash(aws s3 rb*)",
+      "Bash(aws s3 mb*)",
+      "Bash(aws s3 cp*)",
+      "Bash(aws s3 mv*)",
+      "Bash(aws s3 sync*)",
+      "Bash(aws s3 rm*)",
+      "Bash(aws cloudformation deploy*)",
+      "Bash(gcloud * delete*)",
+      "Bash(gcloud * create*)",
+      "Bash(gcloud * deploy*)",
+      "Bash(gcloud * update*)",
+      "Bash(gcloud * set-iam-policy*)",
+      "Bash(gcloud * add-iam-policy-binding*)",
+      "Bash(gcloud * remove-iam-policy-binding*)",
+      "Bash(az * delete*)",
+      "Bash(az * create*)",
+      "Bash(az * update*)",
+      "Bash(az * set*)",
+      "Bash(az deployment * create*)",
+      "Bash(doctl * delete*)",
+      "Bash(doctl * create*)",
+      "Bash(doctl * update*)",
+      "Bash(doctl * resize*)",
+      "Bash(doctl * destroy*)",
+      "Bash(nsupdate*)",
+      "Bash(gh repo delete*)",
+      "Bash(gh secret set*)",
+      "Bash(gh secret delete*)",
+      "Bash(gh secret remove*)",
+      "Bash(gh variable set*)",
+      "Bash(gh variable delete*)",
+      "Bash(gh variable remove*)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
+      "Edit(./Scripts/checks/**)",
+      "Edit(./Scripts/hooks/**)",
+      "Edit(./.githooks/**)",
+      "Edit(./.github/**)",
+      "Edit(./.coast/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" governing-edit",
+            "statusMessage": "rules: governing-edit",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" chained-cd",
+            "statusMessage": "rules: chained-cd",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" infra-command",
+            "statusMessage": "rules: infra-command",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" no-verify",
+            "statusMessage": "rules: no-verify",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" force-push",
+            "statusMessage": "rules: force-push",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-at-commit",
+            "statusMessage": "rules: scan-at-commit (scanning the staged diff)",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" scan-on-edit",
+            "statusMessage": "rules: scan-on-edit",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" unpushed-at-stop",
+            "statusMessage": "rules: unpushed-at-stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/Scripts/hooks/claude-hook.py\" rules-at-start",
+            "statusMessage": "rules: rules-at-start",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+# Ruff (docs.astral.sh/ruff/settings). Installed by Coast beside mypy.ini;
+# yours to edit. Rules held here (enforcement/README.md section 5.2):
+#   STYLE-1 — the formatter and linter run with no per-file exemptions accumulating.
+#   STYLE-5 — B006 (flake8-bugbear): a mutable default argument is a defect.
+# A rule set is named by its prefix; every code under it is on unless it is
+# listed under ignore. B006 is under B; keep B selected and out of ignore.
+line-length = 100
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear (B006: mutable default arguments)
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit
+    "N",    # pep8-naming
+]
+ignore = []
+
+[format]
+quote-style = "double"

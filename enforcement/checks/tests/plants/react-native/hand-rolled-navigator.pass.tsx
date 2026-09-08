@@ -1,0 +1,1 @@
+const Stack = createNativeStackNavigator();

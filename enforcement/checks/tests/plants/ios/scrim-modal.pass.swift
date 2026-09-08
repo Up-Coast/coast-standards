@@ -1,0 +1,1 @@
+.sheet(isPresented: $showing) { Detail() }

@@ -1,0 +1,39 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag must match CHECKS-VERSION
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          file="$(tr -d '[:space:]' < CHECKS-VERSION)"
+          if [ "$tag" != "$file" ]; then
+            echo "FAIL release: tag v$tag but CHECKS-VERSION says $file — bump the file, then tag" >&2
+            exit 1
+          fi
+      - name: The changelog must carry this release
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          awk -v v="$tag" '
+            $0 ~ "^## " v " " {on=1; print; next}
+            /^## / && on {exit}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "FAIL release: CHANGELOG.md has no '## $tag — <date>' entry" >&2
+            exit 1
+          fi
+          cat notes.md
+      - name: Publish the GitHub release with the changelog entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "Coast Standards ${GITHUB_REF_NAME#v}" --notes-file notes.md

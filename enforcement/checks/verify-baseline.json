@@ -1,0 +1,17 @@
+{
+  "_comment": "The ratchet baseline for verify_rules.py on THIS repo's own corpus (enforcement/README.md, decision 2). The count may only fall; the verifier fails the commit when it rises, and fails when it falls until this number is lowered in the same commit. Past the deadline any gap fails. Only a person moves the deadline, and the move is recorded under 'moves' with who and why.",
+  "id": "verify-rules-gaps",
+  "count": 0,
+  "written": "2026-09-04",
+  "by": "Fable (E1.7 + E2.1 + E2.2 merged) — every reference resolves: the scanner and its built-ins, the linter configs, the pre-push runner with its tools, the commit-msg and Claude Code session hooks; the gap count is zero and the ratchet now only guards against a rise",
+  "deadline": "2026-12-03",
+  "moves": [
+    {
+      "date": "2026-09-04",
+      "by": "Fable (E0.3)",
+      "count_from": 395,
+      "count_to": 489,
+      "why": "E0.3 added 92 rules (DRY-1..7, L-1..12, DES-1..4 in the five app documents), each naming a scanner signature, tool or hook that E1/E2 build; no existing rule lost its check. The deadline did not move."
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+WindowGroup { ContentView() }.windowStyle(.automatic)

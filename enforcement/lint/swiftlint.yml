@@ -1,0 +1,51 @@
+# SwiftLint — the linter the review rules name (C-4: a clean lint run under
+# the project's SwiftLint configuration). Installed by Coast; yours to edit.
+# The standard rule set applies; only the width is set here so a line the
+# design tools produce is not an error by itself.
+# Findings in code that predates these checks: in a project Coast scaffolds
+# they live in the baseline Coast writes at the path below (the rules update
+# keeps it current), so only new findings are flagged — fix an old one, and
+# its line leaves that file. In a repository adopted by adopt.py that file
+# does not exist (SwiftLint only warns about it) and the old findings are the
+# `lint-findings` count in .coast/ratchet-baseline.json instead: the push
+# gate refuses a count above it and, past its deadline, runs the linter strict.
+baseline: .coast/lint/swiftlint-baseline.json
+line_length:
+  warning: 120
+  error: 160
+  ignores_urls: true
+  ignores_comments: true
+# Trailing commas in multi-line collections are required here, the way the
+# formatter beside this file (swift-format's TrailingComma rule) and Xcode's
+# own templates write them — so the two checks never ask for opposite fixes.
+trailing_comma:
+  mandatory_comma: true
+excluded:
+  - .build
+  - DerivedData
+  - Pods
+
+# --- The rules the review documents name (enforcement/README.md section 5.2).
+# Each is stated here on its own line — never inherited from SwiftLint's
+# default set — so the verifier can read this file and know the rule is on.
+# C-3: no force-unwraps, force-tries or force-casts on paths that can fail.
+# force_unwrapping is opt-in (realm.github.io/SwiftLint/force_unwrapping.html:
+# "Enabled by default: No"), so it is listed under opt_in_rules; force_cast and
+# force_try are on by default at error severity and are named here so that
+# stays true even if a default ever moves.
+opt_in_rules:
+  - force_unwrapping
+force_unwrapping:
+  severity: error
+force_cast: error
+force_try: error
+# A-3 (advisory): a type or module has one job. A type body past 300 lines is a
+# warning — never an error, the rules say advisory — and a file past 400 the same.
+# Defaults are warning 250 / error 350 (realm.github.io/SwiftLint/type_body_length.html);
+# the error thresholds are lifted so the rule can only warn.
+type_body_length:
+  warning: 300
+  error: 100000
+file_length:
+  warning: 400
+  error: 100000

@@ -1,0 +1,3191 @@
+{
+  "_comment": "One row per signature the scanner (check_rules.py) runs and verify_rules.py resolves rule tags against; check_rules.flatten_signatures turns it into one list per platform. Shared fields, once per row: id (stable; approved deviations and exceptions cite it), rule (the rule id it holds), group (optional: several signatures held by one rule tag, e.g. native-pattern), kind ('builtin' names a check implemented in code rather than a regex), severity block|ratchet|advisory, scope added|tree, applies_to / excludes (path classes from paths.json; '*' = every class), once (report a file once, not per line), words (the failure's plain words). Under platforms, one entry per platform the signature runs on: files (optional glob list; default = the platform's extensions), files_excluded, pattern (regex over a line, and over the file's added lines joined without whitespace), paired (optional second regex that must also match), and any shared field the platform's value differs on (rule, words, applies_to …), which is laid over the row's. A signature absent from a platform is not listed there.",
+  "signatures": [
+    {
+      "id": "appkit-reach-through",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "raw NSWindow/NSApplication reach-through from SwiftUI — window behavior belongs to SwiftUI's scene and window APIs",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(NSWindow|NSApplication|NSApp)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(NSWindow|NSApplication|NSApp)\\b"
+        }
+      }
+    },
+    {
+      "id": "representable-window-reach",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "an NSViewRepresentable touching .window — a bridge view reaching into the hosting window's chrome",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bNSViewRepresentable\\b",
+          "paired": "\\.window\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bNSViewRepresentable\\b",
+          "paired": "\\.window\\b"
+        }
+      }
+    },
+    {
+      "id": "window-chrome-override",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "window-chrome override (standardWindowButton/styleMask/makeKeyAndOrderFront/titlebarAppearsTransparent) — replaces the platform's window controls",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(standardWindowButton|styleMask|makeKeyAndOrderFront|titlebarAppearsTransparent)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(standardWindowButton|styleMask|makeKeyAndOrderFront|titlebarAppearsTransparent)\\b"
+        }
+      }
+    },
+    {
+      "id": "hidden-window-toolbar",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "hiding the window toolbar (.toolbar(.hidden, for: .windowToolbar)) — removes the native title bar and traffic lights",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.toolbar\\(\\s*\\.hidden\\s*,\\s*for:\\s*\\.windowToolbar\\s*\\)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.toolbar\\(\\s*\\.hidden\\s*,\\s*for:\\s*\\.windowToolbar\\s*\\)"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-router",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-rolled Route enum in place of NavigationStack — navigation belongs to the platform's navigation container",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\benum\\s+\\w*Route\\w*\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\benum\\s+\\w*Route\\w*\\b"
+        }
+      }
+    },
+    {
+      "id": "androidview-bridge",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "an AndroidView bridge into the View system from Compose — Compose's own components own the UI; a new bridge needs approval",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bAndroidView\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "window-flags-override",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a window-flags override — insets and system bars belong to the platform's edge-to-edge and WindowInsets APIs",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "(setDecorFitsSystemWindows|WindowManager\\.LayoutParams|window\\.(setFlags|addFlags))"
+        }
+      }
+    },
+    {
+      "id": "on-back-pressed-override",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "overriding onBackPressed — back handling belongs to BackHandler / OnBackPressedDispatcher",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "override\\s+fun\\s+onBackPressed\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "dom-reach-through",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a direct DOM query from component code — the framework's refs and state own the DOM",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\bdocument\\.(getElementById|querySelector|querySelectorAll)\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "inner-html-write",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "writing raw HTML into the page — content belongs to the framework's rendering (and raw HTML is an injection surface)",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "(\\bdangerouslySetInnerHTML\\b|\\.innerHTML\\s*=)"
+        }
+      }
+    },
+    {
+      "id": "div-as-button",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "an element acting as a button — use <button>, which the platform makes focusable and keyboard-operable",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "role=[\"']button[\"']"
+        }
+      }
+    },
+    {
+      "id": "scrim-modal",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a full-screen scrim/dimming overlay used as a modal — modals belong to .sheet/.popover/.alert",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\.black\\.opacity\\("
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\.black\\.opacity\\("
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Color\\.Black\\.copy\\(\\s*alpha",
+          "words": "a dimming overlay used as a modal — dialogs and sheets belong to Dialog / ModalBottomSheet"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "rgba\\(\\s*0\\s*,\\s*0\\s*,\\s*0\\s*,",
+          "words": "an absolute-positioned dimming overlay used as a modal — modals belong to Modal",
+          "paired": "position:\\s*['\"]absolute['\"]"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "rgba\\(\\s*0\\s*,\\s*0\\s*,\\s*0\\s*,",
+          "words": "a fixed dimming overlay used as a modal — dialogs belong to <dialog> (showModal)",
+          "paired": "position:\\s*['\"]?fixed"
+        }
+      }
+    },
+    {
+      "id": "history-reach",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "writing browser history by hand — routes belong to the app's router",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\bhistory\\.(pushState|replaceState)\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "positive-tabindex",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a positive tabindex — focus order belongs to document order",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "tabIndex\\s*=\\s*\\{?\\s*[1-9]|tabindex=[\"'][1-9]"
+        }
+      }
+    },
+    {
+      "id": "custom-select",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-built dropdown — a choice belongs to <select> (or the platform's popover)",
+      "platforms": {
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Dropdown|CustomSelect)\\b"
+        }
+      }
+    },
+    {
+      "id": "native-module-reach",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a direct native-module reach-through — a platform feature React Native already exposes is used through its own API; a new native bridge needs approval",
+      "platforms": {
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(NativeModules|requireNativeComponent|TurboModuleRegistry)\\b"
+        }
+      }
+    },
+    {
+      "id": "uimanager-reach",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "direct view manipulation (UIManager / findNodeHandle / setNativeProps) — the view belongs to React's render",
+      "platforms": {
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(UIManager\\.|findNodeHandle\\s*\\(|setNativeProps\\s*\\()"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-navigator",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-rolled screen switch over mutable state — navigation belongs to the Navigation component (NavHost)",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bwhen\\s*\\(\\s*\\w*(screen|Screen|route|Route)\\w*\\s*\\)",
+          "paired": "\\bmutableStateOf\\b"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Navigator|Router)\\b",
+          "words": "a hand-rolled navigator holding the current screen in state — navigation belongs to React Navigation",
+          "paired": "\\buseState\\b"
+        }
+      }
+    },
+    {
+      "id": "nsevent-key-monitor",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "an NSEvent key monitor — key handling belongs to the platform's focus and command system",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "NSEvent\\s*\\.\\s*add(Local|Global)MonitorForEvents"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "NSEvent\\s*\\.\\s*add(Local|Global)MonitorForEvents"
+        }
+      }
+    },
+    {
+      "id": "focus-key-override",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "focus APIs used to override key handling — the platform's command/shortcut system owns keys",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(@FocusState\\b|\\.focused\\()",
+          "paired": "(\\.onKeyPress\\(|keyDown|NSEvent)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(@FocusState\\b|\\.focused\\()",
+          "paired": "(\\.onKeyPress\\(|keyDown|NSEvent)"
+        }
+      }
+    },
+    {
+      "id": "custom-title-bar",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a custom header/title bar in a hidden-title-bar window — the window's native title bar and toolbar own the header; if the platform provides the feature, use the feature",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.windowStyle\\(\\s*\\.hiddenTitleBar\\s*\\)|\\b(struct|class)\\s+\\w*(TitleBar|HeaderBar)\\w*\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.windowStyle\\(\\s*\\.hiddenTitleBar\\s*\\)|\\b(struct|class)\\s+\\w*(TitleBar|HeaderBar)\\w*\\b"
+        }
+      }
+    },
+    {
+      "id": "custom-tab-bar",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-built tab bar — tab navigation belongs to TabView, even when every piece of the substitute is a native control",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*TabBar\\w*\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*TabBar\\w*\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+\\w*(TabBar|BottomBar)\\w*\\s*\\(",
+          "words": "a hand-built tab bar — tabs belong to NavigationBar / TabRow"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*TabBar\\b",
+          "words": "a hand-built tab bar — tabs belong to the tab navigator"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-search-field",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-rolled search field (a TextField dressed with the search icon) — search belongs to .searchable",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bmagnifyingglass\\b",
+          "paired": "TextField\\("
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bmagnifyingglass\\b",
+          "paired": "TextField\\("
+        }
+      }
+    },
+    {
+      "id": "custom-sidebar",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-styled sidebar list — sidebars belong to NavigationSplitView, which provides the sidebar column and its styling itself",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.listStyle\\(\\s*\\.sidebar\\s*\\)|SidebarListStyle\\("
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.listStyle\\(\\s*\\.sidebar\\s*\\)|SidebarListStyle\\("
+        }
+      }
+    },
+    {
+      "id": "hand-drawn-progress",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a hand-drawn progress indicator — progress belongs to ProgressView",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*(ProgressBar|Spinner|LoadingIndicator|ActivityIndicator)\\w*\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+\\w*(ProgressBar|Spinner|LoadingIndicator|ActivityIndicator)\\w*\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+\\w*(ProgressBar|Spinner|LoadingIndicator)\\w*\\s*\\(",
+          "words": "a hand-drawn progress indicator — progress belongs to CircularProgressIndicator / LinearProgressIndicator"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Spinner|ProgressBar|LoadingIndicator)\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to ActivityIndicator"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "\\b(function|const)\\s+\\w*(Spinner|ProgressBar|LoadingIndicator)\\b",
+          "words": "a hand-drawn progress indicator — progress belongs to <progress>"
+        }
+      }
+    },
+    {
+      "id": "dangerous-navigation-state",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "reaching into navigation internals — use the navigation hooks",
+      "platforms": {
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\bdangerouslyGetState\\s*\\(|\\bdangerouslyGetParent\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "reflection-reach",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "reflection into platform internals — use the platform's public API",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\b(Class\\.forName|getDeclaredMethod|getDeclaredField)\\s*\\("
+        }
+      }
+    },
+    {
+      "id": "custom-picker-control",
+      "rule": "A-7",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a custom-built control where the platform provides one (Picker/Slider/Stepper/Toggle) — use the native control",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+Custom\\w*(Picker|Slider|Stepper|Toggle)\\w*\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\b(struct|class)\\s+Custom\\w*(Picker|Slider|Stepper|Toggle)\\w*\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "fun\\s+Custom\\w*(Picker|Slider|Switch|Checkbox)\\w*\\s*\\(",
+          "words": "a custom-built control where the platform provides one (DatePicker/Slider/Switch/Checkbox) — use the native control"
+        }
+      }
+    },
+    {
+      "id": "import-matrix",
+      "rule": "A-2",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "tree",
+      "words": "module layering: feature modules never import each other, only the app target imports Data, Domain imports nothing app-side",
+      "platforms": {
+        "ios": {},
+        "macos": {},
+        "android": {},
+        "react-native": {},
+        "web": {},
+        "python": {
+          "rule": "ARCH-2"
+        }
+      }
+    },
+    {
+      "id": "ui-string-literal",
+      "rule": "L-1",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "strings",
+        "generated",
+        "docs"
+      ],
+      "words": "user-facing text written as a literal in view code — it belongs in the string catalog under a semantic key",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/res/layout/**/*.xml"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/*.tsx",
+            "**/*.jsx",
+            "**/*.ts",
+            "**/*.js"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/*.tsx",
+            "**/*.jsx",
+            "**/*.ts",
+            "**/*.js"
+          ]
+        },
+        "python": {
+          "rule": "OBS-4",
+          "applies_to": [
+            "source"
+          ],
+          "files": [
+            "**/*.py"
+          ]
+        }
+      }
+    },
+    {
+      "id": "styling-literal",
+      "rule": "DRY-2",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "theme",
+        "tests",
+        "strings",
+        "generated",
+        "governing",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "plans",
+        "git"
+      ],
+      "words": "a colour or font size written as a literal — every visual value is a token in the theme file",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\(\\s*(red|hue|\\.sRGB|hex|\\.displayP3|\\\"#)|Color\\(\\s*(white|red|green|blue|gray):|\\\"#[0-9A-Fa-f]{6}\\\"|\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|\\.(foregroundColor|foregroundStyle|tint|background|fill|stroke)\\(\\s*\\.(red|blue|green|yellow|orange|purple|pink|gray|black|white|cyan|mint|teal|indigo|brown)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "Color\\(\\s*(red|hue|\\.sRGB|hex|\\.displayP3|\\\"#)|Color\\(\\s*(white|red|green|blue|gray):|\\\"#[0-9A-Fa-f]{6}\\\"|\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|\\.(foregroundColor|foregroundStyle|tint|background|fill|stroke)\\(\\s*\\.(red|blue|green|yellow|orange|purple|pink|gray|black|white|cyan|mint|teal|indigo|brown)\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/res/**/*.xml"
+          ],
+          "pattern": "Color\\(0x[0-9A-Fa-f]{6,8}\\)|fontSize\\s*=\\s*\\d+\\.sp|\\\"#[0-9A-Fa-f]{6}\\\"|android:textSize=\\\"\\d|android:(textColor|background)=\\\"#"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "(?<![\\w#&])#[0-9A-Fa-f]{3,8}\\b(?=['\\\"\\s;,)])|\\bfontSize:\\s*\\d|\\bcolor:\\s*['\\\"](?!var\\(|transparent|inherit|currentColor)[a-zA-Z#]|font-size:\\s*\\d+(px|rem|em)|(?<![\\w-])color:\\s*(#|rgba?\\()"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "(?<![\\w#&])#[0-9A-Fa-f]{3,8}\\b(?=['\\\"\\s;,)])|\\bfontSize:\\s*\\d|\\bcolor:\\s*['\\\"](?!var\\(|transparent|inherit|currentColor)[a-zA-Z#]|font-size:\\s*\\d+(px|rem|em)|(?<![\\w-])color:\\s*(#|rgba?\\()"
+        }
+      }
+    },
+    {
+      "id": "spacing-literal",
+      "rule": "DRY-2",
+      "severity": "ratchet",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "theme",
+        "tests",
+        "strings",
+        "generated",
+        "governing",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "plans",
+        "git"
+      ],
+      "words": "a spacing, size or radius written as a number — use the theme's spacing tokens",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.padding\\(\\s*(\\.\\w+\\s*,\\s*)?\\d|\\.frame\\(\\s*(width|height|minWidth|maxWidth|minHeight|maxHeight):\\s*\\d|\\bspacing:\\s*\\d|\\.cornerRadius\\(\\s*\\d|cornerRadius:\\s*\\d|lineWidth:\\s*\\d"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.padding\\(\\s*(\\.\\w+\\s*,\\s*)?\\d|\\.frame\\(\\s*(width|height|minWidth|maxWidth|minHeight|maxHeight):\\s*\\d|\\bspacing:\\s*\\d|\\.cornerRadius\\(\\s*\\d|cornerRadius:\\s*\\d|lineWidth:\\s*\\d"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/res/layout/**/*.xml"
+          ],
+          "pattern": "\\b\\d+\\.dp\\b|android:(padding|margin|layout_margin|layout_width|layout_height)\\w*=\\\"\\d+dp\\\""
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "\\b(padding|margin|gap|borderRadius)(Top|Bottom|Left|Right|Horizontal|Vertical|Start|End)?:\\s*\\d|(?<![\\w-])(padding|margin|gap|border-radius)(-\\w+)?:\\s*\\d+(px|rem)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "\\b(padding|margin|gap|borderRadius)(Top|Bottom|Left|Right|Horizontal|Vertical|Start|End)?:\\s*\\d|(?<![\\w-])(padding|margin|gap|border-radius)(-\\w+)?:\\s*\\d+(px|rem)"
+        }
+      }
+    },
+    {
+      "id": "second-theme-file",
+      "rule": "DRY-2",
+      "severity": "block",
+      "scope": "tree",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "theme",
+        "tests",
+        "generated",
+        "design_bundle",
+        "docs",
+        "git"
+      ],
+      "once": true,
+      "words": "a second theme or tokens file — styling has one home, the bound theme file; a brand swap is a one-file edit",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*Theme.swift",
+            "**/Theme+*.swift",
+            "**/Color+*.swift",
+            "**/Colors.swift",
+            "**/Palette.swift",
+            "**/DesignTokens.swift",
+            "**/Tokens.swift",
+            "**/Typography.swift"
+          ],
+          "pattern": "\\S"
+        },
+        "macos": {
+          "files": [
+            "**/*Theme.swift",
+            "**/Theme+*.swift",
+            "**/Color+*.swift",
+            "**/Colors.swift",
+            "**/Palette.swift",
+            "**/DesignTokens.swift",
+            "**/Tokens.swift",
+            "**/Typography.swift"
+          ],
+          "pattern": "\\S"
+        },
+        "android": {
+          "files": [
+            "**/*Theme.kt",
+            "**/Color.kt",
+            "**/Colors.kt",
+            "**/Type.kt",
+            "**/Dimens.kt",
+            "**/*Tokens.kt",
+            "**/res/values/colors.xml",
+            "**/res/values/dimens.xml"
+          ],
+          "pattern": "\\S"
+        },
+        "react-native": {
+          "files": [
+            "**/theme.ts",
+            "**/theme.tsx",
+            "**/tokens.ts",
+            "**/colors.ts",
+            "**/palette.ts",
+            "**/*Theme.ts",
+            "**/theme.css",
+            "**/tokens.css",
+            "**/variables.css"
+          ],
+          "pattern": "\\S"
+        },
+        "web": {
+          "files": [
+            "**/theme.ts",
+            "**/theme.tsx",
+            "**/tokens.ts",
+            "**/colors.ts",
+            "**/palette.ts",
+            "**/*Theme.ts",
+            "**/theme.css",
+            "**/tokens.css",
+            "**/variables.css"
+          ],
+          "pattern": "\\S"
+        }
+      }
+    },
+    {
+      "id": "env-literal",
+      "rule": "C-5",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "source",
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "config_home",
+        "tests",
+        "docs",
+        "strings",
+        "governing",
+        "generated",
+        "plans",
+        "manifest",
+        "design_bundle",
+        "git"
+      ],
+      "words": "a fact about the world outside the code written as a literal (a branch, a path, a host, a port, a fallback) — ask the system that owns it or read the one configured home",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|Bundle\\.main\\.path\\(forResource"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|Bundle\\.main\\.path\\(forResource"
+        },
+        "android": {
+          "files": [
+            "**/*.kt"
+          ],
+          "pattern": "\\\"(main|master)\\\"|origin/(main|master)|\\\"/Users/|\\\"/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|10\\.0\\.2\\.2"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|process\\.env\\.\\w+\\s*(\\|\\||\\?\\?)\\s*['\\\"][^'\\\"]+['\\\"]"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|process\\.env\\.\\w+\\s*(\\|\\||\\?\\?)\\s*['\\\"][^'\\\"]+['\\\"]"
+        },
+        "python": {
+          "rule": "ARCH-8",
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\\"(main|master)\\\"|'(main|master)'|origin/(main|master)|['\\\"]/Users/|['\\\"]/home/|localhost:\\d+|https?://(api|staging|dev|prod)\\.|os\\.environ\\.get\\(\\s*['\\\"][A-Z_]+['\\\"]\\s*,\\s*['\\\"][^'\\\"]+['\\\"]"
+        }
+      }
+    },
+    {
+      "id": "secret-literal",
+      "rule": "SEC-4",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "git"
+      ],
+      "words": "a secret written into the tree (a key, a token, a private key, a password) — secrets live in the platform's secure store, never in source",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        },
+        "macos": {
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        },
+        "android": {
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        },
+        "react-native": {
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        },
+        "web": {
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        },
+        "python": {
+          "rule": "SEC-8",
+          "files": [
+            "**/*"
+          ],
+          "pattern": "sk-ant-[A-Za-z0-9\\-_]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpa]-[A-Za-z0-9\\-]{10,}|(?:^|[\\\"'`])-----BEGIN [A-Z ]*PRIVATE KEY|(?i:(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)\\s*[:=]\\s*[\\\"'](?!env\\(|\\$\\{|\\$\\(|(?:test|fake|dummy|sample|stub|example|changeme|your)[-_.]|[^\\\"'\\s]*(?:placeholder|example|your-|xxx|changeme|<))(?=[^\\\"'\\s]{20,}[\\\"']|[^\\\"'\\s]*\\d)[^\\\"'\\s]{12,}[\\\"'])"
+        }
+      }
+    },
+    {
+      "id": "secret-file",
+      "rule": "SEC-4",
+      "group": "secret-literal",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "git"
+      ],
+      "words": "a secret- or data-shaped file added to the tree (an .env file, a key, a certificate, a database) — it never enters version control",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        },
+        "python": {
+          "rule": "SEC-8",
+          "files": [
+            "**/.env",
+            "**/.env.*",
+            "**/*.p8",
+            "**/*.p12",
+            "**/*.pem",
+            "**/*.key",
+            "**/*.sqlite",
+            "**/*.sqlite3",
+            "**/*.db",
+            "**/*.mobileprovision",
+            "**/*.jks",
+            "**/*.keystore"
+          ],
+          "files_excluded": [
+            "**/.env.example",
+            "**/.env.sample",
+            "**/.env.template"
+          ]
+        }
+      }
+    },
+    {
+      "id": "plaintext-http",
+      "rule": "SEC-1",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a plain http:// connection (or the setting that allows one) — every connection is HTTPS; a local dev server is the only exception and it is named in the config home",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift",
+            "**/*.plist"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift",
+            "**/*.plist"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.xml"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.plist",
+            "**/AndroidManifest.xml"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ]
+        },
+        "python": {
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.toml",
+            "**/*.yaml",
+            "**/*.yml"
+          ]
+        }
+      }
+    },
+    {
+      "id": "raw-html",
+      "rule": "SEC-2",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "untrusted text rendered as raw HTML — it goes through the framework's escaping, or through a sanitizer, never straight into the page",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "loadHTMLString\\(|documentType:\\s*\\.html|NSAttributedString\\.DocumentType\\.html"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "loadHTMLString\\(|documentType:\\s*\\.html|NSAttributedString\\.DocumentType\\.html"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Html(Compat)?\\.fromHtml\\(|\\.loadData\\(|\\.loadDataWithBaseURL\\("
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "source=\\{\\{\\s*html:\\s*(?![\\'\"`])(?=\\S)|\\bdangerouslySetInnerHTML\\b"
+        },
+        "web": {
+          "rule": "SEC-3",
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html",
+            "**/*.vue",
+            "**/*.svelte"
+          ],
+          "pattern": "\\bdangerouslySetInnerHTML\\b|\\.(innerHTML|outerHTML)\\s*=|document\\.write(ln)?\\(|insertAdjacentHTML\\(|\\bv-html=|\\[innerHTML\\]=|\\{@html\\b"
+        },
+        "python": {
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.jinja",
+            "**/*.jinja2",
+            "**/*.j2"
+          ],
+          "pattern": "\\bmark_safe\\(|\\bMarkup\\(|\\|\\s*safe\\b|autoescape\\s*=\\s*False|render_template_string\\("
+        }
+      }
+    },
+    {
+      "id": "dangerous-eval",
+      "rule": "SEC-5",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "input handed to eval, exec, pickle or an unsafe YAML loader — untrusted data is parsed by a parser that cannot run it",
+      "platforms": {
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "(?<![\\w.])(eval|exec)\\(|\\bpickle\\.loads?\\(|\\bmarshal\\.loads?\\(|\\byaml\\.load\\((?!.*(SafeLoader|safe_load))|\\bshelve\\.open\\("
+        }
+      }
+    },
+    {
+      "id": "shell-injection",
+      "rule": "SEC-4",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a command run through the shell — subprocesses take an argument list, never a string the shell interprets",
+      "platforms": {
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\bshell\\s*=\\s*True|\\bos\\.system\\(|\\bos\\.popen\\(|\\bsubprocess\\.(getoutput|getstatusoutput)\\(|\\bcommands\\.getoutput\\("
+        }
+      }
+    },
+    {
+      "id": "exported-component",
+      "rule": "SEC-6",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a component exported to other apps with no permission guarding it — components are private unless they must be reachable, and a reachable one names its permission (the launcher activity is the one exception the pattern already knows)",
+      "platforms": {
+        "android": {
+          "files": [
+            "**/AndroidManifest.xml"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sql-string-assembly",
+      "rule": "SEC-2",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a SQL statement assembled from a string — values are bound parameters, never pasted into the text",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\\\\\(|\"\\s*\\+)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\\\\\(|\"\\s*\\+)"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\"\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"]*(\\$\\{?\\w|\"\\s*\\+)"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[`\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^`\"\\']*(\\$\\{|[`\"\\']\\s*\\+)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[`\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^`\"\\']*(\\$\\{|[`\"\\']\\s*\\+)"
+        },
+        "python": {
+          "rule": "SEC-3",
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\b[rR]?[fF][rR]?[\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b|[\"\\']\\s*(?i:SELECT|INSERT|UPDATE|DELETE|WHERE)\\b[^\"\\']*[\"\\']\\s*(%|\\+|\\.format\\()"
+        }
+      }
+    },
+    {
+      "id": "cdn-script",
+      "rule": "03 no-cdn-loaded-scripts",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a script loaded from a URL at runtime — dependencies are installed and pinned by the lockfile; a CDN script changes under you",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.html",
+            "**/*.vue",
+            "**/*.svelte",
+            "**/*.astro"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        },
+        "python": {
+          "files": [
+            "**/*.py",
+            "**/*.html",
+            "**/*.jinja",
+            "**/*.jinja2",
+            "**/*.j2"
+          ],
+          "pattern": "<script\\b[^>]*\\ssrc\\s*=\\s*\\\\?[\"\\']https?://"
+        }
+      }
+    },
+    {
+      "id": "blocking-call",
+      "rule": "ENG-3",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "source",
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a call that parks a thread and waits — long waits are async/await; nothing that blocks is reachable from the main actor",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?<![\\w.])u?sleep\\(|Thread\\.sleep\\(|DispatchSemaphore\\(|\\.wait\\(\\)|\\.wait\\(timeout:|RunLoop\\.(main|current)\\.run\\(|\\bDispatchGroup\\(\\)[^\\n]*\\.wait\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?<![\\w.])u?sleep\\(|Thread\\.sleep\\(|DispatchSemaphore\\(|\\.wait\\(\\)|\\.wait\\(timeout:|RunLoop\\.(main|current)\\.run\\(|\\bDispatchGroup\\(\\)[^\\n]*\\.wait\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "Thread\\.sleep\\(|SystemClock\\.sleep\\(|\\brunBlocking\\s*[({]|\\.get\\(\\s*\\d+\\s*,\\s*TimeUnit|\\bCountDownLatch\\(|\\bTasks\\.await\\(",
+          "words": "a call that parks a thread and waits — long waits are suspend functions on a dispatcher; nothing that blocks runs on Main"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "Atomics\\.wait\\(|while\\s*\\(\\s*(Date\\.now\\(\\)|performance\\.now\\(\\)|\\+new Date)|\\.open\\([^)]*,\\s*false\\s*\\)|\\bdeasync\\b",
+          "words": "a busy wait or a synchronous request on the JavaScript thread — long waits are promises the thread does not sit on"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "Atomics\\.wait\\(|while\\s*\\(\\s*(Date\\.now\\(\\)|performance\\.now\\(\\)|\\+new Date)|\\.open\\([^)]*,\\s*false\\s*\\)|\\bdeasync\\b|(?<![\\w.])(alert|confirm|prompt)\\(|window\\.(alert|confirm|prompt)\\(",
+          "words": "a busy wait, a synchronous request or a blocking dialog on the main thread — long waits are promises the thread does not sit on"
+        },
+        "python": {
+          "rule": "ASYNC-1",
+          "applies_to": [
+            "*"
+          ],
+          "files": [
+            "**/*.py"
+          ],
+          "words": "a blocking call inside an async function — file and network I/O and sleeps go through the loop's async forms or run_in_executor",
+          "kind": "builtin"
+        }
+      }
+    },
+    {
+      "id": "layer-import",
+      "rule": "A-1",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a data or network framework imported into view code — screens display; data goes through the repository layer",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(CoreData|SwiftData|GRDB|SQLite|SQLite3|RealmSwift|Realm|FMDB|Supabase|FirebaseFirestore|FirebaseDatabase|CloudKit|Alamofire)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(CoreData|SwiftData|GRDB|SQLite|SQLite3|RealmSwift|Realm|FMDB|Supabase|FirebaseFirestore|FirebaseDatabase|CloudKit|Alamofire)\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "^\\s*import\\s+(androidx\\.room|android\\.database|io\\.realm|com\\.google\\.firebase\\.(firestore|database)|retrofit2|okhttp3|io\\.ktor\\.client|java\\.sql)\\b"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "from\\s+[\\'\"](@prisma/client|@supabase/supabase-js|firebase/(firestore|database)|knex|pg|mysql2|mongoose|typeorm|drizzle-orm|realm|@nozbe/watermelondb|expo-sqlite|react-native-sqlite-storage|better-sqlite3|sqlite3)[\\'\"]|require\\(\\s*[\\'\"](pg|mysql2|mongoose|knex|sqlite3|better-sqlite3)[\\'\"]\\s*\\)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "from\\s+[\\'\"](@prisma/client|@supabase/supabase-js|firebase/(firestore|database)|knex|pg|mysql2|mongoose|typeorm|drizzle-orm|realm|@nozbe/watermelondb|expo-sqlite|react-native-sqlite-storage|better-sqlite3|sqlite3)[\\'\"]|require\\(\\s*[\\'\"](pg|mysql2|mongoose|knex|sqlite3|better-sqlite3)[\\'\"]\\s*\\)"
+        },
+        "python": {
+          "rule": "ARCH-4",
+          "applies_to": [
+            "*"
+          ],
+          "files": [
+            "**/routes/**",
+            "**/routers/**",
+            "**/handlers/**",
+            "**/views/**",
+            "**/api/**",
+            "**/endpoints/**",
+            "**/controllers/**"
+          ],
+          "pattern": "^\\s*(from|import)\\s+(sqlalchemy|psycopg2?|asyncpg|pymongo|motor|sqlite3|aiosqlite|peewee|tortoise|databases|redis)\\b|\\.execute\\(\\s*[rRfF]?[\"\\']|\\bsession\\.query\\(",
+          "words": "database access inside a handler — handlers call the data-access layer; the query lives there"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-password-hash",
+      "rule": "00 native-platform-standard-first",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a password hashed by hand with a general-purpose digest — the platform's password hasher (argon2/bcrypt through passlib, or the framework's make_password) owns it",
+      "platforms": {
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "hashlib\\.(md5|sha1|sha224|sha256|sha384|sha512)\\(.*(?i:password|passwd|pwd)"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-query-parse",
+      "rule": "00 native-platform-standard-first",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a URL, query string or header taken apart by hand — urllib.parse and the framework's request object already own that",
+      "platforms": {
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\.split\\(\\s*[\"\\'](\\?|&|://|;\\s*charset)[\"\\']\\s*\\)"
+        }
+      }
+    },
+    {
+      "id": "hand-rolled-arg-parse",
+      "rule": "00 native-platform-standard-first",
+      "group": "native-pattern",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "command-line flags parsed by hand from sys.argv — argparse owns the flags, the help text and the errors",
+      "platforms": {
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "\\bsys\\.argv\\[\\d+\\]\\s*(==|in\\s*\\()|for\\s+\\w+\\s+in\\s+sys\\.argv"
+        }
+      }
+    },
+    {
+      "id": "viewmodel-ui-import",
+      "rule": "A-1",
+      "group": "layer-import",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a UI framework imported into a view model — view models prepare data and know nothing about the toolkit that draws it",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*ViewModel.swift",
+            "**/ViewModels/**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(SwiftUI|UIKit|AppKit)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*ViewModel.swift",
+            "**/ViewModels/**/*.swift"
+          ],
+          "pattern": "^\\s*import\\s+(SwiftUI|UIKit|AppKit)\\b"
+        },
+        "android": {
+          "files": [
+            "**/*ViewModel.kt"
+          ],
+          "pattern": "^\\s*import\\s+(androidx\\.compose\\.(material|material3|ui|foundation)|android\\.widget\\.|android\\.view\\.)"
+        }
+      }
+    },
+    {
+      "id": "destructive-default-key",
+      "rule": "05 a-destructive-confirm-is-click-only",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib",
+        "source"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a destructive action wired to the Return key or auto-focused — a destructive confirm is a deliberate click, never the default action",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "role:\\s*\\.destructive(?:(?!Button\\().){0,200}?\\.keyboardShortcut\\(\\.defaultAction\\)|\\.keyboardShortcut\\(\\.defaultAction\\)(?:(?!Button\\().){0,160}?role:\\s*\\.destructive"
+        },
+        "macos": {
+          "rule": "MAC-6",
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "role:\\s*\\.destructive(?:(?!Button\\().){0,200}?\\.keyboardShortcut\\(\\.defaultAction\\)|\\.keyboardShortcut\\(\\.defaultAction\\)(?:(?!Button\\().){0,160}?role:\\s*\\.destructive"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\\bon(Done|Go|Send)\\s*=\\s*\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\("
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "onSubmitEditing=\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\("
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(onSubmit|onKeyDown|onKeyPress|onKeyUp)=\\{[^}]*\\b(delete|remove|destroy|erase)\\w*\\(|autoFocus[^>]*\\b(delete|remove|destroy)\\w*[^>]*>|<button[^>]*\\b(delete|remove|destroy)\\w*[^>]*autoFocus"
+        }
+      }
+    },
+    {
+      "id": "manual-plural",
+      "rule": "L-5",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a plural chosen by hand with `count == 1` — plurals come from the catalog's plural variants, which know every language's rules",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+(?:\\w*[cC]ount|\\w*[tT]otal|n)\\s*==\\s*1\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(==|!=)\\s*1\\s*\\?\\s*\"|\\bcount\\s*(==|!=|>)\\s*1\\s*\\?|\\bif\\s+(?:\\w*[cC]ount|\\w*[tT]otal|n)\\s*==\\s*1\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "(==|!=)\\s*1\\)?\\s*\"|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[sS]ize|n)\\s*==\\s*1\\s*\\)|\\bcount\\s*==\\s*1\\s*\\?"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[lL]ength|n)\\s*===?\\s*1\\s*\\)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(===?|!==?)\\s*1\\s*\\?\\s*[\\'\"`]|\\bcount\\s*(===?|!==?|>)\\s*1\\s*\\?|\\bif\\s*\\(\\s*(?:\\w*[cC]ount|\\w*[tT]otal|\\w*[lL]ength|n)\\s*===?\\s*1\\s*\\)"
+        }
+      }
+    },
+    {
+      "id": "ui-string-concat",
+      "rule": "L-4",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a sentence assembled by concatenation — text with values in it is one catalog entry with placeholders, because word order differs across languages",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\""
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\""
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\"\\s*\\+\\s*[A-Za-z_(]|[A-Za-z_)\\]]\\s*\\+\\s*\"(?=[^\"]*[A-Za-z])(?=[^\"]*\\s)[^\"]*\""
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]"
+        }
+      }
+    },
+    {
+      "id": "baked-case",
+      "rule": "L-12",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "casing baked into the string in code — all-caps and capitals are a render-time style (a text-case modifier or CSS), because casing rules differ per language",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^(?!.*(==|!=|contains\\(|hasPrefix\\(|hasSuffix\\(|sorted|compare|caseInsensitive|filter|localizedStandard|\\bkey\\b|Key\\b)).*\\.(uppercased|capitalized)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^(?!.*(==|!=|contains\\(|hasPrefix\\(|hasSuffix\\(|sorted|compare|caseInsensitive|filter|localizedStandard|\\bkey\\b|Key\\b)).*\\.(uppercased|capitalized)\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "^(?!.*(==|!=|contains\\(|startsWith|endsWith|sorted|equals|compareTo|\\bkey\\b)).*\\.(uppercase\\(\\)|replaceFirstChar\\s*\\{[^}]*(uppercase|titlecase))"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "^(?!.*(===?|!==?|includes\\(|startsWith|endsWith|localeCompare|sort|indexOf|\\bkey\\b)).*\\.toUpperCase\\(\\)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "^(?!.*(===?|!==?|includes\\(|startsWith|endsWith|localeCompare|sort|indexOf|\\bkey\\b)).*\\.toUpperCase\\(\\)|text-transform:\\s*(uppercase|capitalize)"
+        }
+      }
+    },
+    {
+      "id": "one-catalog-per-locale",
+      "rule": "L-2",
+      "severity": "block",
+      "scope": "tree",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "generated",
+        "git",
+        "docs",
+        "design_bundle",
+        "plans"
+      ],
+      "once": true,
+      "words": "a second strings catalog — every locale has one catalog in the bound strings home; a table beside it is a second place the same sentence can live",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.xcstrings",
+            "**/*.lproj/*.strings"
+          ],
+          "files_excluded": [
+            "**/Localizable.xcstrings",
+            "**/InfoPlist.xcstrings",
+            "**/AppShortcuts.xcstrings",
+            "**/InfoPlist.strings",
+            "**/Localizable.strings"
+          ],
+          "pattern": "[\\s\\S]"
+        },
+        "macos": {
+          "files": [
+            "**/*.xcstrings",
+            "**/*.lproj/*.strings"
+          ],
+          "files_excluded": [
+            "**/Localizable.xcstrings",
+            "**/InfoPlist.xcstrings",
+            "**/AppShortcuts.xcstrings",
+            "**/InfoPlist.strings",
+            "**/Localizable.strings"
+          ],
+          "pattern": "[\\s\\S]"
+        },
+        "android": {
+          "files": [
+            "**/res/values*/strings*.xml"
+          ],
+          "files_excluded": [
+            "**/res/values*/strings.xml"
+          ],
+          "pattern": "[\\s\\S]"
+        },
+        "react-native": {
+          "excludes": [
+            "tests",
+            "generated",
+            "git",
+            "docs",
+            "design_bundle",
+            "plans",
+            "strings"
+          ],
+          "files": [
+            "**/translations.json",
+            "**/strings.json",
+            "**/messages.json",
+            "**/i18n.json",
+            "**/locales/**/*.json"
+          ],
+          "pattern": "[\\s\\S]"
+        },
+        "web": {
+          "excludes": [
+            "tests",
+            "generated",
+            "git",
+            "docs",
+            "design_bundle",
+            "plans",
+            "strings"
+          ],
+          "files": [
+            "**/translations.json",
+            "**/strings.json",
+            "**/messages.json",
+            "**/i18n.json",
+            "**/locales/**/*.json"
+          ],
+          "pattern": "[\\s\\S]"
+        }
+      }
+    },
+    {
+      "id": "english-key",
+      "rule": "L-3",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "strings",
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "generated",
+        "git",
+        "docs",
+        "design_bundle",
+        "plans"
+      ],
+      "words": "a catalog key that is an English sentence — keys name the meaning (`vehicle.status.doNotDispatch`), so a translation can diverge from the English",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.xcstrings",
+            "**/*.strings"
+          ],
+          "pattern": "^\\s{4}\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.])\"\\s*:\\s*\\{|^\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.])\"\\s*="
+        },
+        "macos": {
+          "files": [
+            "**/*.xcstrings",
+            "**/*.strings"
+          ],
+          "pattern": "^\\s{4}\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.])\"\\s*:\\s*\\{|^\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.])\"\\s*="
+        },
+        "android": {
+          "files": [
+            "**/res/values*/strings*.xml",
+            "**/res/values*/plurals*.xml"
+          ],
+          "pattern": "<(string|plurals)\\s+name=\"[^\"]*[A-Z ][^\"]*\""
+        },
+        "react-native": {
+          "files": [
+            "**/locales/**/*.json",
+            "src/i18n/**/*.json",
+            "**/translations.json",
+            "**/messages.json"
+          ],
+          "pattern": "^\\s*\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.:])\"\\s*:\\s*\""
+        },
+        "web": {
+          "files": [
+            "**/locales/**/*.json",
+            "src/i18n/**/*.json",
+            "**/translations.json",
+            "**/messages.json"
+          ],
+          "pattern": "^\\s*\"(?:[^\"]*\\s[^\"]*|[^\"]*[!?.:])\"\\s*:\\s*\""
+        }
+      }
+    },
+    {
+      "id": "fixed-text-size",
+      "rule": "ACC-4",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git",
+        "theme"
+      ],
+      "words": "a font size fixed in points — text takes a Dynamic Type text style (or a custom font relative to one) so the system text-size setting applies",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|UIFont\\.systemFont\\(\\s*ofSize:|UIFont\\([^)]*size:|\\.font\\(\\s*\\.custom\\([^)]*size:\\s*\\d+\\s*\\)\\)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.font\\(\\s*\\.system\\(\\s*size:|Font\\.system\\(\\s*size:|NSFont\\.systemFont\\(\\s*ofSize:|NSFont\\([^)]*size:|\\.font\\(\\s*\\.custom\\([^)]*size:\\s*\\d+\\s*\\)\\)",
+          "words": "a font size fixed in points — text takes a system text style so the text-size setting applies"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/res/layout/**/*.xml"
+          ],
+          "pattern": "fontSize\\s*=\\s*\\d+(\\.\\d+)?\\.dp\\b|android:textSize=\"\\d+(\\.\\d+)?dp\"|TextUnit\\([^)]*TextUnitType\\.Unspecified",
+          "words": "a font size in dp — text is measured in sp so the system font-size setting applies"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "allowFontScaling=\\{\\s*false|maxFontSizeMultiplier=\\{\\s*1(\\.0)?\\s*\\}",
+          "words": "font scaling switched off — text follows the system text-size setting"
+        },
+        "web": {
+          "rule": "ACC-5",
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "font-size:\\s*\\d+(\\.\\d+)?px|fontSize:\\s*[\\'\"]?\\d+(\\.\\d+)?px",
+          "words": "a font size fixed in pixels — body text is measured in rem/em so browser text scaling applies"
+        }
+      }
+    },
+    {
+      "id": "fixed-screen-size",
+      "rule": "ENG-2",
+      "severity": "advisory",
+      "scope": "added",
+      "applies_to": [
+        "ui",
+        "ui_lib",
+        "source"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git",
+        "theme"
+      ],
+      "words": "a screen-scale size fixed in code — layout adapts through the platform's layout system; fixed dimensions break on the next window size or device",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.frame\\(\\s*width:\\s*\\d{3,}(\\.\\d+)?\\s*,\\s*height:\\s*\\d{3,}|\\.frame\\(\\s*(width|height):\\s*\\d{3,}(\\.\\d+)?\\s*\\)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\.frame\\(\\s*width:\\s*\\d{3,}(\\.\\d+)?\\s*,\\s*height:\\s*\\d{3,}|\\.frame\\(\\s*(width|height):\\s*\\d{3,}(\\.\\d+)?\\s*\\)"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/res/layout/**/*.xml"
+          ],
+          "pattern": "\\.(width|height|size|requiredWidth|requiredHeight)\\(\\s*\\d{3,}\\.dp\\s*\\)|android:layout_(width|height)=\"\\d{3,}dp\""
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\bDimensions\\.get\\(\\s*[\\'\"](window|screen)[\\'\"]\\s*\\)|(width|height):\\s*[\\'\"]?\\d{3,}(px)?[\\'\"]?\\s*[,}]"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.css",
+            "**/*.scss"
+          ],
+          "pattern": "(width|height):\\s*[\\'\"]?\\d{3,}px|^\\s*(width|height):\\s*\\d{3,}px"
+        },
+        "python": {
+          "files": [
+            "**/*.py",
+            "**/*.html"
+          ],
+          "pattern": "(width|height):\\s*\\d{3,}px"
+        }
+      }
+    },
+    {
+      "id": "test-criterion-tag",
+      "rule": "TEST-1",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "tests"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a test that names no acceptance criterion — its name or its comment says which criterion it verifies (`AC-3`, or the word criterion)",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.java"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "python": {
+          "files": [
+            "**/*.py"
+          ]
+        }
+      }
+    },
+    {
+      "id": "hermetic-test",
+      "rule": "TEST-2",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "tests"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a merge-gating test reaching a live service — tests fake their external dependencies locally; a live test is guarded by the LIVE_TESTS switch and never blocks a merge",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.java"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        },
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "^(?!.*(LIVE_TESTS|COAST_LIVE_TESTS|live_tests|@Live|skipUnlessLive|requiresLive|\\.live\\b)).*(https?://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|example\\.(com|org|net)|schemas\\.|www\\.w3\\.org)|URLSession\\.shared\\b|\\bfetch\\(\\s*[\\'\"]http|\\brequests\\.(get|post|put|delete)\\(|\\bhttpx\\.(get|post|Client)\\(|OkHttpClient\\(\\)|axios\\.(get|post|put|delete)\\()"
+        }
+      }
+    },
+    {
+      "id": "test-weakened",
+      "rule": "00 tests-are-mandatory-and-honest",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "tests"
+      ],
+      "excludes": [
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a test skipped, disabled, focused or asserting nothing — tests are honest: a failing test is fixed or the task stays open, never quieted",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bXCTSkip\\b|\\.disabled\\b|withKnownIssue\\(|#expect\\(\\s*true\\s*\\)|XCTAssertTrue\\(\\s*true\\s*\\)|XCTAssert\\(\\s*true\\s*\\)|accuracy:\\s*\\d{2,}"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bXCTSkip\\b|\\.disabled\\b|withKnownIssue\\(|#expect\\(\\s*true\\s*\\)|XCTAssertTrue\\(\\s*true\\s*\\)|XCTAssert\\(\\s*true\\s*\\)|accuracy:\\s*\\d{2,}"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.java"
+          ],
+          "pattern": "@Ignore\\b|@Disabled\\b|assertTrue\\(\\s*true\\s*\\)|assertEquals\\(\\s*true\\s*,\\s*true\\s*\\)"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(x?it|x?describe|test)\\.(skip|todo)\\(|\\bxit\\(|\\bxdescribe\\(|\\bxtest\\(|expect\\(\\s*true\\s*\\)\\.toBe(Truthy)?\\(\\s*(true\\s*)?\\)|\\.only\\("
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "\\b(x?it|x?describe|test)\\.(skip|todo)\\(|\\bxit\\(|\\bxdescribe\\(|\\bxtest\\(|expect\\(\\s*true\\s*\\)\\.toBe(Truthy)?\\(\\s*(true\\s*)?\\)|\\.only\\("
+        },
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "@pytest\\.mark\\.skip\\b|@unittest\\.skip\\b|pytest\\.skip\\(|\\bassert\\s+True\\b|self\\.skipTest\\("
+        }
+      }
+    },
+    {
+      "id": "pii-in-log",
+      "rule": "PRIV-3",
+      "severity": "ratchet",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a log line that names a personal or secret field — personal data never reaches logs, analytics or crash reports; log the event, not the value",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        },
+        "python": {
+          "rule": "OBS-2",
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "(?i)\\b(print|println|NSLog|os_log|debugPrint|dump|Logger\\.\\w+|logger\\.\\w+|log\\.[a-z]\\w*|Log\\.[dievw]|Timber\\.[dievw]|console\\.(log|info|warn|error|debug)|logging\\.(debug|info|warning|error|critical))\\s*\\(.*\\b(email|e_mail|password|passwd|token|phone|phoneNumber|address|street|postcode|zip|ssn|dob|dateOfBirth|birthday|creditCard|cardNumber|cvv|iban|secret|apiKey)\\b"
+        }
+      }
+    },
+    {
+      "id": "inline-comment",
+      "rule": "02 no-inline-comments",
+      "severity": "ratchet",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git",
+        "strings",
+        "manifest"
+      ],
+      "words": "a comment trailing the code on the same line — the name says what the code does; a comment is for the why, on its own line, only when the why is not obvious",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*[^\\s/#\"\\'`*].*[^:\"\\'`/]\\s//\\s\\S"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "^\\s*[^\\s/#\"\\'`*].*[^:\"\\'`/]\\s//\\s\\S"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "^\\s*[^\\s/#\"\\'`*].*[^:\"\\'`/]\\s//\\s\\S"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "^\\s*[^\\s/#\"\\'`*].*[^:\"\\'`/]\\s//\\s\\S"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "^\\s*[^\\s/#\"\\'`*].*[^:\"\\'`/]\\s//\\s\\S"
+        },
+        "python": {
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "^\\s*[^\\s#\"\\'].*[^\"\\'#]\\s#\\s\\S"
+        }
+      }
+    },
+    {
+      "id": "retired-wording",
+      "rule": "01 never-use-the-word-guarantee",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "generated",
+        "git",
+        "governing",
+        "manifest",
+        "plans"
+      ],
+      "words": "the word \"guarantee\" — a legal word Coast never uses; say protections, enforcement or safeguards",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        },
+        "python": {
+          "files": [
+            "**/*.py",
+            "**/*.md",
+            "**/*.xcstrings",
+            "**/*.strings",
+            "**/*.json",
+            "**/*.xml",
+            "**/*.html",
+            "**/*.txt"
+          ],
+          "pattern": "(?i)\\bguarantee[sd]?\\b"
+        }
+      }
+    },
+    {
+      "id": "type-size",
+      "rule": "A-3",
+      "kind": "builtin",
+      "severity": "advisory",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git",
+        "strings",
+        "generated"
+      ],
+      "words": "a type or file grown past the size one job needs — a signal for the reviewer to ask whether it has taken on a second job",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "python": {
+          "rule": "ARCH-5",
+          "files": [
+            "**/*.py"
+          ]
+        }
+      }
+    },
+    {
+      "id": "money-float",
+      "rule": "PAY-1",
+      "severity": "advisory",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "a money field typed as binary floating point — money is a decimal or a whole number of the smallest unit, because floats cannot hold cents exactly",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float|CGFloat)\\b|\\bDouble\\(\\s*\\w*(price|amount|total)"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float|CGFloat)\\b|\\bDouble\\(\\s*\\w*(price|amount|total)"
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.kts"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*(Double|Float)\\b|\\.toDouble\\(\\)|\\.toFloat\\(\\)"
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*number\\b|parseFloat\\(\\s*\\w*(price|amount|total)"
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*number\\b|parseFloat\\(\\s*\\w*(price|amount|total)"
+        },
+        "python": {
+          "rule": "DATA-3",
+          "files": [
+            "**/*.py"
+          ],
+          "pattern": "(?i)\\b(?!\\w*(?:cents|minor|pence|units)\\b)\\w*(price|amount|total|subtotal|cost|balance|fee|tax|refund|discount)\\w*\\s*:\\s*float\\b|\\bfloat\\(\\s*\\w*(price|amount|total)"
+        }
+      }
+    },
+    {
+      "id": "doc-comments",
+      "rule": "DOC-1",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git",
+        "strings",
+        "manifest"
+      ],
+      "words": "a public declaration with no doc comment — every public type and function says what it does, or the generated API reference has nothing to render",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "android": {
+          "files": [
+            "**/*.kt",
+            "**/*.java"
+          ]
+        },
+        "react-native": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "web": {
+          "files": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.jsx"
+          ]
+        },
+        "python": {
+          "rule": "STYLE-4",
+          "files": [
+            "**/*.py"
+          ]
+        }
+      }
+    }
+  ]
+}

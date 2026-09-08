@@ -1,0 +1,15 @@
+<receiver
+    android:name=".SyncReceiver"
+    android:exported="false" />
+<service
+    android:name=".UploadService"
+    android:exported="true"
+    android:permission="com.example.SYNC" />
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>

@@ -1,0 +1,9 @@
+{
+  "number": {
+    "label": "enforced by a check",
+    "retired": [
+      "held by a machine"
+    ],
+    "note": "The label for the headline number (N of M rules whose named check exists and runs). verify_rules.py, adopt.py, claude-hook.py and Coast's Rules tab read it from here; test_vocabulary.py fails when any documentation page still uses a retired label. To rename: change label, append the old one to retired, run the tests, fix every line they list."
+  }
+}

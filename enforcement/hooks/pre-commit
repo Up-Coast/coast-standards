@@ -1,0 +1,64 @@
+#!/bin/sh
+# Coast Standards — the project's pre-commit hook (enforcement task E2.2).
+#
+# Seconds, not minutes: the rules scanner on the STAGED diff — every added
+# line, the doc-comment check among them (the scanner's `doc-comments`
+# built-in holds DOC-1 on added declarations; a legacy file's old debt is
+# the whole-tree advisory at push, never a refusal here — decision 2). The
+# full battery runs at push (.githooks/pre-push). Refusals are the checks'
+# own FAIL lines, so a human and an agent meet the same wall (README §4.4).
+#
+# Installed by enforcement/adopt.py, which also sets
+#   git config core.hooksPath .githooks
+# The platform is one word in .coast/platform (or COAST_PLATFORM); the
+# checks live under Scripts/checks/ (COAST_CHECKS_DIR overrides, for tests).
+# GOVERNING: agents never edit the files that define their own checks.
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+# git exports GIT_DIR and friends to a hook run from a linked worktree or a
+# subdirectory; left in the environment they redirect every git command a
+# check runs. The battery always runs with a clean git environment.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
+export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
+
+checks=${COAST_CHECKS_DIR:-Scripts/checks}
+platform=${COAST_PLATFORM:-}
+if [ -z "$platform" ] && [ -f .coast/platform ]; then
+  platform=$(tr -d '[:space:]' < .coast/platform)
+fi
+if [ -z "$platform" ]; then
+  echo "FAIL pre-commit .coast/platform:0:platform: no platform named — write one word (ios, macos, android, react-native, web, python) to .coast/platform, or run adopt.py" >&2
+  exit 1
+fi
+if [ ! -f "$checks/check_rules.py" ]; then
+  echo "FAIL pre-commit $checks/check_rules.py:0:missing: the rules scanner is not installed — run enforcement/adopt.py from the standards repo" >&2
+  exit 1
+fi
+
+run() {
+  name=$1; shift
+  printf 'gate: %s\n' "$name"
+  if ! "$@"; then
+    printf 'gate: %s failed — the commit was refused. Fix what it printed, then commit again.\n' "$name" >&2
+    exit 1
+  fi
+}
+
+run "rules-scan (staged)" python3 "$checks/check_rules.py" --staged --platform "$platform"
+
+# A project that had its own hooks keeps them: ours ran, now its own does. An executable
+# hook runs as itself (its shebang may say python or bash); only one that is not
+# executable is handed to sh.
+if [ -f .coast/previous-hooks-path ]; then
+  previous=$(tr -d '[:space:]' < .coast/previous-hooks-path)
+  if [ -n "$previous" ] && [ -f "$previous/pre-commit" ]; then
+    printf 'gate: %s/pre-commit (this project had it before it adopted)\n' "$previous"
+    if [ -x "$previous/pre-commit" ]; then
+      "$previous/pre-commit" || exit 1
+    else
+      sh "$previous/pre-commit" || exit 1
+    fi
+  fi
+fi
+
+printf 'gate: every pre-commit check green\n'

@@ -1,0 +1,603 @@
+{
+  "_comment": "Path classes per platform (Coast's F2 §3.2 bindings, one table): ordered, first match wins, everything else is 'source'. The scanner reads this to scope every signature; Coast's PathClasses reads the same file (T248). Globs: ** crosses directories, * stays within one component, matching is case-insensitive.",
+  "platforms": {
+    "ios": {
+      "extensions": [
+        ".swift"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          ".swiftlint.yml",
+          ".swiftformat",
+          ".swift-format"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "Modules/Data/Generated/**",
+          "Package.resolved"
+        ],
+        "schema": [
+          "Modules/Data/Sources/Schema/**",
+          "Modules/Data/Migrations/**"
+        ],
+        "theme": [
+          "Modules/Shared/Sources/Theme/Theme.swift"
+        ],
+        "ui_lib": [
+          "Modules/SharedUI/**"
+        ],
+        "strings": [
+          "**/*.xcstrings",
+          "**/*.strings",
+          "**/*.stringsdict"
+        ],
+        "manifest": [
+          "**/Package.swift",
+          "*.xcodeproj/**",
+          "*.xcworkspace/**"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "Tests/**",
+          "**/Tests/**",
+          "**/*Tests.swift",
+          "**/*UITests/**"
+        ],
+        "ui": [
+          "**/Views/**",
+          "**/Screens/**",
+          "**/*View.swift",
+          "**/*Screen.swift",
+          "**/*Sheet.swift",
+          "**/*Panel.swift",
+          "**/*Row.swift",
+          "**/*Card.swift"
+        ],
+        "config_home": [
+          "**/Config/**",
+          "**/Configuration.swift",
+          "**/AppEnvironment.swift"
+        ]
+      }
+    },
+    "macos": {
+      "extensions": [
+        ".swift"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          ".swiftlint.yml",
+          ".swiftformat",
+          ".swift-format"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "Modules/Data/Generated/**",
+          "Package.resolved"
+        ],
+        "schema": [
+          "Modules/Data/Sources/Schema/**",
+          "Modules/Data/Migrations/**"
+        ],
+        "theme": [
+          "Modules/Shared/Sources/Theme/Theme.swift"
+        ],
+        "ui_lib": [
+          "Modules/SharedUI/**"
+        ],
+        "strings": [
+          "**/*.xcstrings",
+          "**/*.strings",
+          "**/*.stringsdict"
+        ],
+        "manifest": [
+          "**/Package.swift",
+          "*.xcodeproj/**",
+          "*.xcworkspace/**"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "Tests/**",
+          "**/Tests/**",
+          "**/*Tests.swift",
+          "**/*UITests/**"
+        ],
+        "ui": [
+          "**/Views/**",
+          "**/Screens/**",
+          "**/*View.swift",
+          "**/*Screen.swift",
+          "**/*Sheet.swift",
+          "**/*Panel.swift",
+          "**/*Row.swift",
+          "**/*Card.swift"
+        ],
+        "config_home": [
+          "**/Config/**",
+          "**/Configuration.swift",
+          "**/AppEnvironment.swift"
+        ]
+      }
+    },
+    "android": {
+      "extensions": [
+        ".kt",
+        ".kts",
+        ".xml"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          "detekt.yml",
+          "config/detekt/**",
+          ".editorconfig",
+          "lint.xml"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "**/build/generated/**",
+          "gradle/wrapper/**"
+        ],
+        "schema": [
+          "core/data/src/main/**/schema/**",
+          "core/data/schemas/**",
+          "**/src/main/**/database/migrations/**"
+        ],
+        "theme": [
+          "core/ui/src/main/kotlin/ui/theme/Theme.kt",
+          "core/ui/src/main/kotlin/ui/theme/**"
+        ],
+        "ui_lib": [
+          "core/ui/**"
+        ],
+        "strings": [
+          "**/res/values/strings.xml",
+          "**/res/values-*/strings.xml"
+        ],
+        "manifest": [
+          "settings.gradle",
+          "settings.gradle.kts",
+          "**/build.gradle",
+          "**/build.gradle.kts",
+          "gradle/libs.versions.toml",
+          "gradle.properties",
+          "gradlew",
+          "gradlew.bat"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "**/src/test/**",
+          "**/src/androidTest/**"
+        ],
+        "ui": [
+          "**/ui/**",
+          "**/*Screen.kt",
+          "**/res/layout/**"
+        ],
+        "config_home": [
+          "**/config/**",
+          "**/AppConfig.kt"
+        ]
+      }
+    },
+    "react-native": {
+      "extensions": [
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          ".eslintrc*",
+          "eslint.config.*",
+          ".prettierrc*",
+          "tsconfig.json",
+          "eslint-suppressions.json",
+          "babel.config.js",
+          "metro.config.js"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "android/app/build/**",
+          "ios/build/**",
+          "ios/Pods/**"
+        ],
+        "schema": [
+          "src/data/schema/**",
+          "src/data/migrations/**"
+        ],
+        "theme": [
+          "src/theme/theme.ts"
+        ],
+        "ui_lib": [
+          "src/components/**"
+        ],
+        "strings": [
+          "src/i18n/**",
+          "**/locales/**/*.json"
+        ],
+        "manifest": [
+          "package.json",
+          "package-lock.json",
+          "yarn.lock",
+          "pnpm-lock.yaml",
+          "app.json",
+          "ios/Podfile",
+          "ios/Podfile.lock",
+          "android/build.gradle",
+          "android/app/build.gradle",
+          "android/settings.gradle",
+          "ios/*.xcodeproj/**",
+          "ios/*.xcworkspace/**"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "__tests__/**",
+          "**/__tests__/**",
+          "**/*.test.*",
+          "**/*.spec.*",
+          "e2e/**"
+        ],
+        "ui": [
+          "src/screens/**",
+          "**/*.tsx"
+        ],
+        "config_home": [
+          "src/config/**"
+        ]
+      }
+    },
+    "web": {
+      "extensions": [
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".html",
+        ".css",
+        ".scss"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          ".eslintrc*",
+          "eslint.config.*",
+          ".prettierrc*",
+          "tsconfig.json",
+          "eslint-suppressions.json",
+          "vite.config.*",
+          "next.config.*"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "dist/**",
+          "build/**",
+          ".next/**",
+          "coverage/**"
+        ],
+        "schema": [
+          "src/data/schema/**",
+          "src/data/migrations/**",
+          "prisma/**",
+          "supabase/migrations/**"
+        ],
+        "theme": [
+          "src/theme/tokens.ts"
+        ],
+        "ui_lib": [
+          "src/components/**"
+        ],
+        "strings": [
+          "src/i18n/**",
+          "**/locales/**/*.json"
+        ],
+        "manifest": [
+          "package.json",
+          "package-lock.json",
+          "yarn.lock",
+          "pnpm-lock.yaml"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "__tests__/**",
+          "**/__tests__/**",
+          "**/*.test.*",
+          "**/*.spec.*",
+          "e2e/**",
+          "cypress/**",
+          "playwright/**"
+        ],
+        "ui": [
+          "src/pages/**",
+          "src/app/**",
+          "**/*.tsx",
+          "**/*.vue",
+          "**/*.svelte"
+        ],
+        "config_home": [
+          "src/config/**"
+        ]
+      }
+    },
+    "python": {
+      "extensions": [
+        ".py"
+      ],
+      "order": [
+        "git",
+        "governing",
+        "plans",
+        "generated",
+        "schema",
+        "theme",
+        "ui_lib",
+        "strings",
+        "manifest",
+        "docs",
+        "design_bundle",
+        "tests",
+        "ui",
+        "config_home"
+      ],
+      "classes": {
+        "git": [
+          ".git/**",
+          "**/.git/**"
+        ],
+        "governing": [
+          ".github/**",
+          ".coast/**",
+          "Scripts/checks/**",
+        "Scripts/hooks/**",
+          ".githooks/**",
+          "docs/domain-rules.md",
+          "docs/ai-features-rules.md",
+          "ruff.toml",
+          "mypy.ini",
+          ".pre-commit-config.yaml"
+        ],
+        "plans": [
+          "plans/**"
+        ],
+        "generated": [
+          "docs/diagrams/**",
+          "docs/api/**",
+          "docs/modules/**",
+          "docs/features/index.md",
+          "**/__pycache__/**",
+          ".venv/**",
+          "build/**",
+          "dist/**",
+          "*.egg-info/**"
+        ],
+        "schema": [
+          "**/migrations/**",
+          "alembic/**"
+        ],
+        "theme": [],
+        "ui_lib": [],
+        "strings": [
+          "**/messages.py",
+          "**/messages/**",
+          "**/locale/**"
+        ],
+        "manifest": [
+          "pyproject.toml",
+          "requirements*.txt",
+          "setup.py",
+          "setup.cfg",
+          "poetry.lock",
+          "uv.lock"
+        ],
+        "docs": [
+          "docs/**"
+        ],
+        "design_bundle": [
+          "design/**"
+        ],
+        "tests": [
+          "tests/**",
+          "**/tests/**",
+          "**/test_*.py",
+          "**/*_test.py",
+          "**/conftest.py"
+        ],
+        "ui": [],
+        "config_home": [
+          "**/config.py",
+          "**/settings.py",
+          "**/config/**"
+        ]
+      }
+    }
+  }
+}

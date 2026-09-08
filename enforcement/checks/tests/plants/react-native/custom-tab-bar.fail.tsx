@@ -1,0 +1,1 @@
+function BottomTabBar() { return <View/>; }

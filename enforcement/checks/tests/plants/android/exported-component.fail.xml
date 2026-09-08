@@ -1,0 +1,7 @@
+<receiver
+    android:name=".SyncReceiver"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="com.example.SYNC_NOW" />
+    </intent-filter>
+</receiver>

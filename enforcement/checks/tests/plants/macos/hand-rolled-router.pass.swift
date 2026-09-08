@@ -1,0 +1,1 @@
+NavigationStack(path: $path) { Home() }

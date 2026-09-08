@@ -1,0 +1,34 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: jscpd, the duplicate-code tool the pre-push seat runs (pinned)
+        run: npm install -g jscpd@5.1.2
+      - name: Git identity for the test fixtures
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.com
+      - name: Every rule names a check that runs (against the committed baseline)
+        run: python3 enforcement/checks/verify_rules.py --baseline enforcement/checks/verify-baseline.json --summary
+      - name: The enforcement layer's own tests
+        run: python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py'
