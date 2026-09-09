@@ -141,3 +141,7 @@ audit should have caught:
 Filed 20 August 2026, after several audits in the same week each came back clean while
 major pieces sat unbuilt: the list of learnings exists so that future audits are more
 correct. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

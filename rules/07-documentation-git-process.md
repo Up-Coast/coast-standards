@@ -152,3 +152,7 @@ list) — never a second tracker. [check: process]
   documents makes the next reader skim headings and get it wrong. Edit the existing document
   for its subject. (Also: don't couple tooling to Markdown specifically — the format may be
   replaced.) [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

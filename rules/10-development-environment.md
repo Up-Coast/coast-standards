@@ -38,3 +38,7 @@ With one checkout per project rather than worktrees, switching branches invalida
 build-artifact caches, so the next build is a cold one. That's an accepted trade for
 predictable disk use, but it means: batch work on a branch rather than hopping, and don't
 read a slow first build after a switch as a regression. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

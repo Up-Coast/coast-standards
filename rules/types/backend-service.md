@@ -89,3 +89,7 @@ days.
   timezone-aware in UTC.
 - Customer data never enters version control — fixtures are synthetic or
   explicitly cleared.
+
+---
+
+[← All rules](../README.md) · [Priority rules](../00-priority-rules.md) · [Project types](../PROJECT-TYPES.md) · [Documentation](../../docs/README.md)

@@ -14,7 +14,7 @@ by the same checks.
 
 Three parts:
 
-- **`rules/`** — the corpus. Numbered files that apply to every project, type files for
+- **[`rules/`](rules/README.md)** — the corpus, with its own index. Numbered files that apply to every project, type files for
   services and pipelines, and one checkable rule document per platform (iOS, macOS,
   Android, React Native, Web, Python). Every rule names the check that holds it.
 - **`enforcement/`** — the checks. A standard-library Python scanner with per-platform
@@ -36,29 +36,29 @@ Source-available, not open source: see [License](#license) below, and
 
 | Path | What it is |
 |---|---|
-| `rules/PROJECT-TYPES.md` | **Which rules apply to your kind of project** — app, backend service, data/ML pipeline, library/CLI. Read this second, before applying anything to a project without a screen. |
-| `rules/00-priority-rules.md` | The non-negotiables, in priority order. **DRY is the rule above all other rules.** Read this first, always. |
-| `rules/01-working-style.md` | How agents work with the owner of a project: communication, verification, reporting, decisions |
-| `rules/02-architecture-and-code.md` | Layering, SRP, naming, the DRY mechanics (all types); MVVM, reactive state and responsive layout (apps only) |
-| `rules/03-security-owasp.md` | OWASP-derived security rules + sensitive-code handling |
-| `rules/04-localization.md` | Why every app is built localizable from day one, and the Canadian defaults — **apps and frontends only**. The twelve checkable rules (L-1..L-12) live in each platform file since corpus version 8. |
-| `rules/05-design-and-ui.md` | Reading design mocks, interaction rulings, copy rules, accessibility — **apps and frontends only**. The checkable token and component rules (DES-1..4, DRY-1..2) live in each platform file since corpus version 8. |
-| `rules/06-testing.md` | Test types, TDD, false-passing patterns, what "coverage" means |
-| `rules/07-documentation-git-process.md` | Docs, diagrams, decision logs, git and PR discipline |
-| `rules/08-auditing-and-completeness.md` | How to audit: rebuild the list from the code, never review the list; audit the product's claims, not just its specs; **the case log of real audit misses and the mechanical check each one produces**. Read before any audit or "what's left" pass, and add to it whenever an audit misses something. |
-| `rules/09-models-and-agents.md` | Model effort defaults (frugal, per role, never inherited), verifying which model is running, commit attribution, not dictating diffs into code you don't own |
-| `rules/10-development-environment.md` | Atomic commands and permission prompts, disk hygiene, the cost of branch switching |
-| `rules/types/backend-service.md` | The reasoning layer for services with no screen: layering without a UI, API contracts, async/workers, operability, data safety |
-| `rules/types/data-and-ml.md` | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
-| `rules/platform/domain-rules-<platform>.md` | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
-| `rules/platform/ai-features.md` | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
-| `docs/` | **The public documentation** — for a founder or developer installing this into their own product: what it is, the quickstart, how it works, what gets checked, the options, what to do when a check stops you, working with AI agents, FAQ. Plain words; nothing a maintainer-only reader needs. |
-| `enforcement/` | **How these rules are enforced by checks** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("enforced by a check N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `docs/` is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); `enforcement/DEVELOPER-GUIDE.md` is the internal guide for people working on the layer itself — every mode, flag, file and format; `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and three shipped iOS apps (September 2026). |
-| `.githooks/` | This repo's own pre-commit hook (CI runs the same two commands on every pull request): the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
-| `CHECKS-VERSION` | The release number, one line. Every release is this number, the git tag `v<number>`, and an entry in `CHANGELOG.md`; projects record it in `.coast/standards-version`. |
-| `CHANGELOG.md` | One entry per release, in plain words: what a project that upgrades will notice. The release workflow publishes the entry as the release notes. |
-| `skills/adopt-coast-standards/` | This repo's own skill for AI coding agents: where the releases are and how to run the installer, nothing more. Copy the folder into `~/.claude/skills/` or a project's `.claude/skills/`. |
-| `TEMPLATE-CLAUDE.md` | Paste-in starter block for a new project's CLAUDE.md |
+| [`rules/PROJECT-TYPES.md`](rules/PROJECT-TYPES.md) | **Which rules apply to your kind of project** — app, backend service, data/ML pipeline, library/CLI. Read this second, before applying anything to a project without a screen. |
+| [`rules/00-priority-rules.md`](rules/00-priority-rules.md) | The non-negotiables, in priority order. **DRY is the rule above all other rules.** Read this first, always. |
+| [`rules/01-working-style.md`](rules/01-working-style.md) | How agents work with the owner of a project: communication, verification, reporting, decisions |
+| [`rules/02-architecture-and-code.md`](rules/02-architecture-and-code.md) | Layering, SRP, naming, the DRY mechanics (all types); MVVM, reactive state and responsive layout (apps only) |
+| [`rules/03-security-owasp.md`](rules/03-security-owasp.md) | OWASP-derived security rules + sensitive-code handling |
+| [`rules/04-localization.md`](rules/04-localization.md) | Why every app is built localizable from day one, and the Canadian defaults — **apps and frontends only**. The twelve checkable rules (L-1..L-12) live in each platform file since corpus version 8. |
+| [`rules/05-design-and-ui.md`](rules/05-design-and-ui.md) | Reading design mocks, interaction rulings, copy rules, accessibility — **apps and frontends only**. The checkable token and component rules (DES-1..4, DRY-1..2) live in each platform file since corpus version 8. |
+| [`rules/06-testing.md`](rules/06-testing.md) | Test types, TDD, false-passing patterns, what "coverage" means |
+| [`rules/07-documentation-git-process.md`](rules/07-documentation-git-process.md) | Docs, diagrams, decision logs, git and PR discipline |
+| [`rules/08-auditing-and-completeness.md`](rules/08-auditing-and-completeness.md) | How to audit: rebuild the list from the code, never review the list; audit the product's claims, not just its specs; **the case log of real audit misses and the mechanical check each one produces**. Read before any audit or "what's left" pass, and add to it whenever an audit misses something. |
+| [`rules/09-models-and-agents.md`](rules/09-models-and-agents.md) | Model effort defaults (frugal, per role, never inherited), verifying which model is running, commit attribution, not dictating diffs into code you don't own |
+| [`rules/10-development-environment.md`](rules/10-development-environment.md) | Atomic commands and permission prompts, disk hygiene, the cost of branch switching |
+| [`rules/types/backend-service.md`](rules/types/backend-service.md) | The reasoning layer for services with no screen: layering without a UI, API contracts, async/workers, operability, data safety |
+| [`rules/types/data-and-ml.md`](rules/types/data-and-ml.md) | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
+| [`rules/platform/domain-rules-<platform>.md`](rules/README.md#the-checkable-layer--pick-one) | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
+| [`rules/platform/ai-features.md`](rules/platform/ai-features.md) | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
+| [`docs/`](docs/README.md) | **The public documentation** — for a founder or developer installing this into their own product: what it is, the quickstart, how it works, what gets checked, the options, what to do when a check stops you, working with AI agents, FAQ. Plain words; nothing a maintainer-only reader needs. |
+| [`enforcement/`](enforcement/README.md) | **How these rules are enforced by checks** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("enforced by a check N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `docs/` is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); `enforcement/DEVELOPER-GUIDE.md` is the internal guide for people working on the layer itself — every mode, flag, file and format; `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and three shipped iOS apps (September 2026). |
+| [`.githooks/`](.githooks) | This repo's own pre-commit hook (CI runs the same two commands on every pull request): the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
+| [`CHECKS-VERSION`](CHECKS-VERSION) | The release number, one line. Every release is this number, the git tag `v<number>`, and an entry in `CHANGELOG.md`; projects record it in `.coast/standards-version`. |
+| [`CHANGELOG.md`](CHANGELOG.md) | One entry per release, in plain words: what a project that upgrades will notice. The release workflow publishes the entry as the release notes. |
+| [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md) | This repo's own skill for AI coding agents: where the releases are and how to run the installer, nothing more. Copy the folder into `~/.claude/skills/` or a project's `.claude/skills/`. |
+| [`TEMPLATE-CLAUDE.md`](TEMPLATE-CLAUDE.md) | Paste-in starter block for a new project's CLAUDE.md |
 
 ## How to adopt in a new project
 

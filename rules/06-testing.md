@@ -228,3 +228,7 @@ Practice: when writing a stand-in, enumerate the real service's
 documented failure responses first and make the double able to produce
 each one; when a live defect is traced to an unreachable handler, teach
 the stand-in that refusal in the same fix. [check: review]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

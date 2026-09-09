@@ -84,3 +84,7 @@ decision, stated in plain words.
 - **Long-running commands:** stream output through `tee` to a log file and give the owner
   the path, so they can tell stuck from slow. Know what a healthy run looks like; kill and
   investigate a wedged one instead of waiting. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

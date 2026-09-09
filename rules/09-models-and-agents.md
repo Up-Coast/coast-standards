@@ -59,3 +59,7 @@ Assigning someone a manual task you had a tool for is a real cost, not a roundin
 When a permission or safety block genuinely prevents the programmatic path, **say that
 explicitly, with the fix**, rather than quietly inventing a manual workaround.
 [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

@@ -86,3 +86,7 @@ quietly incorrect**, and nothing in the ordinary review path catches that.
   event or a whole lifecycle episode *before* designing the upsert — getting it wrong
   produces duplicated downstream alerts that look like real ones. Downstream triggers fire
   on genuine inserts only, never on updates.
+
+---
+
+[← All rules](../README.md) · [Priority rules](../00-priority-rules.md) · [Project types](../PROJECT-TYPES.md) · [Documentation](../../docs/README.md)

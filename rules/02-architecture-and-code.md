@@ -144,3 +144,7 @@ limit fails **loudly**, with the full log as the cause — never a quiet stall, 
 loop that burns money where nobody can see it. The owner filed this as a rule for the
 whole architecture, binding on anything added later: customers must never burn through
 credits because of a stuck loop. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

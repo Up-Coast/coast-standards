@@ -88,3 +88,7 @@ Add a type rather than bending an existing one. A new type file states what
 kind of project it covers, which universal rules it scopes or replaces, and
 why — the same shape as the two that exist. A rule that has to be explained
 away every time it is applied is a rule in the wrong file.
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

@@ -38,6 +38,7 @@ number of rules a machine holds is shown to you and only ever goes up.
 | [When a check stops you](when-a-check-stops-you.md) | something was refused and you want to know what to do |
 | [Working with AI coding agents](ai-agents.md) | you use Claude Code or a similar tool on this project |
 | [FAQ](faq.md) | short answers to common questions |
+| [The rules](../rules/README.md) | you want to read the rules themselves, or find the one a refusal named |
 
 ## Supported platforms
 

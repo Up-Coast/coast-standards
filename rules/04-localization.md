@@ -31,3 +31,7 @@ left-to-right (no RTL work), needs proper Unicode shaping (free on modern browse
 Gurmukhi-capable font fallback (e.g. Noto Sans Gurmukhi), and has no uppercase — see L-12.
 Translation quality for domain terminology needs a domain-aware translator, not a generic
 vendor. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

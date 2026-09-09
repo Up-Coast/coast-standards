@@ -104,3 +104,7 @@ carry the checkable per-platform variants; this is the cross-platform core.
 - **No CDN-loaded scripts.** Dependencies are installed and pinned by lockfile; a script
   fetched from a CDN at runtime defeats the lockfile entirely and changes under you.
   [check: scan:cdn-script]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

@@ -93,3 +93,7 @@ project; until then, read mocks this way.
 - In a fixed status palette, **a colour means exactly one thing** — reserve the alarm colour
   for the top severity only, and give any demo/placeholder state its own colour used nowhere
   else. [check: review]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

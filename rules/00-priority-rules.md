@@ -165,3 +165,7 @@ So a task is DONE only when both hold:
 
 Anything marked built without both is not built. "Verified" without a test
 name or an on-screen walk is not a word to use. [check: process]
+
+---
+
+[← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)
