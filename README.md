@@ -1,5 +1,42 @@
 # Coast Standards
 
+Engineering rules for software built with AI coding agents, and the checks that enforce
+them. Point an agent at this repository, or install it into a project, and the agent
+knows how to work: what must stay DRY, where user-facing text lives, which imports are
+forbidden, what a review must return, and what a commit or push is refused for.
+
+## How this repo came to be
+
+Scroll down if you don't care.... :)
+
+Hi there, I'm Abbey. I am an iOS engineer (Intel/Mastercard) turned psuedo-short-lived system architect (Rivian) turned product manager (Rivian). I'm now teaching product strategy to both technical and non-technical folks, for FREE through my social venture [https://www.upcoastleaders.ca](Up Coast Leaders).
+
+This project started in July 2026 when I first started using AI to code. I was a late bloomer because for the previous 18 months I had been building the free product strategy course and the companion workbook and doing it right took time! Because I was late, I didn't START until Fable. On the coding side I had played around a little bit with Replit, and I had plenty of experience using it as a non-technical user for research, projections, and drafting reports, so I knew going into it that it was going to piss me off big time when it broke what to me seem like simple rules. 
+
+Y'know...like having one source of truth or not hard-coding things.
+
+Before I even started coding, because I didn't want to be influenced by my experience with the AI, I documented everything that I felt makes a code base a good code base. I spent hours upon hours having a meeting with my Granola transcriber listing out everything I thought was important and how I would design a system of controls. It was kind of a dream come true, FINALLY all coding rules were up to me and no negotiating anything with my team! Muwahahahah!!!
+
+I then had Claude add all OWASP recommendations and after that I had it search the developer communities for the platforms these standards cover in order to surface up platform specific community recommended coding rules and guidelines.
+
+Everything in this repo is written by Claude, so yes the language is sometimes flowery or without purpose but it's AI talking to AI. This repo isn't for you, it's for your AI, so I decided to do an experiment and see if I could be completely hands off the actual code. 
+
+So far that experiment has paid off!
+
+Using these coding standards, since Fable was released (2 months ago), I have built:
+- 3 iOS apps,
+- a learning and course platform,
+- a webapp,
+- a mac app,
+- a feedback system that takes reports from beta testers and fixes them in Claude automatically, and
+- this development tool
+
+I do believe that completing a feature most likely takes more tokens now. Often at the end of work the push will be blocked because a rule was not followed so there is rework done. But it is automatic, I don't manage it, and I suspect that in the long run less credits are used because there are less regressions, less bugs, less skipped work. In either case, even if it is still more credits, I am happier with the experience and the speed than I am when I try to use Claude without it.
+
+I assume this can be used with other AI coding systems however I have only used Claude so it hasn't been tested.
+
+## Okay let's get into it!
+
 *Last updated: 2026-09-09*
 
 Engineering rules for software built with AI coding agents, and the checks that enforce
