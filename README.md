@@ -9,7 +9,7 @@ forbidden, what a review must return, and what a commit or push is refused for.
 
 Scroll down if you don't care.... :)
 
-Hi there, I'm Abbey. I am an iOS engineer (Intel/Mastercard) turned psuedo-short-lived system architect (Rivian) turned product manager (Rivian). I'm now teaching product strategy to both technical and non-technical folks, for FREE through my social venture [https://www.upcoastleaders.ca](Up Coast Leaders).
+Hi there, I'm Abbey. I am an iOS engineer (Intel/Mastercard) turned psuedo-short-lived system architect (Rivian) turned product manager (Rivian). I'm now teaching product strategy to both technical and non-technical folks, for FREE through my social venture [Up Coast Leaders](https://www.upcoastleaders.ca).
 
 This project started in July 2026 when I first started using AI to code. I was a late bloomer because for the previous 18 months I had been building the free product strategy course and the companion workbook and doing it right took time! Because I was late, I didn't START until Fable. On the coding side I had played around a little bit with Replit, and I had plenty of experience using it as a non-technical user for research, projections, and drafting reports, so I knew going into it that it was going to piss me off big time when it broke what to me seem like simple rules. 
 
