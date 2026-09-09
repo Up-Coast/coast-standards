@@ -1,0 +1,123 @@
+# The documentation site (https://up-coast.github.io/coast-standards/).
+#
+# Build it with tools/build-docs.sh, which stages the pages into .docs-build at their
+# EXISTING paths and then runs mkdocs. The rules and the guides are read in three places —
+# here, an adopting project, and the release tarball — so they are never moved into a docs
+# tree of their own, and staging them unchanged is what keeps a relative link like
+# `rules/00-priority-rules.md` working on GitHub and on the site alike. No page carries
+# front matter: these files are parsed by the scanner and the verifier and ship into
+# projects, so nothing site-specific is written into them.
+
+site_name: Coast Standards
+site_description: Engineering rules for software built with AI coding agents, and the checks that enforce them.
+site_url: https://up-coast.github.io/coast-standards/
+repo_url: https://github.com/Up-Coast/coast-standards
+repo_name: Up-Coast/coast-standards
+edit_uri: edit/main/
+
+docs_dir: .docs-build
+site_dir: site
+
+exclude_docs: |
+  .github/
+  .githooks/
+  node_modules/
+  site/
+  mkdocs-venv/
+  enforcement/TEMPLATE-PROJECT-CLAUDE.md
+
+not_in_nav: |
+  CHANGELOG.md
+  TEMPLATE-CLAUDE.md
+  CONTRIBUTING.md
+  LICENSE.md
+  enforcement/TOOLCHAIN.md
+  skills/adopt-coast-standards/SKILL.md
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+nav:
+  - Home: README.md
+  - Getting started:
+      - Overview: docs/README.md
+      - Quickstart: docs/quickstart.md
+      - How it works: docs/how-it-works.md
+      - What gets checked: docs/what-gets-checked.md
+      - Options: docs/options.md
+      - When a check stops you: docs/when-a-check-stops-you.md
+      - Working with AI agents: docs/ai-agents.md
+      - FAQ: docs/faq.md
+  - The rules:
+      - Index: rules/README.md
+      - Priority rules: rules/00-priority-rules.md
+      - Project types: rules/PROJECT-TYPES.md
+      - Reasoning layer:
+          - Working style: rules/01-working-style.md
+          - Architecture and code: rules/02-architecture-and-code.md
+          - Security (OWASP): rules/03-security-owasp.md
+          - Localization: rules/04-localization.md
+          - Design and UI: rules/05-design-and-ui.md
+          - Testing: rules/06-testing.md
+          - Documentation and git: rules/07-documentation-git-process.md
+          - Auditing and completeness: rules/08-auditing-and-completeness.md
+          - Models and agents: rules/09-models-and-agents.md
+          - Development environment: rules/10-development-environment.md
+      - By project type:
+          - Backend service: rules/types/backend-service.md
+          - Data and ML: rules/types/data-and-ml.md
+      - Checkable rules by platform:
+          - iOS: rules/platform/domain-rules-ios.md
+          - macOS: rules/platform/domain-rules-macos.md
+          - Android: rules/platform/domain-rules-android.md
+          - React Native: rules/platform/domain-rules-react-native.md
+          - Web: rules/platform/domain-rules-web.md
+          - Python: rules/platform/domain-rules-python.md
+          - AI features: rules/platform/ai-features.md
+  - Enforcement:
+      - Design and build plan: enforcement/README.md
+      - Developer guide: enforcement/DEVELOPER-GUIDE.md
+      - Toolchain: enforcement/TOOLCHAIN.md
+  - Contributing: CONTRIBUTING.md
+  - License: LICENSE.md

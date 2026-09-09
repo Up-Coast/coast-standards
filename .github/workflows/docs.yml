@@ -1,0 +1,61 @@
+name: docs
+
+# Publishes the documentation site to GitHub Pages on every push to main, and builds it
+# (without publishing) on a pull request so a broken link fails the PR rather than the
+# site. The build runs --strict: an unresolved internal link is an error, not a warning.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE.md"
+      - "CHANGELOG.md"
+      - "TEMPLATE-CLAUDE.md"
+      - "docs/**"
+      - "rules/**"
+      - "enforcement/**.md"
+      - "skills/**"
+      - "mkdocs.yml"
+      - "tools/build-docs.sh"
+      - ".github/workflows/docs.yml"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pinned: the site's look and its search behaviour should not change under us.
+      - run: pip install mkdocs==1.6.1 mkdocs-material==9.7.7
+      - run: ./tools/build-docs.sh
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          path: site
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

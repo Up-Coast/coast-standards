@@ -69,3 +69,20 @@ Everything here is standard-library Python 3. There is nothing to install.
 Open an issue with the "A check stopped me wrongly" template. Paste the refusal line and
 the code it refused. A false positive is a defect in the signature, and it gets a `.pass`
 plant so it cannot come back.
+
+## The documentation site
+
+The site at [up-coast.github.io/coast-standards/](https://up-coast.github.io/coast-standards/) is built from the markdown already in
+the repository — no page is copied and none carries front matter, so the same file reads
+correctly on GitHub, on the site, and inside a project that adopted it. `mkdocs.yml` holds
+the nav.
+
+```bash
+pip install mkdocs==1.6.1 mkdocs-material==9.7.7
+tools/build-docs.sh serve      # http://localhost:8000
+tools/build-docs.sh            # build into site/
+```
+
+The build runs `--strict`, so a link that does not resolve fails it. The `docs` workflow
+runs the same build on every pull request, and publishes on a push to `main`. When you add
+a page, add it to the nav in `mkdocs.yml` and to the staging list in `tools/build-docs.sh`.

@@ -1,6 +1,6 @@
 # Coast Standards
 
-*Last updated: 2026-09-08*
+*Last updated: 2026-09-09*
 
 Engineering rules for software built with AI coding agents, and the checks that enforce
 them. Point an agent at this repository, or install it into a project, and the agent
@@ -17,12 +17,15 @@ Three parts:
 - **[`rules/`](rules/README.md)** — the corpus, with its own index. Numbered files that apply to every project, type files for
   services and pipelines, and one checkable rule document per platform (iOS, macOS,
   Android, React Native, Web, Python). Every rule names the check that holds it.
-- **`enforcement/`** — the checks. A standard-library Python scanner with per-platform
+- **[`enforcement/`](enforcement/README.md)** — the checks. A standard-library Python scanner with per-platform
   signature tables, a doc-comment check, a verifier that counts how many rules a check
   holds, shipped linter configs, three git hooks, hooks for Claude Code sessions, and
-  `adopt.py`, which installs all of it into any project in one command.
-- **`docs/`** — the public documentation for someone installing this into their product,
+  [`adopt.py`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/adopt.py), which installs all of it into any project in one command.
+- **[`docs/`](docs/README.md)** — the public documentation for someone installing this into their product,
   in plain words.
+
+**📖 Documentation with search: [up-coast.github.io/coast-standards/](https://up-coast.github.io/coast-standards/)** — the
+rules, the guides and the enforcement notes as one searchable site.
 
 **Installing this into your own project? Start with the
 [quickstart](docs/quickstart.md)** — ten minutes, one command to fetch the newest
@@ -50,22 +53,22 @@ Source-available, not open source: see [License](#license) below, and
 | [`rules/10-development-environment.md`](rules/10-development-environment.md) | Atomic commands and permission prompts, disk hygiene, the cost of branch switching |
 | [`rules/types/backend-service.md`](rules/types/backend-service.md) | The reasoning layer for services with no screen: layering without a UI, API contracts, async/workers, operability, data safety |
 | [`rules/types/data-and-ml.md`](rules/types/data-and-ml.md) | Pipelines, scoring engines, and models: reproducibility, data-quality gates, model versioning, drift, presenting numbers honestly |
-| [`rules/platform/domain-rules-<platform>.md`](rules/README.md#the-checkable-layer--pick-one) | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
+| [`rules/platform/domain-rules-<platform>.md`](rules/README.md) | The per-platform checkable rule corpus (iOS, macOS, Android, React Native, Web, Python backend). Copy the one matching your target into the project. Since corpus version 8 (2026-09-04) every rule names the check that holds it (`[…; check: …]`), and the app files carry the DRY (DRY-1..7), strings (L-1..12) and design-token (DES-1..4) rules. |
 | [`rules/platform/ai-features.md`](rules/platform/ai-features.md) | The checkable rules for AI features (disclosure, consent and data flow, prompt injection, output handling, agency, cost, evaluation, logging, retrieval, supply chain, the store and EU gates) — own words citing OWASP AISVS chapters and the GenAI LLM Top 10 2026 ids. Copy it to `docs/ai-features-rules.md` when the app has AI features; Coast does this on the founder's say-so. |
 | [`docs/`](docs/README.md) | **The public documentation** — for a founder or developer installing this into their own product: what it is, the quickstart, how it works, what gets checked, the options, what to do when a check stops you, working with AI agents, FAQ. Plain words; nothing a maintainer-only reader needs. |
-| [`enforcement/`](enforcement/README.md) | **How these rules are enforced by checks** — the rules scanner (`checks/check_rules.py`, per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("enforced by a check N of M"), the shipped linter configs (`lint/`), the three git hooks and the Claude Code session hooks (`hooks/`), and `adopt.py`, which installs all of it into any project. `docs/` is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); `enforcement/DEVELOPER-GUIDE.md` is the internal guide for people working on the layer itself — every mode, flag, file and format; `enforcement/README.md` is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and three shipped iOS apps (September 2026). |
-| [`.githooks/`](.githooks) | This repo's own pre-commit hook (CI runs the same two commands on every pull request): the enforcement checks' tests, then `verify_rules.py` against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
-| [`CHECKS-VERSION`](CHECKS-VERSION) | The release number, one line. Every release is this number, the git tag `v<number>`, and an entry in `CHANGELOG.md`; projects record it in `.coast/standards-version`. |
+| [`enforcement/`](enforcement/README.md) | **How these rules are enforced by checks** — the rules scanner ([`checks/check_rules.py`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/checks/check_rules.py), per-platform signature tables, path classes), the doc-comment check, the verifier that prints the honest number ("enforced by a check N of M"), the shipped linter configs ([`lint/`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/lint)), the three git hooks and the Claude Code session hooks ([`hooks/`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/hooks)), and [`adopt.py`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/adopt.py), which installs all of it into any project. [`docs/`](docs/README.md) is the public documentation for anyone installing this into their product (plain words: what it is, how to set it up, the options, what to do when a check stops you); [`enforcement/DEVELOPER-GUIDE.md`](enforcement/DEVELOPER-GUIDE.md) is the internal guide for people working on the layer itself — every mode, flag, file and format; [`enforcement/README.md`](enforcement/README.md) is the design and the build plan; read it before touching any rule's check. Built and proven on Coast's own repository and three shipped iOS apps (September 2026). |
+| [`.githooks/`](https://github.com/Up-Coast/coast-standards/blob/main/.githooks) | This repo's own pre-commit hook (CI runs the same two commands on every pull request): the enforcement checks' tests, then [`verify_rules.py`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/checks/verify_rules.py) against the committed gap baseline (the count may only fall). Install once per clone: `git config core.hooksPath .githooks`. |
+| [`CHECKS-VERSION`](https://github.com/Up-Coast/coast-standards/blob/main/CHECKS-VERSION) | The release number, one line. Every release is this number, the git tag `v<number>`, and an entry in [`CHANGELOG.md`](CHANGELOG.md); projects record it in `.coast/standards-version`. |
 | [`CHANGELOG.md`](CHANGELOG.md) | One entry per release, in plain words: what a project that upgrades will notice. The release workflow publishes the entry as the release notes. |
 | [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md) | This repo's own skill for AI coding agents: where the releases are and how to run the installer, nothing more. Copy the folder into `~/.claude/skills/` or a project's `.claude/skills/`. |
 | [`TEMPLATE-CLAUDE.md`](TEMPLATE-CLAUDE.md) | Paste-in starter block for a new project's CLAUDE.md |
 
 ## How to adopt in a new project
 
-1. Decide the project's type from `rules/PROJECT-TYPES.md` (app · backend · data/ML ·
+1. Decide the project's type from [`rules/PROJECT-TYPES.md`](rules/PROJECT-TYPES.md) (app · backend · data/ML ·
    library/CLI) — a project with a frontend and an API is two types, one per part — and
    name it in the project's `CLAUDE.md` so no session has to guess which rules apply.
-2. Copy `TEMPLATE-CLAUDE.md` content into the project's `CLAUDE.md` and fill in the blanks.
+2. Copy [`TEMPLATE-CLAUDE.md`](TEMPLATE-CLAUDE.md) content into the project's `CLAUDE.md` and fill in the blanks.
    *The installer writes its own block into `CLAUDE.md` either way; do this when you want
    the fuller template around it.*
 3. *The installer does this for you* when the project has no `docs/domain-rules.md`: it
@@ -77,7 +80,7 @@ Source-available, not open source: see [License](#license) below, and
    below), `npx skills add BuildGreatProducts/builder-os`. Some rules are written to sit on
    top of the Claude Code build loop, `design-better` and `design-system`, and read best
    with them present. No check depends on them: nothing is refused if you skip this.
-5. The numbered files in `rules/` are read in place — reference this repo's path from the
+5. The numbered files in [`rules/`](rules/README.md) are read in place — reference this repo's path from the
    project CLAUDE.md rather than copying them, so improvements land everywhere at once.
 6. Run `python3 enforcement/adopt.py <project-dir> --measure-tools` (`--dry-run` first if
    you like). The installer can be run from a fetched release rather than a clone: the
@@ -100,16 +103,16 @@ Source-available, not open source: see [License](#license) below, and
 7. Install the programs the checks run — your platform's linter, formatter and test
    runner, plus `jscpd` — *before* your first push, which is where a missing one is
    refused. The list per platform is in the [quickstart](docs/quickstart.md); the pinned
-   versions and what each is used for are in `enforcement/TOOLCHAIN.md`.
+   versions and what each is used for are in [`enforcement/TOOLCHAIN.md`](enforcement/TOOLCHAIN.md).
 
 ## How enforcement works, in one screen
 
-Every rule in `rules/` ends with a `[check: …]` tag naming what holds it, and the tag
+Every rule in [`rules/`](rules/README.md) ends with a `[check: …]` tag naming what holds it, and the tag
 puts the rule in one of five bins — **machine** (a check refuses the change: the scanner,
 the linter with the shipped config, a tool the push gate runs, a hook), **partly** (a
 machine check and a reviewer share it), **advisory** (the scanner reports it, nothing
 fails), **reviewer** (only a mind can judge it; every review returns a row per rule with
-evidence), **process** (held by the pipeline or by a person). `verify_rules.py` counts the
+evidence), **process** (held by the pipeline or by a person). [`verify_rules.py`](https://github.com/Up-Coast/coast-standards/blob/main/enforcement/checks/verify_rules.py) counts the
 bins and fails the commit when a rule names no check or names one nothing runs; the
 corpus stands at **enforced by a check 170 of 643** (4 September 2026), and each project's
 own number comes from its `docs/domain-rules.md`.
@@ -153,7 +156,7 @@ rules) and `design-system` (token generation). The rest are worth having too.
 ## Releases
 
 Every release is a semantic version in `CHECKS-VERSION`, a git tag `v<number>`, and an
-entry in `CHANGELOG.md`; the release workflow refuses a tag that does not match the file
+entry in [`CHANGELOG.md`](CHANGELOG.md); the release workflow refuses a tag that does not match the file
 or has no changelog entry, then publishes a GitHub release with that entry. Each project
 holds its own copy of the rules and the checks, like a dependency, and records the
 release it carries in `.coast/standards-version`. Nobody needs a clone to adopt: the
@@ -174,7 +177,7 @@ rules are meant to be adopted as written, and the checks are the product.
 
 ## Provenance
 
-- The numbered `rules/` files were extracted from the rules Coast's own development
+- The numbered [`rules/`](rules/README.md) files were extracted from the rules Coast's own development
   followed: its agent context, its capture log of decisions, and its design-conformance
   rulings. Each rule keeps its origin story where one exists, so the reason travels with
   the rule.
@@ -183,13 +186,13 @@ rules are meant to be adopted as written, and the checks are the product.
   stamp on its first line (`<!-- coast-rules-version: N -->`): a project's copy is never
   auto-updated. Coast offers a newer version with the changes in plain words, and the
   founder takes it with an explicit click.
-- **The numbered `rules/` files are NOT all universal.** They were extracted from an app
-  project, and several assume a screen. `PROJECT-TYPES.md` says exactly which apply to
+- **The numbered [`rules/`](rules/README.md) files are NOT all universal.** They were extracted from an app
+  project, and several assume a screen. [`PROJECT-TYPES.md`](rules/PROJECT-TYPES.md) says exactly which apply to
   which kind of project; the app-only files carry an applicability header.
-- `rules/platform/domain-rules-python.md` (Python backends and services) was written for
+- [`rules/platform/domain-rules-python.md`](rules/platform/domain-rules-python.md) (Python backends and services) was written for
   backend work and is not part of the corpus Coast ships, which covers mobile and web
   targets only. If Coast ever ships a Python target, the two must be reconciled.
-- `rules/08-auditing-and-completeness.md` was written from a real completeness-sweep
+- [`rules/08-auditing-and-completeness.md`](rules/08-auditing-and-completeness.md) was written from a real completeness-sweep
   failure it describes.
 
 Newer decisions win: when a rule here conflicts with a newer instruction from the owner of
