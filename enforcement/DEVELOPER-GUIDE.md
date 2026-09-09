@@ -53,6 +53,7 @@ on the builder's own machine, in seconds, before anything leaves it.
 | **Severity** | `block` (any hit fails), `ratchet` (counted over the tree; the count may only fall), `advisory` (printed, never fails). |
 | **Baseline** | A committed count for a ratchet, with a deadline. `.coast/ratchet-baseline.json` for scanner and tool ratchets; `.coast/jscpd-baseline.json` for duplicate code. |
 | **Seat** | One check in the pre-push battery: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset`. Each prints `gate: <name>` and refuses in its own lines. |
+| **Scope** | What a push changed, read before any seat runs (`scope.py`): `none` (prose only — the code seats are skipped), `files` (code — the seats run on the changed files and the affected modules), `all` (the checks themselves changed — everything runs). |
 | **Governed file** | A file the installer owns and replaces on every run, and that agents may not edit (the session hooks refuse). |
 | **Seed** | A file the installer writes once and the founder owns afterwards (linter configs, `docs/domain-rules.md`). |
 | **Exception** | A human-written entry in `.coast/rules-exceptions.json` excusing one signature on one path, or one seat until a date. |
@@ -216,7 +217,12 @@ check_rules.py --staged --platform <p>          the index (pre-commit); touched 
 check_rules.py --files a b c --platform <p>     whole files (editor hook); every line is "added"
 check_rules.py --tree --platform <p>            no diff: tree-scope signatures and ratchets only
 check_rules.py --ratchet <id> --count <n>       judge a tool's count as a ratchet (see §5.5)
-check_rules.py --has-baseline <id>              exit 0 when the baseline has an entry for <id>
+check_rules.py --ratchet <id> --log <log> [--measured <listing>]
+                                                count the tool's own output and judge it; with a
+                                                listing, over those files against the per-file map
+check_rules.py --measure <id> --log <log>       MEASURE and MEASURE-FILE lines for the installer
+check_rules.py --has-baseline <id> [--per-file] exit 0 when the baseline has an entry for <id>
+                                                (with --per-file: one carrying the per-file map)
 ```
 
 Options: `--only id[,id]` runs only the named signatures (used by the installer's secret
@@ -363,11 +369,20 @@ Two kinds of ratchet share the file:
   the tree deterministically. Above the baseline fails. Below it fails too, until the baseline
   is lowered in the same commit (the message says the number). No entry means a baseline of 0.
 - **Tool ratchets** (`build-warnings`, `format-findings`, `lint-findings`, `tests-missing`):
-  the pre-push seat runs the tool without its strict switch, counts, and hands the count to
-  `check_rules.py --ratchet <id> --count <n>`. Above the baseline fails; **below it passes with
-  a note**, because a build's warning count depends on what it recompiled. With no entry the
-  seat runs strict (`-warnings-as-errors`, `--strict`), so a fresh repository is held at zero
-  from its first push.
+  the pre-push seat runs the tool into a log and hands the log to
+  `check_rules.py --ratchet <id> --log <log>`, the one reader of the `file:line:col:
+  warning|error:` lines (`tests-missing` hands a count). Above the baseline fails; **below it
+  passes with a note**, because a build's warning count depends on what it recompiled. With
+  no entry the seat runs strict (`-warnings-as-errors`, `--strict`), so a fresh repository is
+  held at zero from its first push.
+- **The per-file map** (`files`, written by `adopt.py --measure-tools`): each tool entry
+  carries the count per file beside its total. A scoped push (§8.3) hands the seat's
+  listing as `--measured`, and the judgment is over those files — plus any file the tool
+  reported on — against the same files' baseline: a rise refuses and names the file, a fall
+  passes with the note, files the push did not touch keep their numbers. An entry without
+  the map cannot judge a scoped run (`--has-baseline <id> --per-file` says so), so the seat
+  runs whole and prints the re-measure that enables it. The map follows a lowered or equal
+  total; a rise leaves entry and map as they were.
 
 Past the deadline every ratchet becomes `block`: anything above zero refuses. An entry with
 no `deadline` is refused before any count is judged (`FAIL ratchet
@@ -504,6 +519,16 @@ rules do not apply to them, and the hook says so with a `gate:` line.
 
 ### 8.3 `pre-push` — the battery
 
+**What the push changed comes first.** Before any seat, `scope.py` reads the pushed
+ranges (git's ref lines on stdin) and prints one of three kinds, which the hook echoes as
+`gate: scope <kind> — <reason>`:
+
+| Kind | When | What runs |
+|---|---|---|
+| `none` | no code changed: only paths in the `docs`, `plans`, `design_bundle`, `generated` or `git` classes, or with a prose extension (`paths.json`: `not_code_classes`, `prose_extensions`) | the diff scan, `gh-ruleset`, the project's own hooks; every other seat prints `gate: <name> SKIPPED — no code changed` |
+| `files` | code changed | `lint` and `format` on the changed files of their kind (`swiftlint --force-exclude`, `swift-format`, `eslint`, `prettier`, `ruff` take the list); on a Swift package the `build` rebuilds the affected targets and `tests` runs the affected test targets (`swift test --filter '^(A\|B)\.'`), by `swift package describe`: the targets that own the changed files plus every target that depends on them, transitively — `tests` says so and runs nothing when no test target depends on what changed; an Xcode project, Gradle, `npm test`, `tsc`, `mypy` and `pytest` run whole; the tree scan, `doc-comments` and `jscpd` run whole |
+| `all` | a `governing` or `manifest` path changed (`full_run_classes`), a code file no target owns, `--measure`, or `COAST_SCOPE=all` in the environment | everything, as before |
+
 Seats run in this order; each prints `gate: <name>` and stops the push on failure.
 
 | Seat | ios / macos | android | react-native / web | python |
@@ -526,13 +551,15 @@ Xcode projects: the scheme is `.coast/xcode-scheme` if present, else the first s
 
 ```
 sh .githooks/pre-push --seat lint,format        run named seats
-sh .githooks/pre-push --measure build,format    counting mode: prints MEASURE <id> <count>
+sh .githooks/pre-push --measure build,format    counting mode: prints MEASURE <id> <count> and MEASURE-FILE <id> <count> <path>
 ```
 
 Git never passes these flags, so they are not a bypass. A `--seat` or `--measure` run takes
-no push lock and runs no previous hooks. A `--seat rules-scan` run reads git's ref lines
-when they are piped to it (the tests push a branch that is not HEAD this way); with none,
-it scans HEAD against its upstream.
+no push lock and runs no previous hooks. A `--seat` run reads git's ref lines when they are
+piped to it (the tests push a branch that is not HEAD this way); with none, it judges HEAD
+against its upstream — with no upstream, against the empty tree, so everything is code that
+changed. `COAST_SCOPE=all` runs every seat whole regardless of what changed; `--measure`
+always measures the whole tree.
 
 ### 8.5 One push at a time
 

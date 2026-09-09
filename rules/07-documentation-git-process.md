@@ -30,10 +30,18 @@
 
 ## Nothing is pushed unverified (2026-09-01)
 
-- **The full gate battery runs locally before every push**: build, the
-  complete test suite, the linter, the formatter in check mode, and every
+- **The gate battery runs locally before every push, on what the push
+  changed**: build, tests, the linter, the formatter in check mode, and every
   deterministic check script the repository's CI runs. A failure stays
-  local and is fixed before anything leaves the machine.
+  local and is fixed before anything leaves the machine. The battery reads
+  what changed first (2026-09-09): a push of documents and plans alone runs
+  no build, test, linter or formatter — there is nothing for them to judge;
+  a push that changed code runs the linter and formatter on the changed
+  files, rebuilds the affected modules and runs the tests that depend on
+  them (rules/06: never a re-run of a suite nothing has changed since); a
+  push that changed the checks themselves, their configuration, or the
+  package manifest runs everything. The whole battery is one word away
+  (`SCOPE=all` with the layer's prefix) for CI or a person who wants it.
   [check: session:no-verify]
 - **CI confirms; it never discovers.** A CI failure on a pushed commit is a
   process defect, not a normal event. Origin: on one Coast walk a single

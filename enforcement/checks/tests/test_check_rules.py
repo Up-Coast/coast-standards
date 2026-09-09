@@ -809,3 +809,80 @@ class WebPrecisionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ToolLogAndPerFileRatchetTests(unittest.TestCase):
+    """The one reader of a tool's warning lines, and a scoped run judged against the baseline's per-file map (E8)."""
+
+    def setUp(self):
+        self.repo = Repo()
+        self.addCleanup(self.repo.cleanup)
+
+    def log(self, name, text):
+        self.repo.write(name, text)
+        return os.path.join(self.repo.path, name)
+
+    def baseline(self, signature_id, count, files=None):
+        entry = {"id": signature_id, "count": count, "deadline": "2026-12-03", "written": "2026-09-04", "by": "adopt.py", "moves": []}
+        if files is not None:
+            entry["files"] = files
+        self.repo.write(".coast/ratchet-baseline.json", {"baselines": [entry]})
+
+    def test_warnings_are_distinct_lines_and_findings_are_every_line(self):
+        log = self.log("build.log", "Sources/App/A.swift:1:1: warning: w\nSources/App/A.swift:1:1: warning: w\n"
+                                    "Sources/App/B.swift:2:2: warning: x\nSources/App/B.swift:3:3: error: e\nnot a finding\n")
+        cwd = os.getcwd()
+        os.chdir(self.repo.path)
+        try:
+            self.assertEqual(cr.tool_log_counts(log, "warnings"), {"Sources/App/A.swift": 1, "Sources/App/B.swift": 1})
+            self.assertEqual(cr.tool_log_counts(log, "findings"), {"Sources/App/A.swift": 2, "Sources/App/B.swift": 2})
+            absolute = self.log("abs.log", os.path.join(self.repo.path, "Sources/App/A.swift") + ":1:1: warning: w\n")
+            self.assertEqual(cr.tool_log_counts(absolute, "warnings"), {"Sources/App/A.swift": 1}, "paths come back repository-relative")
+        finally:
+            os.chdir(cwd)
+
+    def test_measure_prints_the_total_and_one_line_per_file(self):
+        log = self.log("lint.log", "Sources/App/A.swift:1:1: warning: w\nSources/App/B.swift:2:2: error: e\nSources/App/B.swift:3:3: error: e\n")
+        code, out = self.repo.run("--measure", "lint-findings", "--log", log)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.splitlines(), ["MEASURE lint-findings 3", "MEASURE-FILE lint-findings 1 Sources/App/A.swift",
+                                            "MEASURE-FILE lint-findings 2 Sources/App/B.swift"])
+
+    def test_a_log_is_judged_like_a_count_when_the_run_was_whole(self):
+        self.baseline("build-warnings", 2)
+        log = self.log("build.log", "Sources/App/A.swift:1:1: warning: w\nSources/App/B.swift:2:2: warning: x\n")
+        code, out = self.repo.run("--ratchet", "build-warnings", "--log", log, "--platform", "ios", "--today", "2026-09-04")
+        self.assertEqual(code, 0, out)
+        self.assertIn("OK ratchet build-warnings: 2 reported, equal to the baseline", out)
+
+    def test_a_scoped_run_is_judged_over_its_files_against_the_map(self):
+        self.baseline("build-warnings", 5, {"Sources/App/A.swift": 2, "Sources/Other/C.swift": 3})
+        listing = self.log("measured.txt", "Sources/App/A.swift\nSources/App/B.swift\n")
+        # A's two warnings again, B clean: equal over the two measured files; C's three are untouched.
+        log = self.log("build.log", "Sources/App/A.swift:1:1: warning: w\nSources/App/A.swift:2:1: warning: w2\n")
+        code, out = self.repo.run("--ratchet", "build-warnings", "--log", log, "--measured", listing, "--platform", "ios", "--today", "2026-09-04")
+        self.assertEqual(code, 0, out)
+        self.assertIn("2 reported over the 2 file(s) this push measured, equal to the baseline", out)
+        # One new warning in B (a file the map does not carry) refuses, and names the file.
+        log = self.log("build.log", "Sources/App/A.swift:1:1: warning: w\nSources/App/A.swift:2:1: warning: w2\nSources/App/B.swift:1:1: warning: new\n")
+        code, out = self.repo.run("--ratchet", "build-warnings", "--log", log, "--measured", listing, "--platform", "ios", "--today", "2026-09-04")
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet build-warnings: 3 reported over the 2 file(s) this push measured, above the baseline of 2", out)
+        self.assertIn("FAIL ratchet Sources/App/B.swift:0:build-warnings: 1 reported, 0 in the baseline [C-4]", out)
+        # A file the listing forgot but the tool reported on is judged too — a warning cannot hide there.
+        log = self.log("build.log", "Sources/Other/C.swift:1:1: warning: w\n")
+        code, out = self.repo.run("--ratchet", "build-warnings", "--log", log, "--measured", listing, "--platform", "ios", "--today", "2026-09-04")
+        self.assertEqual(code, 0, out)
+        self.assertIn("1 reported over the 3 file(s) this push measured, below the baseline of 5", out)
+
+    def test_without_the_map_a_scoped_run_cannot_be_judged(self):
+        self.baseline("build-warnings", 2)
+        listing = self.log("measured.txt", "Sources/App/A.swift\n")
+        log = self.log("build.log", "")
+        code, out = self.repo.run("--ratchet", "build-warnings", "--log", log, "--measured", listing, "--platform", "ios")
+        self.assertEqual(code, 2)
+        self.assertIn("has no per-file map", out)
+        self.assertEqual(self.repo.run("--has-baseline", "build-warnings")[0], 0)
+        self.assertEqual(self.repo.run("--has-baseline", "build-warnings", "--per-file")[0], 1)
+        self.baseline("build-warnings", 2, {"Sources/App/A.swift": 2})
+        self.assertEqual(self.repo.run("--has-baseline", "build-warnings", "--per-file")[0], 0)

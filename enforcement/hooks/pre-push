@@ -41,6 +41,21 @@
 #                    no bypass actors (rules/07 protected main). Skipped
 #                    with a plain-words note when gh is absent or offline.
 #
+# THE BATTERY RUNS ON WHAT CHANGED (task E8). Before any seat, scope.py beside
+# the checks reads the pushed ranges and answers with one of three kinds:
+#   none   no code changed (documents, plans, prose) — every code seat prints
+#          SKIPPED; only the diff scan, gh-ruleset and the project's own hooks run
+#   files  code changed — lint and format run on the changed files, the build
+#          rebuilds the affected package targets and the tests seat runs the test
+#          targets that depend on what changed (SwiftPM's own graph); a scoped
+#          count is judged against the baseline's per-file map, so a warning may
+#          not rise in the files this push measured while untouched files keep
+#          their numbers. A baseline entry without the map runs the seat whole.
+#   all    the checks themselves changed (a governing or manifest path), a code
+#          file no target owns, or <prefix>SCOPE=all in the environment
+# jscpd, the whole-tree scan and the doc-comment count run whenever code changed:
+# a clone pairs a changed file with an unchanged one, so the tree is their unit.
+#
 # git calls this as `pre-push <remote> <url>` with the ref lines on stdin.
 # Run by hand as `pre-push --seat <name>[,<name>]` to run named seats
 # (tests use this; git never passes --seat, so it is no bypass), or as
@@ -214,12 +229,12 @@ remote_still_ours() {
   return 1
 }
 
-# The ref lines git hands a pre-push hook on stdin, kept in a file: the rules scan reads
-# them to know WHAT is being pushed, and the project's previous hook gets them again. A
-# `--seat rules-scan` run reads them too when they are piped in (the tests push a branch
-# that is not HEAD this way); --measure never reads stdin.
+# The ref lines git hands a pre-push hook on stdin, kept in a file: the scope and the rules
+# scan read them to know WHAT is being pushed, and the project's previous hook gets them
+# again. A `--seat` run reads them too when they are piped in (the tests push a branch that
+# is not HEAD this way); --measure never reads stdin.
 refs_file=""
-if [ ! -t 0 ] && [ "$measure" = 0 ] && { [ "$seats" = all ] || wants_named rules-scan; }; then
+if [ ! -t 0 ] && [ "$measure" = 0 ]; then
   refs_file=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}refs.XXXXXX") || refs_file=""
   [ -n "$refs_file" ] && cat > "$refs_file"
 fi
@@ -227,6 +242,43 @@ fi
 if [ "$seats" = all ]; then
   take_push_lock || exit 1
   remote_still_ours || exit 1
+fi
+
+# What is being PUSHED: git hands the refs on stdin (<local ref> <local sha> <remote ref>
+# <remote sha>), and each local sha is the tip judged — `git push origin feature` from
+# main judges feature, not HEAD. A ref the remote has never seen is compared with the
+# remote's default branch, or with the empty tree when there is none, so every line
+# counts. Without ref lines (a `--seat` run by hand) HEAD against its upstream.
+empty_tree=$(git hash-object -t tree /dev/null)
+ranges=""
+if [ -n "$refs_file" ]; then
+  while read -r _local_ref local_sha _remote_ref remote_sha; do
+    [ -z "${local_sha:-}" ] && continue
+    case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac  # a deletion
+    case "$remote_sha" in
+      0000000000000000000000000000000000000000|"")
+        base=$(git merge-base "$local_sha" "${push_remote:-origin}/HEAD" 2>/dev/null \
+               || git merge-base "$local_sha" '@{upstream}' 2>/dev/null || echo "$empty_tree") ;;
+      *) base=$remote_sha ;;
+    esac
+    ranges="$ranges $base:$local_sha"
+  done < "$refs_file"
+fi
+[ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
+
+scope_files_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
+scope_measured_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
+if [ "$measure" = 1 ]; then
+  scope_args="--all"   # a measurement is the whole tree, always
+else
+  scope_args=$ranges
+fi
+# shellcheck disable=SC2086
+scope=$(python3 "$checks/scope.py" --platform "$platform" --files-to "$scope_files_listing" --measured-to "$scope_measured_listing" $scope_args) \
+  || { echo "FAIL pre-push $checks/scope.py:0:scope: what this push changed could not be read — see the lines above" >&2; exit 1; }
+eval "$scope"
+if [ "$measure" != 1 ]; then
+  printf 'gate: scope %s — %s\n' "$scope_kind" "$scope_reason"
 fi
 
 # A project that had its own hooks keeps them: ours run first, then its own, with the same
@@ -279,18 +331,36 @@ need() {  # a battery member that is not installed is a refusal, never a silent 
 ratcheted() {  # <id>
   [ "$measure" = 1 ] || python3 "$checks/check_rules.py" --has-baseline "$1" >/dev/null 2>&1
 }
-judge() {  # <id> <count>
+judge_count() {  # <id> <count> — a count the seat itself produced (tests-missing)
   if [ "$measure" = 1 ]; then
     printf 'MEASURE %s %s\n' "$1" "$2"
     return 0
   fi
   python3 "$checks/check_rules.py" --ratchet "$1" --count "$2" --platform "$platform"
 }
-# A warning count is only comparable with the baseline on a FULL build: an incremental
-# build prints warnings only for the files it recompiles, so it would read as a fall
-# (refused: "lower the baseline") or hide a rise. Ratcheted builds therefore recompile
-# everything of the project's own — SwiftPM drops the package's own targets' build
-# products (dependencies stay built), xcodebuild runs `clean build`.
+judge_log() {  # <id> <log> [<measured listing>] — the tool's own output, counted and judged by
+               # check_rules.py (the one reader of its warning lines); with a listing, the count
+               # over those files against the baseline's per-file map (E8)
+  if [ "$measure" = 1 ]; then
+    python3 "$checks/check_rules.py" --measure "$1" --log "$2"
+    return $?
+  fi
+  if [ -n "${3:-}" ]; then
+    python3 "$checks/check_rules.py" --ratchet "$1" --log "$2" --measured "$3" --platform "$platform"
+  else
+    python3 "$checks/check_rules.py" --ratchet "$1" --log "$2" --platform "$platform"
+  fi
+}
+# A warning count is only comparable with the baseline on a build that recompiled the
+# files it is judged on: an incremental build prints warnings only for what it recompiles,
+# so it would read as a fall or hide a rise. A ratcheted build therefore drops the build
+# products of the targets it judges — every own target on a whole run, the affected
+# targets on a scoped one (dependencies stay built); xcodebuild runs `clean build`.
+targets_rebuild() {  # <target…>
+  for name in "$@"; do
+    rm -rf ".build/debug/$name.build"
+  done
+}
 own_targets_rebuild() {
   names=$(swift package describe --type json 2>/dev/null | python3 -c 'import json, sys
 print(" ".join(t["name"] for t in json.load(sys.stdin).get("targets", [])))' 2>/dev/null) || names=""
@@ -298,19 +368,12 @@ print(" ".join(t["name"] for t in json.load(sys.stdin).get("targets", [])))' 2>/
     swift package clean >/dev/null 2>&1
     return 0
   fi
-  for name in $names; do
-    rm -rf ".build/debug/$name.build"
-  done
+  # shellcheck disable=SC2086
+  targets_rebuild $names
 }
-count_warnings() {  # <log> — distinct `file:line:col: warning:` lines
-  grep -E '^[^ ]+:[0-9]+:[0-9]+: warning: ' "$1" | sort -u | wc -l | tr -d ' '
-}
-count_format_findings() {  # <log> — swift-format's and swiftlint's `file:line:col: warning|error:` lines
-  grep -cE '^[^ ]+:[0-9]+:[0-9]+: (warning|error): ' "$1" | tr -d ' '
-}
-# <id> <counter> <command…>: run the tool into a log, echo the log, count, judge.
+# <id> <measured listing or ""> <command…>: run the tool into a log, echo the log, judge.
 ratcheted_run() {
-  id=$1; counter=$2; shift 2
+  id=$1; measured=$2; shift 2
   log=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}gate.XXXXXX") || return 1
   "$@" > "$log" 2>&1
   status=$?
@@ -319,9 +382,76 @@ ratcheted_run() {
     rm -f "$log"
     return 1
   fi
-  n=$("$counter" "$log")
+  judge_log "$id" "$log" "$measured"
+  status=$?
   rm -f "$log"
-  judge "$id" "${n:-0}"
+  return $status
+}
+# <listing> <command…>: the command with the listing's paths appended, one argument each.
+with_listing() {
+  listing=$1; shift
+  tr '\n' '\0' < "$listing" | xargs -0 "$@"
+}
+count_lines() { wc -l < "$1" | tr -d ' '; }
+
+# <seat> <extension regex> <tool…>: a tool with no ratchet over the changed files of that
+# kind (a scoped push), or a SKIPPED line when the changed code has none of them.
+listed_seat() {
+  seat=$1; kind=$2; shift 2
+  listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}files.XXXXXX") || return 1
+  grep -iE "\.($kind)\$" "$scope_files_listing" > "$listing" || true
+  if [ ! -s "$listing" ]; then
+    printf 'gate: %s SKIPPED — no %s file among the changed code\n' "$seat" "$kind"
+    rm -f "$listing"
+    return 0
+  fi
+  run "$seat ($(count_lines "$listing") changed file(s))" with_listing "$listing" "$@"
+  rm -f "$listing"
+}
+
+# ---------------------------------------------------------------- what this push changed
+scoped() {  # <seat> — false, with a line, when no code changed: the seat has nothing to judge
+  if [ "$scope_kind" = none ]; then
+    printf 'gate: %s SKIPPED — no code changed (%s)\n' "$1" "$scope_reason"
+    return 1
+  fi
+  return 0
+}
+per_file() {  # <id> — the baseline entry carries the per-file map a scoped run is judged by
+  python3 "$checks/check_rules.py" --has-baseline "$1" --per-file >/dev/null 2>&1
+}
+# <id> <seat> <extension regex> <tool…>: a finding-counting tool (the linter, the formatter)
+# over the changed files of that kind when the push is scoped and the baseline can judge
+# it (no entry: the tool is strict at zero already; an entry with the per-file map), else
+# over every tracked file of that kind. The tool takes its files as trailing arguments and
+# is given its strict flag in every case: a ratcheted run ignores the exit status and
+# counts the lines, a strict run is the tool's own verdict.
+findings_seat() {
+  id=$1; seat=$2; kind=$3; shift 3
+  listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}files.XXXXXX") || return 1
+  measured=""
+  if [ "$scope_kind" = files ] && { ! ratcheted "$id" || per_file "$id"; }; then
+    grep -iE "\.($kind)\$" "$scope_files_listing" > "$listing" || true
+    if [ ! -s "$listing" ]; then
+      printf 'gate: %s SKIPPED — no %s file among the changed code\n' "$seat" "$kind"
+      rm -f "$listing"
+      return 0
+    fi
+    where="$(count_lines "$listing") changed file(s)"
+    measured=$listing
+  else
+    if [ "$scope_kind" = files ]; then
+      printf 'gate: %s — the %s baseline has no per-file map, so every file is read; run adopt.py --measure-tools to let a push read only what it changed\n' "$seat" "$id"
+    fi
+    git ls-files -- "*.$kind" > "$listing"
+    where="every tracked .$kind file"
+  fi
+  if ratcheted "$id"; then
+    run "$seat (findings ratchet, $where)" ratcheted_run "$id" "$measured" with_listing "$listing" "$@"
+  else
+    run "$seat (strict, $where)" with_listing "$listing" "$@"
+  fi
+  rm -f "$listing"
 }
 
 tests_missing() {  # 1 when the project has no test target at all, else 0 (the tests-missing baseline)
@@ -359,7 +489,7 @@ tests_seat() {
   if ratcheted tests-missing; then
     missing=$(tests_missing)
     if [ "$missing" = 1 ] || [ "$measure" = 1 ]; then
-      judge tests-missing "$missing"
+      judge_count tests-missing "$missing"
       return $?
     fi
   fi
@@ -414,17 +544,42 @@ print(best[1] if best else "")' 2>/dev/null)
 case "$platform" in
   ios|macos)
     if [ -f Package.swift ]; then
-      # A Swift package: build and test through SwiftPM.
-      if wants build; then
+      # A Swift package: build and test through SwiftPM. A scoped push (code changed, the
+      # package's graph read) rebuilds the affected targets and runs the test targets that
+      # depend on what changed; anything else builds and tests the whole package.
+      modular=0
+      [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ] && modular=1
+      if wants build && scoped build; then
         if ratcheted build-warnings; then
-          own_targets_rebuild
-          run "build (warnings ratchet, the package's own targets rebuilt)" ratcheted_run build-warnings count_warnings swift build
+          if [ "$modular" = 1 ] && per_file build-warnings; then
+            # shellcheck disable=SC2086
+            targets_rebuild $scope_targets
+            run "build (warnings ratchet, the affected targets rebuilt: $scope_targets)" \
+              ratcheted_run build-warnings "$scope_measured_listing" swift build
+          else
+            if [ "$modular" = 1 ]; then
+              printf 'gate: build — the build-warnings baseline has no per-file map, so every own target is rebuilt; run adopt.py --measure-tools build to let a push rebuild only what it changed\n'
+            fi
+            own_targets_rebuild
+            run "build (warnings ratchet, the package's own targets rebuilt)" ratcheted_run build-warnings "" swift build
+          fi
         else
-          # warnings-as-errors: the Swift build fails on any warning.
+          # warnings-as-errors: the Swift build fails on any warning (SwiftPM's own
+          # incremental build already compiles only what changed).
           run "build (warnings-as-errors)" swift build -Xswiftc -warnings-as-errors
         fi
       fi
-      wants tests && run "tests" tests_seat swift test
+      if wants tests && scoped tests; then
+        if [ "$modular" = 1 ]; then
+          if [ -z "$scope_test_targets" ]; then
+            printf 'gate: tests SKIPPED — no test target depends on what changed (%s)\n' "$scope_targets"
+          else
+            run "tests ($scope_test_targets)" tests_seat swift test --filter "$scope_test_filter"
+          fi
+        else
+          run "tests" tests_seat swift test
+        fi
+      fi
     else
       # An Xcode project or workspace (xcodegen apps): build and test through
       # xcodebuild. The scheme is the state dir's xcode-scheme file, else the first scheme
@@ -432,7 +587,7 @@ case "$platform" in
       # build and the first available iPhone (or the Mac) for the tests.
       need xcodebuild "install Xcode" || exit 1
       scheme=$(xcode_scheme) || exit 1
-      if wants build; then
+      if wants build && scoped build; then
         if ratcheted build-warnings; then
           run "build (warnings ratchet, clean build)" ratcheted_run build-warnings count_warnings \
             xcodebuild clean build -quiet -scheme "$scheme" -destination "$(xcode_build_destination)" \
@@ -444,48 +599,41 @@ case "$platform" in
             CODE_SIGNING_ALLOWED=NO
         fi
       fi
-      wants tests && run "tests" tests_seat xcode_tests "$scheme"
+      wants tests && scoped tests && run "tests" tests_seat xcode_tests "$scheme"
     fi
-    if wants lint && linter_on swiftlint; then
+    # The linter and the formatter over the changed Swift files, or every tracked one (so an
+    # Xcode layout with no Sources/ folder is covered too). --force-exclude keeps the config's
+    # excluded paths excluded when files are named one by one (SwiftLint's own flag for it).
+    if wants lint && linter_on swiftlint && scoped lint; then
       need swiftlint "brew install swiftlint" || exit 1
-      if ratcheted lint-findings; then
-        run "lint (findings ratchet)" ratcheted_run lint-findings count_format_findings swiftlint lint --quiet
-      else
-        run "lint (swiftlint --strict)" swiftlint lint --strict --quiet
-      fi
+      findings_seat lint-findings lint swift swiftlint lint --strict --quiet --force-exclude
     fi
-    if wants format && linter_on swiftformat; then
+    if wants format && linter_on swiftformat && scoped format; then
       need swift-format "brew install swift-format" || exit 1
-      # every tracked Swift file, so an Xcode layout with no Sources/ folder is covered too
-      if ratcheted format-findings; then
-        run "format (findings ratchet)" ratcheted_run format-findings count_format_findings \
-          sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
-      else
-        run "format (swift-format lint)" sh -c 'git ls-files -z -- "*.swift" | xargs -0 swift-format lint --strict'
-      fi
+      findings_seat format-findings format swift swift-format lint --strict
     fi
     ;;
   android)
-    if wants build; then
+    if wants build && scoped build; then
       # warnings-as-errors: Kotlin's allWarningsAsErrors must be set in the build files.
       if ! grep -rqs 'allWarningsAsErrors[[:space:]]*=[[:space:]]*true\|allWarningsAsErrors\.set(true)' --include='*.gradle' --include='*.gradle.kts' .; then
         echo "FAIL pre-push build.gradle:0:warnings-as-errors: the Kotlin build does not set allWarningsAsErrors = true — add it to the module's kotlinOptions/compilerOptions" >&2
         exit 1
       fi
       run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
-    elif wants tests; then
+    elif wants tests && scoped tests; then
       run "tests" ./gradlew --quiet test
     fi
-    if wants lint && linter_on detekt; then
+    if wants lint && linter_on detekt && scoped lint; then
       run "lint (detekt)" ./gradlew --quiet detekt
     fi
-    if wants format && linter_on ktlint; then
+    if wants format && linter_on ktlint && scoped format; then
       need ktlint "brew install ktlint" || exit 1
       run "format (ktlint)" ktlint
     fi
     ;;
   react-native|web)
-    if wants build; then
+    if wants build && scoped build; then
       # warnings-as-errors: tsc under "strict": true reports every problem as
       # an error, and eslint runs with --max-warnings 0 below.
       if linter_on tsc; then
@@ -499,12 +647,24 @@ case "$platform" in
         run "build (npm run build)" npm run --silent build
       fi
     fi
-    wants tests && run "tests (npm test)" npm test --silent
-    wants lint && linter_on eslint && run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
-    wants format && linter_on prettier && run "format (prettier --check)" npx --no-install prettier --check .
+    wants tests && scoped tests && run "tests (npm test)" npm test --silent
+    if wants lint && linter_on eslint && scoped lint; then
+      if [ "$scope_kind" = files ]; then
+        listed_seat lint 'ts|tsx|js|jsx|mjs|cjs' npx --no-install eslint --max-warnings 0
+      else
+        run "lint (eslint --max-warnings 0)" npx --no-install eslint . --max-warnings 0
+      fi
+    fi
+    if wants format && linter_on prettier && scoped format; then
+      if [ "$scope_kind" = files ]; then
+        listed_seat format '[a-z]+' npx --no-install prettier --check
+      else
+        run "format (prettier --check)" npx --no-install prettier --check .
+      fi
+    fi
     ;;
   python)
-    if wants tests; then
+    if wants tests && scoped tests; then
       # warnings-as-errors: every Python warning fails the test run.
       if [ -d tests ] || ls test_*.py >/dev/null 2>&1; then
         if python3 -c 'import pytest' 2>/dev/null; then
@@ -520,17 +680,27 @@ case "$platform" in
     # so does the battery, so a seat stays right whatever a founder edits into a seed. The flags
     # are the tools' own: ruff `--extend-exclude` ("adds additional files and directories on top
     # of those already excluded"), mypy `--exclude` (a regular expression, hence the escaped name).
-    if wants lint; then
+    if wants lint && scoped lint; then
       if linter_on ruff; then
         need ruff "pip install ruff" || exit 1
-        run "lint (ruff check)" ruff check . --extend-exclude "$layout_state_dir"
+        if [ "$scope_kind" = files ]; then
+          listed_seat lint py ruff check --extend-exclude "$layout_state_dir"
+        else
+          run "lint (ruff check)" ruff check . --extend-exclude "$layout_state_dir"
+        fi
       fi
       if linter_on mypy; then
         need mypy "pip install mypy" || exit 1
         run "types (mypy)" mypy . --exclude "^$layout_state_dir_regex/"
       fi
     fi
-    wants format && linter_on ruff && run "format (ruff format --check)" ruff format --check . --extend-exclude "$layout_state_dir"
+    if wants format && linter_on ruff && scoped format; then
+      if [ "$scope_kind" = files ]; then
+        listed_seat format py ruff format --check --extend-exclude "$layout_state_dir"
+      else
+        run "format (ruff format --check)" ruff format --check . --extend-exclude "$layout_state_dir"
+      fi
+    fi
     ;;
   *)
     echo "FAIL pre-push $state/platform:0:platform: unknown platform '$platform' (ios, macos, android, react-native, web, python)" >&2
@@ -544,28 +714,7 @@ if wants rules-scan; then
     echo "FAIL pre-push $checks/check_rules.py:0:missing: the rules scanner is not installed — run enforcement/adopt.py" >&2
     exit 1
   fi
-  # The lines added by what is being PUSHED: git hands the refs on stdin
-  # (<local ref> <local sha> <remote ref> <remote sha>), and each local sha is
-  # the tip scanned — `git push origin feature` from main scans feature, not
-  # HEAD. A ref the remote has never seen is compared with the remote's
-  # default branch, or with the empty tree when there is none, so every line
-  # counts. Without ref lines (a `--seat` run by hand) HEAD against its upstream.
-  empty_tree=$(git hash-object -t tree /dev/null)
-  ranges=""
-  if [ -n "$refs_file" ]; then
-    while read -r _local_ref local_sha _remote_ref remote_sha; do
-      [ -z "${local_sha:-}" ] && continue
-      case "$local_sha" in 0000000000000000000000000000000000000000) continue ;; esac  # a deletion
-      case "$remote_sha" in
-        0000000000000000000000000000000000000000|"")
-          base=$(git merge-base "$local_sha" "${push_remote:-origin}/HEAD" 2>/dev/null \
-                 || git merge-base "$local_sha" '@{upstream}' 2>/dev/null || echo "$empty_tree") ;;
-        *) base=$remote_sha ;;
-      esac
-      ranges="$ranges $base:$local_sha"
-    done < "$refs_file"
-  fi
-  [ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
+  # The lines added by what is being pushed: the ranges computed above, one diff scan each.
   # The first push after adoption carries commits written before the checks existed. Lines
   # added before the commit that adopted (the one that added the platform file) are legacy and
   # belong to the baselines; the scan starts at the adoption commit. Found on Coast, where the
@@ -579,13 +728,15 @@ if wants rules-scan; then
     base=$(since_adoption "$base" "$tip")
     run "rules-scan (added since $(git rev-parse --short "$base" 2>/dev/null || echo "$base") on $(git rev-parse --short "$tip" 2>/dev/null || echo "$tip"))" python3 "$checks/check_rules.py" "$base" "$tip" --platform "$platform"
   done
-  # The whole tree with the ratchets, ONCE. Each diff scan above judges the added lines and
-  # the tree-scope signatures on the changed files only; a diff scan that judged the tree as
-  # well ran the half-minute pass twice on a large repository.
-  run "rules-scan (tree + ratchets)" python3 "$checks/check_rules.py" --tree --platform "$platform"
+  # The whole tree with the ratchets, ONCE, when code changed. Each diff scan above judges the
+  # added lines and the tree-scope signatures on the changed files only; a diff scan that
+  # judged the tree as well ran the half-minute pass twice on a large repository.
+  if scoped "rules-scan (tree + ratchets)"; then
+    run "rules-scan (tree + ratchets)" python3 "$checks/check_rules.py" --tree --platform "$platform"
+  fi
 fi
 
-if wants doc-comments; then
+if wants doc-comments && scoped doc-comments; then
   if [ -f "$checks/check_doc_comments.py" ]; then
     printf 'gate: doc-comments (whole tree, advisory — added lines are held by rules-scan)\n'
     count=$(python3 "$checks/check_doc_comments.py" --all --platform "$platform" 2>/dev/null | grep -c '^FAIL doc-comments ' || true)
@@ -662,7 +813,7 @@ else:
   rm -rf "$scratch"
   return 0
 }
-wants jscpd && run "jscpd (no new clones)" jscpd_seat
+wants jscpd && scoped jscpd && run "jscpd (no new clones)" jscpd_seat
 
 # ------------------------------------------------------------------ gh-ruleset: main is protected
 gh_ruleset_seat() {
@@ -723,5 +874,6 @@ wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
 
 [ "$seats" = all ] && run "the hooks this project already had" previous_hooks
 [ -n "$refs_file" ] && rm -f "$refs_file"
+rm -f "$scope_files_listing" "$scope_measured_listing"
 
 printf 'gate: every check green\n'

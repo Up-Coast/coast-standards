@@ -162,7 +162,9 @@ What refuses, and where: `.githooks/pre-commit` (the scanner on the staged diff 
 lines only, in seconds), `.githooks/commit-msg` (a subject under 100 characters; an agent
 session's commit names its model), `.githooks/pre-push` (build, tests, lint, format, the
 scanner on everything added since the remote and on the whole tree, the doc-comment count,
-jscpd, the protected-main ruleset), and the Claude Code hooks in `.claude/settings.json`
+jscpd, the protected-main ruleset — each on what the push changed: a push of documents
+alone runs none of the code checks, a push of code runs the linters on the changed files
+and the tests of the modules that depend on them), and the Claude Code hooks in `.claude/settings.json`
 (no edits to the files that define the checks, no `cd X && …` chains, no infrastructure
 commands, no `--no-verify` or force-push, the staged scan before a commit, the scanner on
 every edited file, no ending a turn with unpushed work).

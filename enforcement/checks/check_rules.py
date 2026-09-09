@@ -22,7 +22,13 @@ Every mode but ``--tree`` judges the change: the added-scope signatures on the a
 and the tree-scope block signatures on the changed files, no ratchets. The whole-tree pass
 with the ratchets is ``--tree`` alone, so a push runs it once.
     check_rules.py --ratchet <id> --count <n> --platform <p>   # a tool's count judged as a ratchet (build-warnings, format-findings)
-    check_rules.py --has-baseline <id>               # exit 0 when the state dir's ratchet-baseline.json carries an entry for <id>
+    check_rules.py --ratchet <id> --log <log> [--measured <listing>] --platform <p>
+                                                     # the tool's own output counted here (one reader for the
+                                                     # file:line:col: warning|error: lines); with --measured, the
+                                                     # count over those files against the baseline's per-file map (E8)
+    check_rules.py --measure <id> --log <log>        # MEASURE <id> <total> and MEASURE-FILE <id> <count> <path> lines for adopt.py
+    check_rules.py --has-baseline <id> [--per-file]  # exit 0 when the state dir's ratchet-baseline.json carries an entry for <id>
+                                                     # (with --per-file: one that carries the per-file map)
     … --only <id>[,<id>]                             # run only the named signatures (adopt.py's first-push secret scan)
 
 The platform also comes from ``<prefix>PLATFORM`` (``COAST_PLATFORM`` by
@@ -383,13 +389,13 @@ def ratchet_verdict(signature_id, count, baselines, today):
 TOOL_RATCHETS = {
     "build-warnings": {
         "words": "compiler warnings in the build — a change added one; the count may only fall, and past the deadline the build runs with warnings as errors",
-        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4", "log": "warnings"},
     "format-findings": {
         "words": "formatter findings in the tree — a change added one; the count may only fall, and past the deadline the format check refuses any finding",
-        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4", "log": "findings"},
     "lint-findings": {
         "words": "linter findings in the tree — a change added one; the count may only fall, and past the deadline the linter runs strict",
-        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4"},
+        "rules": {"python": "02 zero-new-warnings"}, "rule": "C-4", "log": "findings"},
     "tests-missing": {
         "words": "the project has no test target — tests come first (rules/06); add one and re-run adopt.py to lower this to zero; past the deadline the push refuses until a test target exists",
         "rules": {"python": "06 tests-first"}, "rule": "06 tests-first"},
@@ -401,7 +407,53 @@ def tool_ratchet_rule(signature_id, platform):
     return entry["rules"].get(platform or "", entry["rule"])
 
 
-def judge_tool_ratchet(signature_id, count, platform, today):
+TOOL_LINE = re.compile(r"^([^ :][^:]*):(\d+):(\d+): (warning|error): ")
+
+
+def tool_log_counts(log_path, kind):
+    """{path: count} from a tool's output — the one reader of the ``file:line:col: warning|error:``
+    lines the compiler, the linter and the formatter print. ``warnings`` counts distinct warning
+    lines (a build prints the same warning once per target that includes the file); ``findings``
+    counts every warning and error line, which is what the linter and formatter report. Paths
+    are made relative to the working directory (the repository root the hook runs from), so a
+    count can be matched to the baseline's per-file map and to the files a push measured."""
+    root = os.path.realpath(os.getcwd()).rstrip("/") + "/"
+    counts = {}
+    seen = set()
+    with open(log_path, encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            match = TOOL_LINE.match(line)
+            if not match:
+                continue
+            if kind == "warnings":
+                if match.group(4) != "warning":
+                    continue
+                stripped = line.rstrip("\n")
+                if stripped in seen:
+                    continue
+                seen.add(stripped)
+            path = match.group(1)
+            if os.path.isabs(path):
+                real = os.path.realpath(path)   # a Mac's /var is /private/var; the tools print either
+                if real.startswith(root):
+                    path = real[len(root):]
+            counts[path] = counts.get(path, 0) + 1
+    return counts
+
+
+def read_listing(path):
+    with open(path, encoding="utf-8") as handle:
+        return [line.rstrip("\n") for line in handle if line.strip()]
+
+
+def print_measure(signature_id, counts):
+    """The lines adopt.py --measure-tools reads: the total, then one per file with a count."""
+    print(f"MEASURE {signature_id} {sum(counts.values())}")
+    for path in sorted(counts):
+        print(f"MEASURE-FILE {signature_id} {counts[path]} {path}")
+
+
+def judge_tool_ratchet(signature_id, count, platform, today, measured=None, counts=None):
     """Print the ratchet line (and the FAIL line on a refusal) for a tool's count; the exit code.
 
     A tool's count is NOT the deterministic tree count a scanner ratchet judges: a build
@@ -411,6 +463,11 @@ def judge_tool_ratchet(signature_id, count, platform, today):
     improvement or a warm build, and neither is a reason to refuse a push. (Two real
     refusals produced this: one adopting app measured 22 and rebuilt to 0, the reference implementation measured 270
     and rebuilt to 0 while another session held the build directory warm.)
+
+    With ``measured`` (the files a scoped run rebuilt or linted, E8) the count is judged
+    against the baseline's per-file map summed over those same files — plus any file the
+    tool reported on, so a warning cannot hide in a file the listing forgot. Files the run
+    did not touch keep their numbers: nothing in them could have changed.
     """
     if signature_id not in TOOL_RATCHETS:
         print(f"check_rules.py: unknown tool ratchet '{signature_id}' (one of {', '.join(sorted(TOOL_RATCHETS))})")
@@ -423,6 +480,16 @@ def judge_tool_ratchet(signature_id, count, platform, today):
     baseline = entry.get("count", 0) if entry else 0
     deadline = entry.get("deadline") if entry else None
     today = today or _dt.date.today()
+    scope_words = ""
+    if measured is not None:
+        files = entry.get("files") if entry else None
+        if not isinstance(files, dict):
+            print(f"check_rules.py: the baseline entry for '{signature_id}' has no per-file map — a scoped run cannot be judged; "
+                  f"run adopt.py --measure-tools, or run the tool whole")
+            return 2
+        judged = sorted(set(measured) | set(counts or {}))
+        baseline = sum(int(files.get(path, 0) or 0) for path in judged)
+        scope_words = f" over the {len(judged)} file(s) this push measured"
     if deadline:
         try:
             past = today > _dt.date.fromisoformat(deadline)
@@ -435,16 +502,20 @@ def judge_tool_ratchet(signature_id, count, platform, today):
             print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
             return 1
     if count > baseline:
-        print(f"FAIL ratchet {signature_id}: {count} reported, above the baseline of {baseline} "
+        print(f"FAIL ratchet {signature_id}: {count} reported{scope_words}, above the baseline of {baseline} "
               f"— a change added one; the count may only fall [{rule}]")
+        if counts and measured is not None:
+            for path in sorted(counts):
+                if counts[path] > int((entry or {}).get("files", {}).get(path, 0) or 0):
+                    print(f"FAIL ratchet {path}:0:{signature_id}: {counts[path]} reported, {int((entry or {}).get('files', {}).get(path, 0) or 0)} in the baseline [{rule}]")
         print(f"FAIL ratchet {BASELINE_FILE}:0:{signature_id}: {TOOL_RATCHETS[signature_id]['words']} [{rule}]")
         return 1
     if count < baseline:
-        print(f"OK ratchet {signature_id}: {count} reported, below the baseline of {baseline} "
+        print(f"OK ratchet {signature_id}: {count} reported{scope_words}, below the baseline of {baseline} "
               f"— nothing new; lower the baseline with adopt.py --measure-tools when the tree is quiet"
               + (f"; deadline {deadline}" if deadline else "") + f" [{rule}]")
         return 0
-    print(f"OK ratchet {signature_id}: {count} reported, equal to the baseline"
+    print(f"OK ratchet {signature_id}: {count} reported{scope_words}, equal to the baseline"
           + (f"; deadline {deadline}" if deadline else "") + f" [{rule}]")
     return 0
 
@@ -808,22 +879,46 @@ def main(argv=None):
     parser.add_argument("--tree", action="store_true")
     parser.add_argument("--paths-override", help=f"a project's own path-class bindings (default: {PATHS_OVERRIDE_FILE} when present)")
     parser.add_argument("--only", metavar="ID[,ID]", help="run only these signature ids (adopt.py's first-push secret scan uses it; not a bypass — git never passes it)")
-    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings, lint-findings or tests-missing (with --count)")
+    parser.add_argument("--ratchet", metavar="ID", help="judge a tool's count as a ratchet: build-warnings, format-findings, lint-findings or tests-missing (with --count or --log)")
     parser.add_argument("--count", type=int, help="the count the tool produced (with --ratchet)")
+    parser.add_argument("--log", metavar="FILE", help="the tool's own output, counted here (with --ratchet or --measure)")
+    parser.add_argument("--measured", metavar="LISTING", help="the files a scoped run measured, one per line: judge their count against the baseline's per-file map (with --ratchet --log)")
+    parser.add_argument("--measure", metavar="ID", help="print MEASURE and MEASURE-FILE lines for adopt.py from --log")
     parser.add_argument("--has-baseline", metavar="ID", help="exit 0 when the ratchet baseline carries an entry for ID, else 1")
+    parser.add_argument("--per-file", action="store_true", help="with --has-baseline: the entry must carry the per-file map")
     parser.add_argument("--today", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
-    modes = [bool(args.staged), bool(args.files), bool(args.tree), bool(args.base), bool(args.ratchet), bool(args.has_baseline)]
-    if sum(modes) != 1 or (args.base and not args.head) or (args.ratchet and args.count is None):
+    modes = [bool(args.staged), bool(args.files), bool(args.tree), bool(args.base), bool(args.ratchet), bool(args.has_baseline), bool(args.measure)]
+    counted = args.count is not None or args.log is not None
+    if sum(modes) != 1 or (args.base and not args.head) or (args.ratchet and not counted) or (args.measure and not args.log):
         parser.print_usage()
-        print("check_rules.py: give exactly one of <base> <head|WORKTREE>, --staged, --files …, --tree, --ratchet ID --count N, --has-baseline ID")
+        print("check_rules.py: give exactly one of <base> <head|WORKTREE>, --staged, --files …, --tree, --ratchet ID --count N|--log FILE, "
+              "--measure ID --log FILE, --has-baseline ID")
         return 2
     if args.has_baseline:
-        return 0 if args.has_baseline in load_baselines() else 1
+        entry = load_baselines().get(args.has_baseline)
+        if entry is None:
+            return 1
+        return 0 if not args.per_file or isinstance(entry.get("files"), dict) else 1
+    if args.measure:
+        if args.measure not in TOOL_RATCHETS or "log" not in TOOL_RATCHETS[args.measure]:
+            print(f"check_rules.py: --measure counts a tool's log: one of {', '.join(k for k, v in sorted(TOOL_RATCHETS.items()) if 'log' in v)}")
+            return 2
+        print_measure(args.measure, tool_log_counts(args.log, TOOL_RATCHETS[args.measure]["log"]))
+        return 0
     if args.ratchet:
         today = _dt.date.fromisoformat(args.today) if args.today else None
-        return judge_tool_ratchet(args.ratchet, args.count, args.platform, today)
+        counts = None
+        count = args.count
+        if args.log is not None:
+            if args.ratchet not in TOOL_RATCHETS or "log" not in TOOL_RATCHETS[args.ratchet]:
+                print(f"check_rules.py: --log counts a tool's output: one of {', '.join(k for k, v in sorted(TOOL_RATCHETS.items()) if 'log' in v)}")
+                return 2
+            counts = tool_log_counts(args.log, TOOL_RATCHETS[args.ratchet]["log"])
+            count = sum(counts.values())
+        measured = read_listing(args.measured) if args.measured is not None else None
+        return judge_tool_ratchet(args.ratchet, count, args.platform, today, measured, counts)
     signatures, paths = load_tables(args.platform, args.paths_override)
     if args.only:
         wanted = set(args.only.split(","))

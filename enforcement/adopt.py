@@ -757,6 +757,14 @@ class Adoption:
             env.pop(name, None)
         done = subprocess.run(["sh", hook, "--measure", self.measure_tools], cwd=self.project, capture_output=True, text=True, env=env)
         counts = {m.group(1): int(m.group(2)) for m in re.finditer(r"^MEASURE (\S+) (\d+)$", done.stdout, re.M)}
+        # The per-file map (E8): a push that rebuilds or lints only what it changed is judged
+        # against these files' numbers, so the map travels with the count.
+        self.measured_files = {}
+        for match in re.finditer(r"^MEASURE-FILE (\S+) (\d+) (.+)$", done.stdout, re.M):
+            self.measured_files.setdefault(match.group(1), {})[match.group(3)] = int(match.group(2))
+        for signature_id in counts:
+            if signature_id in ("build-warnings", "format-findings", "lint-findings"):
+                self.measured_files.setdefault(signature_id, {})
         if done.returncode != 0:
             failed = [line for line in (done.stdout + done.stderr).splitlines() if line.startswith(("FAIL ", "gate: ")) and "failed" in line]
             self.say("note", "tool ratchets", "a tool did not finish, so its count was not measured: " + ("; ".join(failed[-2:]) or "see the build output"))
@@ -791,17 +799,24 @@ class Adoption:
         existing = self.load_json(self.state("ratchet-baseline.json")) or {}
         entries = {e["id"]: e for e in existing.get("baselines", []) if isinstance(e, dict) and "id" in e}
         deadline = (self.today + _dt.timedelta(days=self.config["ratchet_days"])).isoformat()
+        measured_files = getattr(self, "measured_files", {})
         for signature_id, count in sorted(counts.items()):
             entry = entries.get(signature_id)
+            files = measured_files.get(signature_id)
             if entry is None:
-                entries[signature_id] = {"id": signature_id, "count": count, "deadline": deadline,
-                                         "written": self.today.isoformat(), "by": self.by, "moves": []}
+                entries[signature_id] = entry = {"id": signature_id, "count": count, "deadline": deadline,
+                                                 "written": self.today.isoformat(), "by": self.by, "moves": []}
             elif count < entry.get("count", 0):
                 self.say("note", self.state("ratchet-baseline.json"), f"{signature_id} fell {entry.get('count')} → {count}; lowered (its deadline {entry.get('deadline')} stays)")
                 entry["count"] = count
             elif count > entry.get("count", 0):
                 self.say("note", self.state("ratchet-baseline.json"), f"{signature_id} is {count} in the tree, above its baseline of {entry.get('count')} — NOT raised; the push will refuse until it comes down")
-        data = {"_comment": "Ratchet baselines (enforcement/README.md decision 2): each count may only fall; past its deadline the check blocks. Only a person moves a deadline, recorded under moves.",
+                files = None   # the map matches the count it was measured with, so a rise leaves both as they were
+            if files is not None:
+                entry["files"] = {path: files[path] for path in sorted(files)}
+        data = {"_comment": "Ratchet baselines (enforcement/README.md decision 2): each count may only fall; past its deadline the check blocks. "
+                            "Only a person moves a deadline, recorded under moves. A tool entry's files map is the count per file, "
+                            "written by adopt.py --measure-tools: a push that rebuilds or lints only what it changed is judged against those files' numbers (E8).",
                 "baselines": [entries[k] for k in sorted(entries)]}
         self.put_json(self.state("ratchet-baseline.json"), data)
 

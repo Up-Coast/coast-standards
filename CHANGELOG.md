@@ -1,9 +1,44 @@
 # Changelog
 
-*Last updated: 2026-09-08*
+*Last updated: 2026-09-09*
 
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
+
+## 1.2.0 — 2026-09-09
+
+The push battery runs on what the push changed.
+
+- **A push of documents alone runs no code check.** The hook reads what the push changed
+  before it runs anything. Documents, plans and other prose (`docs/`, `plans/`, `.md`,
+  `.txt` and the like) are not code: the build, the tests, the linter, the formatter, the
+  whole-tree scan, the doc-comment count and jscpd all print `SKIPPED — no code changed`
+  and the push takes seconds. The scanner still reads the added lines, and the
+  protected-main check still runs. Origin: a push that changed one internal note ran the
+  whole battery, for a change no check could have an opinion on.
+- **A push of code runs the checks on that code.** The linter and the formatter read the
+  changed files. On a Swift package, the build rebuilds the targets that changed and every
+  target that depends on them, and the tests run for the test targets that depend on them
+  (`swift test --filter`), by the package's own graph: a change in a leaf module runs its
+  tests alone, and the hook says so when no test target depends on what changed. A file
+  no target owns, a change to the checks, a linter configuration, a baseline or the package
+  manifest runs everything, as does `COAST_SCOPE=all` in the environment (CI's word).
+  An Xcode project has no graph the hook reads yet: its build and tests run whole when
+  code changed; its linter and formatter are file-scoped. On the web and Python platforms
+  eslint, prettier and ruff read the changed files; the other tools run whole when code
+  changed. Module graphs for Gradle, npm workspaces and Python packages are filed (E8.6).
+- **The starting lines judge a scoped run by file.** A tool's baseline entry
+  (`build-warnings`, `lint-findings`, `format-findings`) now carries a count per file
+  beside its total, so a scoped push is held on the files it rebuilt or linted: their
+  count may not rise against those same files' baseline, and a rise names the file. Files
+  the push did not touch keep their numbers. The seats' counters live in one place now
+  (`check_rules.py --ratchet <id> --log <log>`); `--measure` prints the per-file lines the
+  installer writes.
+  *Upgrading:* re-run the installer with `--measure-tools` once, so the baseline gains
+  the per-file counts; until then a scoped push runs those seats whole and prints the
+  line that says so. The re-measure never raises a count.
+- `rules/07`: "the full gate battery runs before every push" now says what the battery
+  runs on. The rule's check is unchanged.
 
 ## 1.1.1 — 2026-09-08
 

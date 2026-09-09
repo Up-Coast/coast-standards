@@ -109,6 +109,7 @@ coast-standards (this repo) — THE HOME
 │   ├── README.md                 this design
 │   ├── checks/
 │   │   ├── check_rules.py        the scanner: signatures × path classes × diff
+│   │   ├── scope.py              what a push changed → none / files / all, the affected modules (E8)
 │   │   ├── check_doc_comments.py the doc-comment check (moved out of Coast's Swift)
 │   │   ├── verify_rules.py       rule doc ↔ battery parity; the enforced/total number
 │   │   ├── rules_signatures.json one row per signature: the shared fields once, each platform's
@@ -121,7 +122,7 @@ coast-standards (this repo) — THE HOME
 │   │                             eslint type-checked, detekt.yml, lint.xml, prettier, swift-format)
 │   ├── hooks/
 │   │   ├── pre-commit            scanner on the staged diff (seconds)
-│   │   ├── pre-push              the full battery for the platform
+│   │   ├── pre-push              the battery for the platform, on what the push changed
 │   │   ├── claude-settings.json  the Claude Code hooks (session layer)
 │   │   └── claude-hook.py        the one entry the Claude hooks call
 │   └── adopt.py                  installs all of the above into a project, idempotent
@@ -308,7 +309,8 @@ the hook's stdin JSON, exits 2 with the reason on stderr to block):
 
 Git hooks beside them: `.githooks/pre-commit` (scanner on staged) and
 `.githooks/pre-push` (build → tests → lint → format → scanner → jscpd new
-clones → the other shipped checks), `core.hooksPath` set by `adopt.py`.
+clones → the other shipped checks, each on what the push changed — Phase E8),
+`core.hooksPath` set by `adopt.py`.
 Both refuse in the checks' own lines. A human and an agent meet the same
 wall.
 
@@ -623,6 +625,61 @@ replaces the earlier plugin shape.)
 | E7.2 | **DONE 2026-09-07 (release 1.0.0).** **Fetch by release, not by clone.** The installer can be run without a maintained clone: `adopt.py` fetches the release tarball for a named version (`--version 1.2.0`, default latest) into a cache and installs from it, so "upgrade this project to 1.3.0" is one command and no developer keeps a checkout of this repo. A clone still works for contributors. | M | a project adopts from a tarball with no clone present; re-running with a newer version upgrades and keeps edits |
 | E7.3 | **DONE 2026-09-07 (release 1.0.0).** **The thin skill.** One `SKILL.md` a person may install globally or per project, holding only: where the releases are, the one command to adopt or upgrade, and the instruction to run the dry run first and put the few real questions (platform, theme file, owner name, any check the project cannot run yet) to the user before writing. No rules, no checks, nothing else in it; the instructions live in the project's own copy. | S | the skill's steps run end to end on a fixture from an empty machine |
 | E7.4 | **DONE 2026-09-07 (release 1.0.0).** **Docs.** The quickstart says "install release N" instead of "clone"; the options page shows the version file; the developer guide gains a release checklist (bump, changelog, tag, the four re-adoptions). | S | a fresh Mac follows the README from nothing to a first green push |
+
+### Phase E8 — the battery runs on what changed (2026-09-09, at the owner's request)
+
+The finding: a push that changed one internal document ran the build, every test, the
+linter over the tree, the formatter over the tree and jscpd — the whole battery, for a
+change no check could have an opinion on. The owner: checks run only when CODE changes,
+and only on the code that changed and whatever depends on it; where the project is
+modularized the way rules/02 demands, the modules limit the tests. Rules/06 already said
+"never a re-run of a suite nothing has changed since"; the battery did not obey it.
+
+The design, in one sentence: **the hook first asks what the push changed, then each seat
+runs on that — nothing, the changed files, the affected modules, or everything.**
+
+- **What changed** (`enforcement/checks/scope.py`, one home): the paths in every pushed
+  range, classified with the scanner's own path classes (`paths.json`, the project's
+  bindings included). A path in the `docs`, `plans`, `design_bundle`, `generated` or `git`
+  class, or with a prose extension (`.md`, `.txt`, …, the `prose_extensions` list in
+  `paths.json`), is not code. A `governing` or `manifest` path — a check, a config, a
+  linter seed, a baseline, the package manifest — means everything runs: the checks
+  themselves changed. Any other path is code. The answer is one of three kinds: **none**
+  (no code changed: every code seat prints `SKIPPED — no code changed` and only the
+  diff scan, the protected-main check and the project's own hooks run), **files** (code
+  changed; the seats that take a file list run on those files, the module seats on the
+  affected modules), or **all** (a governing or manifest change, a code file no module
+  owns, or `<prefix>SCOPE=all` in the environment — CI's word, or a person's).
+- **Modules limit the tests** (SwiftPM first, the shape every app here has): the
+  package's own graph (`swift package describe`) maps each changed file to its target;
+  the affected set is those targets plus every target that depends on them, transitively.
+  The tests seat runs the test targets in that set (`swift test --filter`), and says so
+  when no test target depends on what changed. A file no target owns makes the push
+  **all**. An Xcode-project app has no graph the hook can read, so its build and tests run
+  whole when code changed; its lint and format seats are still file-scoped.
+- **The build rebuilds only the affected targets** under the warnings ratchet, and the
+  ratchet is judged on those targets' files: the baseline entry gains a per-file map
+  (`files`, written by `adopt.py --measure-tools`), so the count over the files this push
+  rebuilt may not rise against the same files' baseline. Unaffected targets keep their
+  numbers — they did not recompile, so nothing in them could have changed. The same
+  per-file judgment holds `lint-findings` and `format-findings` when the linter and
+  formatter run on the changed files only. A baseline entry without the map runs the seat
+  whole, as before, with a line naming the re-measure that enables the scoped run.
+- **jscpd, the whole-tree scan and the doc-comment count** run whenever code changed
+  (a clone pairs a changed file with an unchanged one, so the tree is the unit) and not
+  otherwise. `gh-ruleset` is about the repository, not the change, and runs every push.
+- **The other platforms** get the none/files/all gate and the file-scoped linters that
+  take a list natively (eslint, prettier, ruff); a module graph for Gradle, npm workspaces
+  and Python packages is E8.6, filed, not built.
+
+| Task | What | Size | Guard |
+|---|---|---|---|
+| E8.1 | `enforcement/checks/scope.py`: the changed paths of the pushed ranges, the three kinds, the SwiftPM graph and the affected closure, the test filter; prints shell assignments the hook `eval`s and writes the file listings the seats take. `paths.json` gains `prose_extensions`. | M | `tests/test_scope.py`: docs-only is none; a source file is files with its target and dependents; a manifest, a governing file and an unowned file are all; the environment word forces all; a synthetic graph proves the closure |
+| E8.2 | `pre-push`: the ranges computed once, before the platform switch; every code seat gated by the kind; the Swift build rebuilds the affected targets under the ratchet; the tests seat filters to the affected test targets; lint and format run on the changed Swift files (`swiftlint --force-exclude` so the config's excludes still hold); eslint, prettier and ruff on the changed files. | M | `test_hooks_and_adopt.py`: a docs-only push skips build, tests, lint, format and jscpd; a code push under a per-file baseline rebuilds one target and judges its files; one more warning in a changed file refuses while an unchanged file's old warnings do not |
+| E8.3 | `check_rules.py`: one log reader for the tools' `file:line:col: warning|error:` lines (the two shell counters go), `--ratchet ID --log <log> [--measured <listing>]` judging the measured files' sum against the baseline's per-file slice, `--measure ID --log <log>` printing `MEASURE` and `MEASURE-FILE` lines, `--has-baseline ID --per-file`. | S | `test_check_rules.py`: the slice judgment in both directions, a file absent from the map judged at zero, no map means no scoped judgment |
+| E8.4 | `adopt.py --measure-tools` writes the per-file map into each tool entry; a lowered or equal total replaces the map, a rise leaves entry and map as they were. | S | `test_hooks_and_adopt.py`: the map is written and replaced |
+| E8.5 | Docs: rules/07 says what the battery runs on; the README, the project `CLAUDE.md` template, how-it-works, options (`SCOPE`, the `files` map), the developer guide; CHANGELOG 1.2.0. | S | verify_rules green; the site builds |
+| E8.6 | Filed: module graphs for Gradle (`settings.gradle` modules), npm workspaces and Python packages, and `jest --findRelatedTests` / `vitest related` where the test script is one of those. | M | — |
 
 ## 7. The decisions (ALL DECIDED 2026-09-04 — build them, don't re-ask)
 

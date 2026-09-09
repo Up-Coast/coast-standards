@@ -41,6 +41,15 @@ CLEAN_VIEW = "import SwiftUI\nstruct HomeView: View { var body: some View { Text
 PLANTED_VIEW = 'import SwiftUI\nstruct HomeView: View { var body: some View { Text("Welcome back to the app") } }\n'
 
 
+# The package graph the stubbed `swift package describe` answers with: App owns One.swift and the
+# view, Other owns Two.swift, AppTests depends on App alone — so a change in Other affects no test.
+STUB_GRAPH = {"targets": [
+    {"name": "App", "type": "library", "path": "Sources/App", "sources": ["One.swift", "Views/HomeView.swift"]},
+    {"name": "Other", "type": "library", "path": "Sources/Other", "sources": ["Two.swift"], "target_dependencies": []},
+    {"name": "AppTests", "type": "test", "path": "Tests/AppTests", "sources": ["AppTests.swift"], "target_dependencies": ["App"]},
+]}
+
+
 def clean_env(**overrides):
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.pop("CLAUDECODE", None)
@@ -303,6 +312,105 @@ class AdoptTests(unittest.TestCase):
         self.project.adopt()
         self.assertIn("Elsewhere.swift", self.project.read(".coast/paths.json"))
 
+    def _push_refs(self, base, tip):
+        return f"refs/heads/main {tip} refs/heads/main {base}\n"
+
+    def test_a_push_of_documents_alone_skips_every_code_seat(self):
+        self.project.adopt()
+        self.project.commit("adopt")
+        base = sh(self.project.path, "git", "rev-parse", "HEAD")
+        self.project.write("docs/internal-note.md", "# A note\n\nNothing here is code.\n")
+        self.project.write("README.md", "prose\n")
+        self.project.commit("two documents")
+        tip = sh(self.project.path, "git", "rev-parse", "HEAD")
+        overrides, record = self._stub_tools()
+        code, out = self.project.hook("pre-push", "--seat", "build,tests,lint,format,rules-scan,jscpd,doc-comments",
+                                      stdin=self._push_refs(base, tip), env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: scope none — documents and plans only", out)
+        for seat in ("build", "tests", "lint", "format", "jscpd", "doc-comments", "rules-scan (tree + ratchets)"):
+            self.assertIn(f"gate: {seat} SKIPPED — no code changed", out)
+        self.assertIn("gate: rules-scan (added since", out, "the diff scan still reads the pushed lines")
+        self.assertFalse(os.path.exists(record), "no tool ran")
+        # The environment word runs everything regardless.
+        code, out = self.project.hook("pre-push", "--seat", "build", stdin=self._push_refs(base, tip),
+                                      env=clean_env(COAST_SCOPE="all", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: scope all — everything", out)
+        self.assertIn("gate: build (warnings-as-errors)", out)
+
+    def test_a_scoped_push_rebuilds_the_affected_targets_and_runs_their_tests(self):
+        overrides, record = self._stub_tools()
+        self.project.write("Sources/Other/Two.swift", "import Foundation\nlet two = 2\n")
+        self.project.adopt()
+        baseline = json.loads(self.project.read(".coast/ratchet-baseline.json"))
+        baseline["baselines"].append({"id": "build-warnings", "count": 3, "deadline": "2026-12-03", "written": "2026-09-04",
+                                      "by": "Tester", "moves": [], "files": {"Sources/App/One.swift": 2, "Sources/Other/Two.swift": 1}})
+        self.project.write(".coast/ratchet-baseline.json", json.dumps(baseline))
+        self.project.commit("adopt")
+        base = sh(self.project.path, "git", "rev-parse", "HEAD")
+        self.project.write("Sources/App/One.swift", self.project.read("Sources/App/One.swift") + "// touched\n")
+        self.project.commit("a change in App")
+        tip = sh(self.project.path, "git", "rev-parse", "HEAD")
+        # The stub prints One.swift's two warnings: equal over the files App owns; Two.swift's one is untouched.
+        code, out = self.project.hook("pre-push", "--seat", "build,tests", stdin=self._push_refs(base, tip), env=clean_env(STUB_WARNINGS="2", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: scope files — 1 code file(s) in App; affected: App, AppTests", out)
+        self.assertIn("gate: build (warnings ratchet, the affected targets rebuilt: App)", out)
+        self.assertIn("OK ratchet build-warnings: 2 reported over the 2 file(s) this push measured, equal to the baseline", out)
+        self.assertIn("gate: tests (AppTests)", out)
+        with open(record, encoding="utf-8") as handle:
+            calls = handle.read()
+        self.assertIn("swift test --filter ^(AppTests)\\.", calls)
+        self.assertNotIn("-warnings-as-errors", calls)
+        # A third warning in the changed file refuses and names it.
+        code, out = self.project.hook("pre-push", "--seat", "build", stdin=self._push_refs(base, tip), env=clean_env(STUB_WARNINGS="3", **overrides))
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet Sources/App/One.swift:0:build-warnings: 3 reported, 2 in the baseline", out)
+        # A change in Other: no test target depends on it, so the tests seat says so and runs nothing.
+        self.project.write("Sources/Other/Two.swift", "import Foundation\nlet two = 22\n")
+        self.project.commit("a change in Other")
+        other = sh(self.project.path, "git", "rev-parse", "HEAD")
+        os.remove(record)
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(tip, other), env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: tests SKIPPED — no test target depends on what changed (Other)", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertNotIn("swift test", handle.read(), "only the package graph was read; no test ran")
+        # Without the per-file map the build runs whole, and says what enables the scoped run.
+        for entry in baseline["baselines"]:
+            entry.pop("files", None)
+        self.project.write(".coast/ratchet-baseline.json", json.dumps(baseline))
+        code, out = self.project.hook("pre-push", "--seat", "build", stdin=self._push_refs(tip, other), env=clean_env(STUB_WARNINGS="3", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("has no per-file map, so every own target is rebuilt", out)
+        self.assertIn("gate: build (warnings ratchet, the package's own targets rebuilt)", out)
+
+    def test_the_linter_reads_only_the_changed_files_of_a_scoped_push(self):
+        overrides, record = self._stub_tools()
+        self.project.adopt()
+        baseline = json.loads(self.project.read(".coast/ratchet-baseline.json"))
+        baseline["baselines"].append({"id": "lint-findings", "count": 9, "deadline": "2026-12-03", "written": "2026-09-04",
+                                      "by": "Tester", "moves": [], "files": {"Sources/App/One.swift": 4, "Sources/App/Views/HomeView.swift": 5}})
+        self.project.write(".coast/ratchet-baseline.json", json.dumps(baseline))
+        self.project.commit("adopt")
+        base = sh(self.project.path, "git", "rev-parse", "HEAD")
+        self.project.write("Sources/App/One.swift", self.project.read("Sources/App/One.swift") + "// touched\n")
+        self.project.commit("a change")
+        tip = sh(self.project.path, "git", "rev-parse", "HEAD")
+        code, out = self.project.hook("pre-push", "--seat", "lint,format", stdin=self._push_refs(base, tip), env=clean_env(STUB_LINT="4", **overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: lint (findings ratchet, 1 changed file(s))", out)
+        self.assertIn("OK ratchet lint-findings: 4 reported over the 1 file(s) this push measured, equal to the baseline", out)
+        self.assertIn("gate: format (strict, 1 changed file(s))", out, "no format entry: strict, on the changed file")
+        with open(record, encoding="utf-8") as handle:
+            calls = handle.read()
+        self.assertIn("swiftlint lint --strict --quiet --force-exclude Sources/App/One.swift", calls)
+        self.assertNotIn("HomeView.swift", calls)
+        code, out = self.project.hook("pre-push", "--seat", "lint", stdin=self._push_refs(base, tip), env=clean_env(STUB_LINT="5", **overrides))
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet Sources/App/One.swift:0:lint-findings: 5 reported, 4 in the baseline", out)
+
     def _stub_tools(self):
         """A `swift` and a `swift-format` on PATH that print STUB_WARNINGS / STUB_FINDINGS distinct
         finding lines and record their arguments; returns (env overrides, the calls file)."""
@@ -314,7 +422,7 @@ class AdoptTests(unittest.TestCase):
                                 ("swiftlint", "STUB_LINT", "error: Identifier Name Violation: stubbed")):
             with open(os.path.join(stub_dir, name), "w", encoding="utf-8") as handle:
                 handle.write("#!/bin/sh\necho \"" + name + " $@\" >> " + json.dumps(record) + "\n"
-                             "if [ \"$1\" = package ]; then echo '{\"targets\": [{\"name\": \"AppTests\", \"type\": \"test\"}]}'; exit 0; fi\n"
+                             "if [ \"$1\" = package ]; then echo '" + json.dumps(STUB_GRAPH) + "'; exit 0; fi\n"
                              "i=0\nwhile [ $i -lt ${" + var + ":-0} ]; do\n"
                              "  echo \"Sources/App/One.swift:$((i+1)):5: " + kind + " $i\"\n  i=$((i+1))\ndone\nexit 0\n")
             os.chmod(os.path.join(stub_dir, name), 0o755)
@@ -368,10 +476,13 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(entries["format-findings"]["count"], 3)
         self.assertEqual(entries["lint-findings"]["count"], 4)
         self.assertIn("build-warnings measured 2", out)
+        # The per-file map travels with each count (E8): a scoped push is judged against it.
+        self.assertEqual(entries["build-warnings"]["files"], {"Sources/App/One.swift": 2})
+        self.assertEqual(entries["lint-findings"]["files"], {"Sources/App/One.swift": 4})
         # Under its entry the lint seat counts instead of running strict; one more finding refuses.
         code, out = self.project.hook("pre-push", "--seat", "lint", env=clean_env(STUB_LINT="4", **overrides))
         self.assertEqual(code, 0, out)
-        self.assertIn("gate: lint (findings ratchet)", out)
+        self.assertIn("gate: lint (findings ratchet", out)
         code, out = self.project.hook("pre-push", "--seat", "lint", env=clean_env(STUB_LINT="5", **overrides))
         self.assertEqual(code, 1, out)
         self.assertIn(":lint-findings:", out)
@@ -381,7 +492,9 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(code, 0, out)
         entries = self._baseline_entries()
         self.assertEqual(entries["build-warnings"]["count"], 0)
+        self.assertEqual(entries["build-warnings"]["files"], {}, "the map follows a lowered count")
         self.assertEqual(entries["format-findings"]["count"], 3)
+        self.assertEqual(entries["format-findings"]["files"], {"Sources/App/One.swift": 3}, "a rise leaves the map with its count")
         self.assertIn("format-findings is 5 in the tree, above its baseline of 3", out)
         # A clean project writes no tool entry at all: its seats stay strict.
         fresh = Project()

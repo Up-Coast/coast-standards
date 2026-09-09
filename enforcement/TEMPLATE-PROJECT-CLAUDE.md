@@ -34,11 +34,15 @@ yours to edit:
 - `{{HOOKS_DIR}}/commit-msg` — a subject line under 100 characters; a commit
   from an agent session names the model that did the work
   (`Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>`).
-- `{{HOOKS_DIR}}/pre-push` — the full battery: build with warnings as errors,
-  tests, lint, format, the scanner on everything added since the remote
-  and on the whole tree, the whole-tree doc-comment count (advisory),
-  jscpd (no new duplicated code against `{{STATE_DIR}}/jscpd-baseline.json`),
-  and the protected-main ruleset.
+- `{{HOOKS_DIR}}/pre-push` — the battery, on what the push changed: build
+  with warnings as errors, tests, lint, format, the scanner on everything
+  added since the remote and on the whole tree, the whole-tree doc-comment
+  count (advisory), jscpd (no new duplicated code against
+  `{{STATE_DIR}}/jscpd-baseline.json`), and the protected-main ruleset. A push
+  of documents alone runs none of the code checks; a push of code runs the
+  linter and formatter on the changed files and the tests of the modules
+  that depend on what changed; a push that changes the checks themselves
+  runs everything.
 - `{{SESSION_HOOK}}` with `{{SETTINGS_FILE}}` — the Claude Code session
   hooks: edits to governing files, chained `cd`, infrastructure commands,
   `--no-verify`, force pushes and a red scan at commit are refused.

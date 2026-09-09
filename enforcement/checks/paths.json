@@ -1,5 +1,24 @@
 {
-  "_comment": "Path classes per platform (Coast's F2 §3.2 bindings, one table): ordered, first match wins, everything else is 'source'. The scanner reads this to scope every signature; Coast's PathClasses reads the same file (T248). Globs: ** crosses directories, * stays within one component, matching is case-insensitive. A {key} in a glob is a layout key (layout.json beside this file, task E5.1), filled by layout.py when the table is read — the governing class names the layer's own folders that way, so a project that moves them keeps them governed.",
+  "_comment": "Path classes per platform (Coast's F2 \u00a73.2 bindings, one table): ordered, first match wins, everything else is 'source'. The scanner reads this to scope every signature; Coast's PathClasses reads the same file (T248). Globs: ** crosses directories, * stays within one component, matching is case-insensitive. A {key} in a glob is a layout key (layout.json beside this file, task E5.1), filled by layout.py when the table is read \u2014 the governing class names the layer's own folders that way, so a project that moves them keeps them governed.",
+  "_scope_comment": "What a push changed (scope.py, task E8): a path in one of not_code_classes, or with one of prose_extensions, is not code and runs no code seat; a path in one of full_run_classes changes the checks themselves, so everything runs; every other path is code.",
+  "not_code_classes": [
+    "docs",
+    "plans",
+    "design_bundle",
+    "generated",
+    "git"
+  ],
+  "full_run_classes": [
+    "governing",
+    "manifest"
+  ],
+  "prose_extensions": [
+    ".md",
+    ".markdown",
+    ".txt",
+    ".rst",
+    ".adoc"
+  ],
   "platforms": {
     "ios": {
       "extensions": [

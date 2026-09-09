@@ -10,9 +10,34 @@ The checks run at three moments.
 |---|---|---|
 | **Every time a file is saved** by an AI coding agent | the scanner on that one file | under a second |
 | **Every commit** | the scanner on the lines you added, and a check that the commit message is sensible | seconds |
-| **Every push** | the whole battery: build, tests, linter, formatter, the scanner on everything since your last push, duplicate-code detection, and a check that your main branch is protected | as long as your build |
+| **Every push** | the battery, on what the push changed: build, tests, linter, formatter, the scanner on everything since your last push, duplicate-code detection, and a check that your main branch is protected | seconds for a push of documents; as long as the affected modules' build and tests for a push of code |
 
 A refusal at any moment stays on your machine.
+
+## A push runs what it changed
+
+The push hook reads what the push changed before it runs anything, and answers with one
+of three words:
+
+- **none** — only documents, plans or other prose changed. No build, no tests, no linter,
+  no formatter, no duplicate-code run: none of them could have an opinion. The scanner
+  still reads the added lines, and the protected-main check still runs.
+- **files** — code changed. The linter and the formatter read the changed files. On a
+  Swift package the build rebuilds the targets that changed and every target that depends
+  on them, and the tests run for the test targets that depend on them — the package's
+  own graph decides, so a change in a leaf module never runs the whole suite, and a
+  change in the module everything imports runs everything. A file no module owns runs
+  the whole battery. An Xcode project has no graph the hook reads yet, so its build and
+  tests run whole when code changed; its linter and formatter are still file-scoped.
+- **all** — the checks themselves changed (a check, a linter configuration, a baseline,
+  the package manifest), or the environment asked for everything (`COAST_SCOPE=all`,
+  which CI sets). Everything runs.
+
+The starting lines follow suit. A repository adopted with warnings or findings carries a
+count per file beside its total (written by `adopt.py --measure-tools`), so a scoped push
+is judged on the files it rebuilt or linted: their count may not rise, and the files it
+did not touch keep their numbers. A starting line without the per-file counts runs that
+check whole, and says which re-measure enables the scoped run.
 
 ## The scanner
 

@@ -4,7 +4,9 @@
 
 **Will this slow down my commits?**
 No. A commit runs the scanner on the lines you added, which takes seconds. The full
-battery runs only at push, and it takes as long as your build and tests.
+battery runs only at push, on what the push changed: a push of documents alone runs no
+build and no tests at all, and a push of code takes as long as the affected modules' build
+and tests.
 
 **Does my code leave my machine?**
 No. Every check runs locally. Nothing is uploaded and no model is called.

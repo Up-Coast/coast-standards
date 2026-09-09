@@ -33,6 +33,22 @@ Releases are downloaded into `~/.cache/coast-standards/<version>/`. Two environm
 variables change where that happens: `COAST_STANDARDS_CACHE` sets the cache folder, and
 `COAST_STANDARDS_RELEASES` sets the address the tarballs are fetched from, for a mirror.
 
+## Run everything on one push
+
+A push runs the checks on what it changed ([how it works](how-it-works.md)):
+nothing for a push of documents, the changed files and the affected modules for a push of
+code, everything when the checks themselves changed. To run everything once regardless —
+before a release, or in CI — set one word in the environment:
+
+```bash
+COAST_SCOPE=all git push
+```
+
+The starting lines a scoped push is judged by are the per-file counts in
+`.coast/ratchet-baseline.json` (a `files` map beside each tool's total). The installer
+writes them with `--measure-tools`; a project adopted before release 1.2.0 runs that once,
+and until it does the build, linter and formatter seats run whole and say so.
+
 ## Tell it where things are
 
 `.coast/paths.json` tells the scanner which files are which. The installer writes a
