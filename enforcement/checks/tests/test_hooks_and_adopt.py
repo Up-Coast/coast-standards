@@ -411,6 +411,90 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("FAIL ratchet Sources/App/One.swift:0:lint-findings: 5 reported, 4 in the baseline", out)
 
+    def _scoped_project(self, platform, files, change):
+        """A project of the platform adopted, with `files` committed, then `change` (path → text)
+        committed on top; returns (base, tip) shas."""
+        os.remove(os.path.join(self.project.path, "Package.swift"))
+        for relative in list(self.project.snapshot()):
+            if relative.startswith("Sources/") and os.path.isfile(os.path.join(self.project.path, relative)):
+                os.remove(os.path.join(self.project.path, relative))
+        for relative, text in files.items():
+            self.project.write(relative, text)
+        self.project.commit("shape")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = adopt.main([self.project.path, "--platform", platform, "--by", "Tester", "--today", "2026-09-04", "--yes"])
+        self.assertEqual(code, 0, out.getvalue())
+        self.project.commit("adopt")
+        base = sh(self.project.path, "git", "rev-parse", "HEAD")
+        for relative, text in change.items():
+            self.project.write(relative, text)
+        self.project.commit("the change")
+        return base, sh(self.project.path, "git", "rev-parse", "HEAD")
+
+    def _stub(self, name, script):
+        stub_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, stub_dir, True)
+        record = os.path.join(stub_dir, "calls.txt")
+        with open(os.path.join(stub_dir, name), "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\necho \"" + name + " $@\" >> " + json.dumps(record) + "\n" + script)
+        os.chmod(os.path.join(stub_dir, name), 0o755)
+        return {"PATH": stub_dir + os.pathsep + os.environ.get("PATH", "")}, record
+
+    def test_an_android_push_builds_the_affected_gradle_modules_and_formats_the_changed_files(self):
+        base, tip = self._scoped_project("android", {
+            "settings.gradle": "include ':app', ':core'\n",
+            "app/build.gradle": "apply plugin: 'com.android.application'\nkotlinOptions { allWarningsAsErrors = true }\ndependencies { implementation project(':core') }\n",
+            "core/build.gradle": "apply plugin: 'com.android.library'\n",
+            "core/src/main/kotlin/Core.kt": "class Core\n",
+            "app/src/main/kotlin/Main.kt": "class Main\n",
+        }, {"app/src/main/kotlin/Main.kt": "class Main { val x = 1 }\n"})
+        self.project.write("gradlew", "#!/bin/sh\necho \"gradlew $@\" >> " + json.dumps(os.path.join(self.project.path, "gradle-calls.txt")) + "\nexit 0\n")
+        os.chmod(os.path.join(self.project.path, "gradlew"), 0o755)
+        overrides, record = self._stub("ktlint", "exit 0\n")
+        code, out = self.project.hook("pre-push", "--seat", "build,format", stdin=self._push_refs(base, tip), env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("affected modules: :app", out)
+        with open(os.path.join(self.project.path, "gradle-calls.txt"), encoding="utf-8") as handle:
+            self.assertIn("gradlew --quiet :app:build", handle.read())
+        self.assertIn("gate: format (1 changed file(s))", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertEqual(handle.read().strip(), "ktlint app/src/main/kotlin/Main.kt")
+
+    def test_a_web_push_hands_the_changed_files_to_jest(self):
+        base, tip = self._scoped_project("web", {
+            "package.json": json.dumps({"name": "site", "scripts": {"test": "jest"}}),
+            "src/one.ts": "export const one = 1;\n",
+            "src/two.ts": "export const two = 2;\n",
+        }, {"src/one.ts": "export const one = 11;\n"})
+        overrides, record = self._stub("npm", "exit 0\n")
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip), env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: tests (jest --findRelatedTests, 1 changed file(s))", out)
+        with open(record, encoding="utf-8") as handle:
+            self.assertEqual(handle.read().strip(), "npm test --silent -- --passWithNoTests --findRelatedTests src/one.ts")
+
+    def test_a_python_push_runs_the_test_files_the_change_reaches(self):
+        base, tip = self._scoped_project("python", {
+            "pkg/__init__.py": "",
+            "pkg/a.py": "def a():\n    return 1\n",
+            "pkg/lonely.py": "def lonely():\n    return 2\n",
+            "tests/__init__.py": "",
+            "tests/test_a.py": "import unittest\nfrom pkg.a import a\n\n\nclass ATests(unittest.TestCase):\n    def test_a(self):\n        self.assertEqual(a(), 1)\n",
+            "tests/test_other.py": "import unittest\n\n\nclass OtherTests(unittest.TestCase):\n    def test_other(self):\n        self.assertTrue(True)\n",
+        }, {"pkg/a.py": "def a():\n    return 1  # touched\n"})
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip))
+        self.assertEqual(code, 0, out)
+        self.assertIn("1 test file(s) reached by the change", out)
+        self.assertTrue("Ran 1 test" in out or "1 passed" in out, out)
+        self.assertNotIn("test_other", out)
+        self.project.write("pkg/lonely.py", "def lonely():\n    return 3\n")
+        self.project.commit("lonely")
+        lonely = sh(self.project.path, "git", "rev-parse", "HEAD")
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(tip, lonely))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: tests SKIPPED — no test file imports what changed", out)
+
     def _stub_tools(self):
         """A `swift` and a `swift-format` on PATH that print STUB_WARNINGS / STUB_FINDINGS distinct
         finding lines and record their arguments; returns (env overrides, the calls file)."""

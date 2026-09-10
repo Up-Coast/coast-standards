@@ -5,7 +5,26 @@
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
 
-## 1.2.0 — 2026-09-09
+## 1.3.0 — 2026-09-09
+
+Every platform's push runs on what it changed, not only Swift's.
+
+- **Module graphs for Android, the web and Python.** The hook reads the platform's own
+  graph: Gradle modules from `settings.gradle[.kts]` and each module's `project(':x')`
+  dependencies (a push builds and tests the affected modules, `./gradlew :m:build` /
+  `:m:test`); npm workspaces from the root `package.json` (a push tests the affected
+  workspaces, `npm test -w`); and for Python every tracked `.py` file with its imports
+  resolved to files in the tree, the `src` layout and relative imports included, so a push
+  runs exactly the test files whose imports reach what changed, and says so when none do.
+- **The runner's own related-tests mode.** When the web test script is `jest` or `vitest`,
+  a push hands the changed files to `jest --findRelatedTests` or `vitest related`: the
+  tests that import the changed files, transitively, whether or not the project has
+  workspaces.
+- **ktlint reads the changed files** like the other formatters already did.
+- `tsc`, `mypy`, `npm run build` and `detekt` still run whole when code changed: the first
+  two are whole-program by nature, the others are not scoped by their tools.
+
+
 
 The push battery runs on what the push changed.
 

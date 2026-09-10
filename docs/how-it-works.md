@@ -26,9 +26,15 @@ of three words:
   Swift package the build rebuilds the targets that changed and every target that depends
   on them, and the tests run for the test targets that depend on them — the package's
   own graph decides, so a change in a leaf module never runs the whole suite, and a
-  change in the module everything imports runs everything. A file no module owns runs
-  the whole battery. An Xcode project has no graph the hook reads yet, so its build and
-  tests run whole when code changed; its linter and formatter are still file-scoped.
+  change in the module everything imports runs everything. On Android the Gradle modules
+  play the same part (each affected module builds and runs its own tests); on the web the
+  npm workspaces do, and when the test script is jest or vitest the runner is handed the
+  changed files and runs the tests that import them; in Python every file's imports are
+  the graph, so a push runs exactly the test files whose imports reach what changed. A
+  file no module owns runs the whole battery. An Xcode project has no graph the hook
+  reads, so its build and tests run whole when code changed; its linter and formatter are
+  still file-scoped. Type checkers (`tsc`, `mypy`) always read the whole program, because
+  that is what a type check is.
 - **all** — the checks themselves changed (a check, a linter configuration, a baseline,
   the package manifest), or the environment asked for everything (`COAST_SCOPE=all`,
   which CI sets). Everything runs.

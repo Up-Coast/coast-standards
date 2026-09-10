@@ -268,13 +268,14 @@ fi
 
 scope_files_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
 scope_measured_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
+scope_tests_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
 if [ "$measure" = 1 ]; then
   scope_args="--all"   # a measurement is the whole tree, always
 else
   scope_args=$ranges
 fi
 # shellcheck disable=SC2086
-scope=$(python3 "$checks/scope.py" --platform "$platform" --files-to "$scope_files_listing" --measured-to "$scope_measured_listing" $scope_args) \
+scope=$(python3 "$checks/scope.py" --platform "$platform" --files-to "$scope_files_listing" --measured-to "$scope_measured_listing" --tests-to "$scope_tests_listing" $scope_args) \
   || { echo "FAIL pre-push $checks/scope.py:0:scope: what this push changed could not be read — see the lines above" >&2; exit 1; }
 eval "$scope"
 if [ "$measure" != 1 ]; then
@@ -407,6 +408,14 @@ listed_seat() {
   fi
   run "$seat ($(count_lines "$listing") changed file(s))" with_listing "$listing" "$@"
   rm -f "$listing"
+}
+
+gradle_tasks() {  # <task> <module…> — `:m:task` for each module
+  task=$1; shift
+  for module in "$@"; do printf '%s:%s ' "$module" "$task"; done
+}
+workspace_flags() {  # <workspace…> — `-w name` for each
+  for workspace in "$@"; do printf -- '-w %s ' "$workspace"; done
 }
 
 # ---------------------------------------------------------------- what this push changed
@@ -620,16 +629,31 @@ case "$platform" in
         echo "FAIL pre-push build.gradle:0:warnings-as-errors: the Kotlin build does not set allWarningsAsErrors = true — add it to the module's kotlinOptions/compilerOptions" >&2
         exit 1
       fi
-      run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
+      # A scoped push builds the affected modules (`:m:build` runs each module's own
+      # check, test and lint tasks); anything else builds the whole tree.
+      if [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
+        run "build + tests + lint (warnings-as-errors, affected modules: $scope_targets)" \
+          ./gradlew --quiet $(gradle_tasks build $scope_targets)
+      else
+        run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
+      fi
     elif wants tests && scoped tests; then
-      run "tests" ./gradlew --quiet test
+      if [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
+        run "tests (affected modules: $scope_test_targets)" ./gradlew --quiet $(gradle_tasks test $scope_test_targets)
+      else
+        run "tests" ./gradlew --quiet test
+      fi
     fi
     if wants lint && linter_on detekt && scoped lint; then
       run "lint (detekt)" ./gradlew --quiet detekt
     fi
     if wants format && linter_on ktlint && scoped format; then
       need ktlint "brew install ktlint" || exit 1
-      run "format (ktlint)" ktlint
+      if [ "$scope_kind" = files ]; then
+        listed_seat format 'kt|kts' ktlint
+      else
+        run "format (ktlint)" ktlint
+      fi
     fi
     ;;
   react-native|web)
@@ -647,7 +671,24 @@ case "$platform" in
         run "build (npm run build)" npm run --silent build
       fi
     fi
-    wants tests && scoped tests && run "tests (npm test)" npm test --silent
+    if wants tests && scoped tests; then
+      # The runner's own related-tests mode when the test script is jest or vitest: the tests
+      # whose imports reach the changed files (`jest --findRelatedTests`, `vitest related`).
+      # Else the affected workspaces (`npm test -w`), else the whole suite.
+      runner=$(python3 "$checks/jsonc.py" package.json scripts.test 2>/dev/null | tr -d '"' | awk '{print $1}')
+      runner=${runner##*/}
+      if [ "$scope_kind" = files ] && [ "$runner" = jest ] && [ -s "$scope_files_listing" ]; then
+        run "tests (jest --findRelatedTests, $scope_files changed file(s))" \
+          with_listing "$scope_files_listing" npm test --silent -- --passWithNoTests --findRelatedTests
+      elif [ "$scope_kind" = files ] && [ "$runner" = vitest ] && [ -s "$scope_files_listing" ]; then
+        run "tests (vitest related, $scope_files changed file(s))" \
+          with_listing "$scope_files_listing" npx --no-install vitest related --run --passWithNoTests
+      elif [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
+        run "tests (npm test, affected workspaces: $scope_test_targets)" npm test --silent --if-present $(workspace_flags $scope_test_targets)
+      else
+        run "tests (npm test)" npm test --silent
+      fi
+    fi
     if wants lint && linter_on eslint && scoped lint; then
       if [ "$scope_kind" = files ]; then
         listed_seat lint 'ts|tsx|js|jsx|mjs|cjs' npx --no-install eslint --max-warnings 0
@@ -667,7 +708,18 @@ case "$platform" in
     if wants tests && scoped tests; then
       # warnings-as-errors: every Python warning fails the test run.
       if [ -d tests ] || ls test_*.py >/dev/null 2>&1; then
-        if python3 -c 'import pytest' 2>/dev/null; then
+        if [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ] && [ "$scope_tests" = 0 ]; then
+          printf 'gate: tests SKIPPED — no test file imports what changed (%s)\n' "$scope_reason"
+        elif [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
+          # The test files whose imports reach the changed files (scope.py's Python graph).
+          if python3 -c 'import pytest' 2>/dev/null; then
+            run "tests (pytest, $scope_tests test file(s) reached by the change)" \
+              with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m pytest -q
+          else
+            run "tests (unittest, $scope_tests test file(s) reached by the change)" \
+              with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m unittest -q
+          fi
+        elif python3 -c 'import pytest' 2>/dev/null; then
           run "tests (pytest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m pytest -q
         else
           run "tests (unittest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m unittest discover -q
@@ -874,6 +926,6 @@ wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
 
 [ "$seats" = all ] && run "the hooks this project already had" previous_hooks
 [ -n "$refs_file" ] && rm -f "$refs_file"
-rm -f "$scope_files_listing" "$scope_measured_listing"
+rm -f "$scope_files_listing" "$scope_measured_listing" "$scope_tests_listing"
 
 printf 'gate: every check green\n'

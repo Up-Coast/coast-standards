@@ -668,9 +668,9 @@ runs on that — nothing, the changed files, the affected modules, or everything
 - **jscpd, the whole-tree scan and the doc-comment count** run whenever code changed
   (a clone pairs a changed file with an unchanged one, so the tree is the unit) and not
   otherwise. `gh-ruleset` is about the repository, not the change, and runs every push.
-- **The other platforms** get the none/files/all gate and the file-scoped linters that
-  take a list natively (eslint, prettier, ruff); a module graph for Gradle, npm workspaces
-  and Python packages is E8.6, filed, not built.
+- **The other platforms** get the same: Gradle modules, npm workspaces and Python's
+  file-level import graph limit the build and the tests; eslint, prettier, ruff and ktlint
+  read the changed files; jest and vitest run the tests that import the changed files (E8.6).
 
 | Task | What | Size | Guard |
 |---|---|---|---|
@@ -679,7 +679,7 @@ runs on that — nothing, the changed files, the affected modules, or everything
 | E8.3 | `check_rules.py`: one log reader for the tools' `file:line:col: warning|error:` lines (the two shell counters go), `--ratchet ID --log <log> [--measured <listing>]` judging the measured files' sum against the baseline's per-file slice, `--measure ID --log <log>` printing `MEASURE` and `MEASURE-FILE` lines, `--has-baseline ID --per-file`. | S | `test_check_rules.py`: the slice judgment in both directions, a file absent from the map judged at zero, no map means no scoped judgment |
 | E8.4 | `adopt.py --measure-tools` writes the per-file map into each tool entry; a lowered or equal total replaces the map, a rise leaves entry and map as they were. | S | `test_hooks_and_adopt.py`: the map is written and replaced |
 | E8.5 | Docs: rules/07 says what the battery runs on; the README, the project `CLAUDE.md` template, how-it-works, options (`SCOPE`, the `files` map), the developer guide; CHANGELOG 1.2.0. | S | verify_rules green; the site builds |
-| E8.6 | Filed: module graphs for Gradle (`settings.gradle` modules), npm workspaces and Python packages, and `jest --findRelatedTests` / `vitest related` where the test script is one of those. | M | — |
+| E8.6 | **DONE 2026-09-09 (release 1.3.0).** Module graphs for Gradle (`settings.gradle[.kts]` modules, `project(':x')` edges; the affected modules build and test through `:m:build` / `:m:test`), npm workspaces (the root `package.json`'s list, sibling dependencies as edges; `npm test -w` for the affected ones) and Python (every tracked `.py` a node, imports resolved to files as edges — the src layout and relative imports through `import_matrix.python_read`; the test files the change reaches run, `pytest`/`unittest` on that list); `jest --findRelatedTests` and `vitest related` on the changed files when the test script is one of those; ktlint on the changed files. | M | `test_scope.py` (each graph on a fixture tree; the closure to test files), `test_hooks_and_adopt.py` (an Android push builds `:app:build` and formats one file, a web push hands one file to jest, a Python push runs the one test file its change reaches and skips when none does) |
 
 ## 7. The decisions (ALL DECIDED 2026-09-04 — build them, don't re-ask)
 
