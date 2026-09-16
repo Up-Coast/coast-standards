@@ -29,7 +29,7 @@ Run the installer as `python3 <release>/enforcement/adopt.py <project> [flags]`.
 | `--owner NAME` | The owner's name, used in refusal messages ("ask NAME first"). Saved as `owner.name`. |
 | `--product NAME` | The product's name. Saved as `owner.product`. |
 | `--org NAME` | The organisation's name. Saved as `owner.org`. |
-| `--release VERSION` | Downloads that version (for example `1.6.3`, or `latest` for the newest published release) and installs from it instead of from the copy you ran. Use it to update. |
+| `--release VERSION` | Downloads that version (for example `1.9.1`, or `latest` for the newest) and installs from it instead of from the copy you ran. Use it to update. |
 | `--measure-tools [STEPS]` | Measures the tool baselines again: build warnings, formatter findings, linter findings and a missing test target. A first install does this anyway. Add a list to skip work, for example `--measure-tools format,lint` to measure without building. |
 | `--lower-baselines` | Writes only the two baseline files, measured from the code as it is now. A count that fell is lowered. A count that rose is left and reported. Nothing is installed. Use it when a push is refused because a count went down. An AI agent may run it, because it can only lower counts. It cannot be combined with `--init`, `--measure-tools` or `--secret-scan`, and the project must already be installed. |
 | `--secret-scan` | Scans every tracked file for secrets again. A first install always does this. |

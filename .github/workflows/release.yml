@@ -1,14 +1,14 @@
 name: release
 
-# Publishes a GitHub release for a version that already has a tag. Every merge to main
-# is tagged by the checks workflow; a release is published only when someone runs this
-# workflow (Actions → release → Run workflow), naming the version.
+# Every merge to main is published by the checks workflow. Run this by hand only to
+# publish a version that is missing from the releases page (Actions → release → Run
+# workflow), naming the version. Its tag v<version> must exist.
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "The version to publish, for example 1.6.3 (its tag v<version> must exist)"
+        description: "The version to publish, for example 1.9.1 (its tag v<version> must exist)"
         required: true
 
 permissions:
@@ -30,22 +30,11 @@ jobs:
             echo "FAIL release: v$VERSION holds CHECKS-VERSION $file" >&2
             exit 1
           fi
-      - name: The changelog must carry this version
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          awk -v v="$VERSION" '
-            $0 ~ "^## " v " " {on=1; print; next}
-            /^## / && on {exit}
-            on {print}
-          ' CHANGELOG.md > notes.md
-          if [ ! -s notes.md ]; then
-            echo "FAIL release: CHANGELOG.md has no '## $VERSION — <date>' section" >&2
-            exit 1
-          fi
-          cat notes.md
       - name: Publish the GitHub release with the changelog section
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
-        run: gh release create "v$VERSION" --title "Coast Standards $VERSION" --notes-file notes.md
+        run: |
+          python3 tools/release_notes.py "$VERSION" > notes.md
+          cat notes.md
+          gh release create "v$VERSION" --title "Coast Standards $VERSION" --notes-file notes.md --verify-tag

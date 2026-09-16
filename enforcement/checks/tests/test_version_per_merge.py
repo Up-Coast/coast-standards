@@ -20,6 +20,7 @@ CHECKS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO_ROOT = os.path.dirname(os.path.dirname(CHECKS_DIR))
 sys.path.insert(0, os.path.join(REPO_ROOT, "tools"))
 
+import release_notes  # noqa: E402
 import version  # noqa: E402
 
 CHANGELOG = """# Changelog
@@ -106,6 +107,15 @@ class BumpTests(unittest.TestCase):
             version.bump("patch", "A summary.", root=self.repo.root)
         with self.assertRaises(ValueError):
             version.bump("huge", "A summary.", root=self.repo.root)
+
+
+class ReleaseNotesTests(unittest.TestCase):
+    def test_the_notes_are_one_version_section(self):
+        text = CHANGELOG.replace("## 1.0.0 — ", "## 1.1.0 — 2026-02-02\n\nSummary.\n\n- **Thing.** Detail.\n\n## 1.0.0 — ")
+        self.assertEqual(release_notes.notes("1.1.0", text), "## 1.1.0 — 2026-02-02\n\nSummary.\n\n- **Thing.** Detail.\n")
+        self.assertEqual(release_notes.notes("1.0.0", text), "## 1.0.0 — 2026-01-01\n\nThe first one.\n")
+        self.assertIsNone(release_notes.notes("1.0", text), "a partial version never matches a longer one")
+        self.assertIsNone(release_notes.notes("2.0.0", text))
 
 
 class PushCheckTests(unittest.TestCase):

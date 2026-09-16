@@ -632,18 +632,17 @@ The configs in `lint/` switch on the rules the documents cite. The verifier fail
 
 ## 12. Versioning
 
-Every merge to `main` is a new version. Publishing a GitHub release is a separate step.
+Every merge to `main` is a new version, and every version is published as a GitHub release.
 
 | What | Where |
 |---|---|
 | Version | `CHECKS-VERSION` (semantic version, no `v`) |
-| Tag | `v<version>`, added by CI to every version on `main` |
+| Tag and release | `v<version>`, added by CI to every version on `main`, with a GitHub release whose notes are the version's changelog section (`tools/release_notes.py`) |
 | Notes | `CHANGELOG.md`, one `## <version> — <date>` section per version |
-| Published releases | GitHub releases, created only by running the release workflow by hand |
 | A project's version | `.coast/standards-version`: `1.0.0` from a tarball or tagged clone, `1.0.0+<commit>` otherwise |
 | Rules release | First line of each platform rules file: `<!-- coast-standards-release: X.Y.Z -->`, the version in which its text last changed. Old `coast-rules-version: N` stamps count as older than any version. |
 
-A project can install any tagged version with `adopt.py <project> --release <version>`. `--release latest` installs the newest published release. A rules document from an older version is upgraded at adoption. A copy from the current version that differs is the owner's edit, and is left alone.
+A project can install any tagged version with `adopt.py <project> --release <version>`. `--release latest` installs the newest version. A rules document from an older version is upgraded at adoption. A copy from the current version that differs is the owner's edit, and is left alone.
 
 ### 12.1 Every merge raises the version
 
@@ -669,22 +668,25 @@ What holds this:
 
 - The pre-push hook (`.githooks/pre-push`) refuses a push to `main` whose version is not higher than the one on `main`, or whose changelog has no section for it.
 - The pre-commit hook's tests refuse a rules file still marked `unreleased` once the version has moved.
-- After the checks pass on `main`, CI tags the commit `v<version>`. It fails if that tag already marks another commit.
+- After the checks pass on `main`, CI tags the commit `v<version>` and publishes the release. It fails if that tag already marks another commit.
+- An edit made on the GitHub website skips the pre-push hook. If it did not raise the version, CI fails; raise the version in a follow-up commit.
 
 Do not re-adopt the owner's projects as part of a merge. Each project takes a new version when its owner asks.
 
-### 12.2 Publishing a release
+### 12.2 Publishing a missing release
 
-Publish when a version should appear on the releases page and become what `--release latest` installs.
+CI publishes every version. If a version is missing from the releases page, publish it by hand:
 
 1. Open **Actions**, choose **release**, and click **Run workflow**.
-2. Enter the version, for example `1.6.3`. Its tag must already exist.
+2. Enter the version, for example `1.9.1`. Its tag must already exist.
 
-The workflow checks the tag against `CHECKS-VERSION` and the changelog, then publishes the GitHub release with that changelog section as its notes. From a terminal:
+From a terminal:
 
 ```bash
 gh workflow run release.yml -R Up-Coast/coast-standards -f version=<version>
 ```
+
+Publish missing versions oldest first, so the newest one is marked **Latest**.
 
 #### How to write release notes
 

@@ -2,8 +2,8 @@
 """Every merge to main raises the version of this repository.
 
 The version is in ``CHECKS-VERSION``. Each version has a dated section in ``CHANGELOG.md``,
-and CI tags every version that reaches ``main`` as ``v<version>``. Publishing a GitHub
-release is a separate step, started by hand.
+and CI tags every version that reaches ``main`` as ``v<version>`` and publishes it as a
+GitHub release.
 
 Usage (from anywhere):
     python3 tools/version.py bump patch "One sentence summarising the change."
@@ -27,6 +27,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import build_rules  # noqa: E402
+import release_notes  # noqa: E402
 
 PARTS = ("major", "minor", "patch")
 UNRELEASED = "## Unreleased\n"
@@ -45,10 +46,6 @@ def raised(version, part):
     if part == "minor":
         return f"{major}.{minor + 1}.0"
     return f"{major}.{minor}.{patch + 1}"
-
-
-def section_heading(version):
-    return re.compile(r"(?m)^## " + re.escape(version) + r" — \d{4}-\d{2}-\d{2}$")
 
 
 def bump(part, summary, root=REPO_ROOT, today=None):
@@ -104,7 +101,7 @@ def check(old, new, root=REPO_ROOT):
         except ValueError:
             pass
     changelog = _show(root, new, "CHANGELOG.md") or ""
-    if not section_heading(after).search(changelog):
+    if release_notes.notes(after, changelog) is None:
         problems.append(f"CHANGELOG.md has no '## {after} — YYYY-MM-DD' section; tools/version.py bump writes it")
     return problems
 

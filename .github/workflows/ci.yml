@@ -33,9 +33,9 @@ jobs:
       - name: The enforcement layer's own tests
         run: python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py'
 
-  tag-version:
-    # Every merge to main is a version. Once the checks pass, tag it v<CHECKS-VERSION>.
-    # Publishing a GitHub release is separate: run the release workflow by hand.
+  publish-version:
+    # Every merge to main is a release. Once the checks pass, tag the commit
+    # v<CHECKS-VERSION> and publish a GitHub release with its changelog section.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: verify-and-test
     runs-on: ubuntu-latest
@@ -49,6 +49,7 @@ jobs:
         run: |
           version="$(tr -d '[:space:]' < CHECKS-VERSION)"
           tag="v$version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             if [ "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA" ]; then
               echo "$tag already marks this commit"
@@ -60,3 +61,13 @@ jobs:
           python3 tools/version.py check "" "$GITHUB_SHA"
           git tag "$tag" "$GITHUB_SHA"
           git push origin "$tag"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already published"
+            exit 0
+          fi
+          python3 tools/release_notes.py "$VERSION" > notes.md
+          gh release create "v$VERSION" --title "Coast Standards $VERSION" --notes-file notes.md --verify-tag

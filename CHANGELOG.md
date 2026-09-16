@@ -1,8 +1,20 @@
 # Changelog
 
-What changes for a project that upgrades, one section per version. Every merge to `main` is a new version: the number is in `CHECKS-VERSION`, and each version is the git tag `v<version>`. Published releases are the ones on the GitHub releases page. How to write an entry: [Every merge raises the version](enforcement/DEVELOPER-GUIDE.md#121-every-merge-raises-the-version).
+What changes for a project that upgrades, one section per version. Every merge to `main` is a new version: the number is in `CHECKS-VERSION`, and each version is the git tag `v<version>` and a GitHub release with this section as its notes. How to write an entry: [Every merge raises the version](enforcement/DEVELOPER-GUIDE.md#121-every-merge-raises-the-version).
 
 ## Unreleased
+
+## 1.9.2 — 2026-09-16
+
+Every version is published as a GitHub release.
+
+### Changed
+
+- **Every version is published as a GitHub release.** CI now publishes a release for each merge to main, with the version's changelog section as its notes, so `adopt.py --release latest` always installs the newest version. The release workflow stays for publishing a version that is missing from the releases page.
+
+### Upgrading
+
+Nothing to do. `--release latest` now follows every version.
 
 ## 1.9.1 — 2026-09-16
 
