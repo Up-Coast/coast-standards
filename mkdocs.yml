@@ -25,6 +25,7 @@ exclude_docs: |
   site/
   mkdocs-venv/
   enforcement/TEMPLATE-PROJECT-CLAUDE.md
+  rules/platform/shared/
 
 not_in_nav: |
   CHANGELOG.md

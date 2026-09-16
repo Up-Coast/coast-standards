@@ -1,112 +1,98 @@
 # How it works
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-16*
 
-## Three moments
+## When the checks run
 
-The checks run at three moments.
-
-| Moment | What runs | How long |
+| When | What runs | How long |
 |---|---|---|
-| **Every time a file is saved** by an AI coding agent | the scanner on that one file | under a second |
-| **Every commit** | the scanner on the lines you added, and a check that the commit message is sensible | seconds |
-| **Every push** | the battery, on what the push changed: build, tests, linter, formatter, the scanner on everything since your last push, duplicate-code detection, and a check that your main branch is protected | seconds for a push of documents; as long as the affected modules' build and tests for a push of code |
+| An AI coding agent saves a file | The scanner, on that file | Under a second |
+| You commit | The scanner, on the lines you added, and a commit-message check | Seconds |
+| You push | The pre-push hook's checks, on what the push changed (see below) | Seconds for documents; the affected build and tests for code |
 
-A refusal at any moment stays on your machine.
+The pre-push hook runs: build, tests, linter, formatter, the scanner, duplicate-code detection, and a check that your main branch is protected on GitHub.
 
-## A push runs what it changed
+Everything runs on your machine. A refusal never leaves it.
 
-The push hook reads what the push changed before it runs anything, and answers with one
-of three words:
+## A push only checks what it changed
 
-- **none** — only documents, plans or other prose changed. No build, no tests, no linter,
-  no formatter, no duplicate-code run: none of them could have an opinion. The scanner
-  still reads the added lines, and the protected-main check still runs.
-- **files** — code changed. The linter and the formatter read the changed files. On a
-  Swift package the build rebuilds the targets that changed and every target that depends
-  on them, and the tests run for the test targets that depend on them — the package's
-  own graph decides, so a change in a leaf module never runs the whole suite, and a
-  change in the module everything imports runs everything. On Android the Gradle modules
-  play the same part (each affected module builds and runs its own tests); on the web the
-  npm workspaces do, and when the test script is jest or vitest the runner is handed the
-  changed files and runs the tests that import them; in Python every file's imports are
-  the graph, so a push runs exactly the test files whose imports reach what changed. A
-  file no module owns runs the whole battery. An Xcode project has no graph the hook
-  reads, so its build and tests run whole when code changed; its linter and formatter are
-  still file-scoped. Type checkers (`tsc`, `mypy`) always read the whole program, because
-  that is what a type check is.
-- **all** — the checks themselves changed (a check, a linter configuration, a baseline,
-  the package manifest), or the environment asked for everything (`COAST_SCOPE=all`,
-  which CI sets). Everything runs.
+Before running anything, the pre-push hook works out the scope of the push.
 
-The starting lines follow suit. A repository adopted with warnings or findings carries a
-count per file beside its total (written by `adopt.py --measure-tools`), so a scoped push
-is judged on the files it rebuilt or linted: their count may not rise, and the files it
-did not touch keep their numbers. A starting line without the per-file counts runs that
-check whole, and says which re-measure enables the scoped run.
+| Scope | When | What runs |
+|---|---|---|
+| **none** | Only documents or other prose changed | The scanner on added lines, and the protected-branch check. No build, tests, linter, formatter or duplicate-code check. |
+| **files** | Code changed | The linter and formatter on the changed files. The build and tests for the affected modules (see below). |
+| **all** | The checks themselves changed (a check, a linter config, a baseline, the package manifest), or `COAST_SCOPE=all` is set (CI sets it) | Everything. |
+
+How "affected modules" is worked out:
+
+| Platform | Unit | What runs |
+|---|---|---|
+| Swift package | Package targets | Changed targets, targets that depend on them, and their tests |
+| Android | Gradle modules | Each affected module's build and tests |
+| Web | npm workspaces | Affected workspaces; jest or vitest run only the tests that import the changed files |
+| Python | Imports | Test files whose imports reach the changed code |
+| Xcode project | None | Whole build and tests (linter and formatter still run per file) |
+
+- A changed file that belongs to no module runs everything.
+- Type checkers (`tsc`, `mypy`) always check the whole program.
 
 ## The scanner
 
-Most of the rules are about a literal in the wrong place: a user-facing sentence typed
-straight into a screen instead of a strings file, a colour or a font size typed into a
-view instead of the theme, a password in code, a plain `http://` address, a `sleep` on
-the main thread. The scanner has a list of these patterns for each platform and looks
-for them in the lines you added. It knows what kind of file it is looking at (a screen, a
-test, the theme, a strings catalog) and applies only the patterns that make sense there.
+Most rules catch a literal in the wrong place. Examples:
 
-It does not read your program's structure.
+- User-facing text typed into a screen instead of a strings file.
+- A colour or font size typed into a view instead of the theme.
+- A password in code, or a plain `http://` address.
+- A `sleep` on the main thread.
+
+The scanner has a list of these patterns per platform. It checks the lines you added. It knows the file's kind (screen, test, theme, strings catalog) and applies only the patterns that fit. It does not analyse program structure.
 
 ## Your platform's linter
 
-Where the platform already has a good tool (SwiftLint, detekt, ESLint, ruff), the
-installer ships a configuration with the rules the standards cite switched on, and the
-push runs it. You can edit that configuration; the installer will not overwrite your
-edits.
+Where a good linter exists (SwiftLint, detekt, ESLint, ruff), the installer ships a config with the relevant rules on. The pre-push hook runs it. You may edit that config; the installer will not overwrite your edits.
 
 ## Duplicate code
 
-`jscpd` finds copied blocks of code across your project. The rule is "no new
-duplication": the copies you already had are recorded at install, and a push is refused
-only when it adds a new one.
+`jscpd` finds copied blocks of code. Copies that existed at install are recorded. A push is refused only if it adds a new one.
 
-## Three kinds of rule
+## Baselines: existing problems in an older project
 
-Every rule is labelled with what holds it, and the label puts it in a bin:
+A baseline is a count of existing problems that may only go down. The installer records one for existing build warnings, linter and formatter findings, duplicated blocks, and some scanner checks.
 
-- **Enforced by a check.** A check refuses the change. This is the number you see.
-- **Advisory.** The scanner mentions it. Nothing fails.
-- **Needs a reviewer.** Only a person (or a review agent reading the code) can judge it:
-  naming, whether an abstraction is premature, whether an error message is honest.
-  These are listed in your rules file as review-only.
+- Each baseline has a deadline, 90 days after install by default (`ratchet_days`).
+- Before the deadline, the count may stay the same or fall, never rise.
+- After the deadline, the count must be zero.
+- Only a person can move a deadline.
 
-The number "rules enforced by a check: 24 of 74" is computed from your project's own copy
-of the rules and written into your `CLAUDE.md`. A rule counts only if the check it names
-exists and runs.
+Baselines live in `.coast/ratchet-baseline.json` and `.coast/jscpd-baseline.json`.
 
-## Starting lines and deadlines
+Tool baselines (warnings, linter, formatter) can also store a count per file. With those, a scoped push is judged only on the files it rebuilt or linted. Without them, that check runs on the whole project, and the hook tells you which re-measure (`adopt.py --measure-tools`) enables the scoped run.
 
-An existing project's warnings, style findings, duplicated blocks, and a few scanner
-counts are recorded at install with a date 90 days out. Each count may fall or stay flat
-and never rise. After the date, the check requires zero. Only a person can move a date,
-and the move is written down with who and why.
+## How each rule is enforced
+
+Every rule in your `docs/domain-rules.md` is labelled with what enforces it:
+
+| Label | Meaning |
+|---|---|
+| Enforced by a check | A check refuses the change. |
+| Advisory | The scanner reports it. Nothing fails. |
+| Needs a reviewer | Only a person or a review agent can judge it (naming, premature abstraction, honest error messages). |
+| Process | Held by the workflow or by a person. |
+| Switched off | A person turned its check off in `.coast/config.json`. Nothing enforces it until they turn it back on. |
+
+The installer counts the enforced rules (for example "rules enforced by a check: 24 of 74") and writes the number into your `CLAUDE.md`. A rule counts only if the check it names exists and runs.
 
 ## Guard-rails for AI agents
 
-If you use Claude Code on the project, a small set of hooks stops an agent from doing
-things it should never do on its own: editing the files that define the checks, running
-commands that change your cloud infrastructure, skipping the hooks, force-pushing, and
-ending its turn with work it has not pushed. See
-[Working with AI coding agents](ai-agents.md).
+If you use Claude Code, session hooks stop an agent from editing the check files, changing cloud infrastructure, skipping hooks, force-pushing, or ending its turn with unpushed commits. See [Working with AI coding agents](ai-agents.md).
 
 ## Where the checks live
 
-In your project. The installer copies the checks, the hooks, and the rules into it, and
-records the release in `.coast/standards-version`. Nothing outside the project carries
-the rules, and nothing needs to be cloned or kept in step on your machine. A newer release
-is taken by running the installer with `--release`.
+In your project. The installer copies the checks, hooks and rules into it. It records the installed release in `.coast/standards-version`. Nothing needs to be cloned or kept in sync elsewhere. To upgrade, run the installer with `--release`.
 
 ## What it never does
 
-- It never sends your code anywhere. Everything runs locally.
-- It never calls a model. The checks are scripts.
+- It never sends your code anywhere.
+- It never calls an AI model. The checks are scripts.
 - It never edits your code. It only refuses.

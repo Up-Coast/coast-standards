@@ -1,159 +1,86 @@
 # Auditing and completeness — never trust the tracker
 
-The rule this file exists for: **an audit rebuilds the list from the code; it
-never reviews the list.** A tracker, an inventory page, or a "what's left"
-document records what somebody remembered to write down. Auditing it against
-itself proves only that it is internally consistent.
+The core rule: **an audit rebuilds the list from the code; it never reviews the list.** A tracker, an inventory page or a "what's left" document only records what somebody remembered to write down. Checking it against itself only proves that it agrees with itself.
 
-Origin (20 August 2026, Coast): a page headed "Everything not on this page is
-built, tested and pushed" was wrong in thirteen places, including agent roles
-that existed with rules and toolboxes but nothing that ever started them, and
-a founder-facing switch wired to nothing. A large audit had run weeks earlier
-and missed all of it, because that audit was scoped to one layer and checked
-the tracker rather than the source. The owner's instruction: an in-depth audit
-looks at the sources the page comes from and essentially rebuilds the page.
+Why: a page claiming "everything not on this page is built" can be wrong in many places, and an audit that checks the page instead of the source will miss all of them.
 
 ## The method
 
-1. **Name the scope out loud before starting, and again in the report.** "I
-   audited the frontend against the design" is an honest sentence. "I audited
-   the project" almost never is. An audit of one layer proves nothing about
-   any other layer, and a report that doesn't say which layer it covered will
-   be read as covering everything.
-2. **Rebuild the inventory from primary sources.** Walk the code, the specs,
-   and the decision log, and derive what should exist. Then compare that
-   derived list against the existing tracker. Items the tracker is missing are
-   the finding; items it has that the code already satisfies are stale rows to
-   close.
-3. **Sweep for the shapes that hide unbuilt work.** These are mechanical and
-   fast, and they are where the misses actually live:
-   - Dispatch tables, factories, and hook maps that return nothing for a case
-     — an empty branch is a feature that silently does not exist.
-   - Comments admitting deferral: "not built yet", "not implemented", "stub",
-     "placeholder", "until … lands", "filed", "TODO", "for now".
-   - Code that raises or refuses with a message aimed at a human — those
-     sentences are the system telling you what is missing, in its own words.
-   - Every declared role, mode, kind, or type in an enum: does anything
-     construct it? A case with no construction site is a design that never
-     shipped.
-   - Every user-facing setting or toggle: does anything read it? A dial no
-     code consults is a promise to the user that nothing keeps.
-   - Every public function built and exported: does anything call it outside
-     the tests? Tests-only callers mean the seam was built and never wired.
-   - Every stage or step named in the spec: is it in the sequence the runtime
-     actually executes?
-4. **Check the paths tests never take.** Ask what conditions no test fixture
-   ever sets — a flag always false in every fixture, a branch no sample data
-   reaches. Unbuilt work survives precisely where the tests never look.
-5. **File everything in the same session, where pending work lives.** A
-   finding that stays in the report is a finding that gets missed again. It
-   goes onto the project's real pending-work list, with what it is, what
-   happens today when the path is hit, and how severe it is.
-6. **Rank by what a user can reach.** A gap behind a shipping button outranks
-   a gap behind a flag nobody has turned on. Say plainly which findings are
-   reachable today and how.
-7. **Retire false completeness claims.** If a document asserts that everything
-   not listed is done, either prove it with a sweep or delete the sentence.
-   Replace it with what was actually checked, and when. [check: process]
+1. **Name the scope out loud before starting, and again in the report.** "I audited the frontend against the design" can be true. "I audited the project" almost never is. An audit of one layer proves nothing about the other layers. A report that does not name its layer will be read as covering everything.
+2. **Rebuild the inventory from primary sources.** Go through the code, the specs and the decision log, and work out what should exist. Then compare that list with the existing tracker. Items missing from the tracker are the findings. Tracker items that the code already satisfies are stale and should be closed.
+3. **Sweep for the shapes that hide unbuilt work.** These checks are mechanical and fast, and they are where missed work is usually found:
+   - Dispatch tables, factories and hook maps that return nothing for a case. An empty branch is a feature that silently does not exist.
+   - Comments admitting deferral: "not built yet", "not implemented", "stub", "placeholder", "until … lands", "filed", "TODO", "for now".
+   - Code that throws or refuses with a message written for a person. Those messages tell you, in the system's own words, what is missing.
+   - Every declared role, mode, kind or type in an enum: does anything create it? A case that nothing creates is a design that never shipped.
+   - Every user-facing setting or toggle: does anything read it? A setting that no code reads is a promise to the user that nothing keeps.
+   - Every public function that is built and exported: does anything call it outside the tests? If only tests call it, it was built but never connected.
+   - Every stage or step named in the spec: is it in the sequence the runtime actually runs?
+4. **Check the paths tests never take.** Find the conditions no test fixture ever sets, such as a flag that is false in every fixture, or a branch no sample data reaches. Unbuilt work survives exactly where the tests never look.
+5. **File everything in the same session, where pending work lives.** A finding that stays only in the report gets missed again. Add it to the project's real pending-work list, with what it is, what happens today when someone hits that path, and how severe it is.
+6. **Rank by what a user can reach.** A gap behind a button that ships outranks a gap behind a flag nobody has turned on. Say clearly which findings a user can reach today, and how.
+7. **Retire false completeness claims.** If a document says everything not listed is done, either prove it with a sweep or delete the sentence. Replace it with what was actually checked, and when. [check: process]
 
 ## Every built surface is on a route
 
-A public view or component that nothing on a route in the shipping product constructs is
-not done, whatever its tests and captures say. A route counts when the product has it — on
-by default, or behind a declared feature flag whose off state is a named deferral. A debug
-component gallery, a catalogue, a preview, a storybook or a test is a construction site and
-not a route. A view deliberately not mounted yet says so in the comment above its
-declaration, `not-mounted-yet: <the task that mounts it>`, so the deferred list lives with
-the code and never in a document nobody builds from. The scanner holds this on the whole
-tree; the acceptance criteria of any UI task name the route (and the flag, if there is one).
+A public view or component is not done unless something on a route in the shipping product creates it, whatever its tests and captures say. A route counts if the product has it, either on by default or behind a declared feature flag whose off state is a named deferral. A debug component gallery, a catalogue, a preview, a storybook or a test does not count as a route.
+
+If a view is deliberately not mounted yet, the comment above its declaration says so: `not-mounted-yet: <the task that mounts it>`. This keeps the list of deferred views in the code, not in a document nobody builds from. The rules scanner checks this across the whole codebase. The acceptance criteria of every UI task name the route (and the flag, if there is one).
 [check: scan:unreached-view]
 
 ## Audit against the product's promise, not only against its specs
 
-Comparing code to specs finds things that were designed and never built. It cannot find the
-more dangerous gap: **capabilities everyone assumes the product has, that were never
-designed in the first place.** There is no spec for the code to fall short of, so the sweep
-comes back clean and the belief survives.
+Comparing code to specs finds things that were designed and never built. It cannot find the more dangerous gap: **capabilities everyone assumes the product has, but that were never designed.** There is no spec for the code to fall short of, so the sweep comes back clean and the false belief survives.
 
-Origin (20 August 2026): repeated sweeps of the Coast codebase found every designed-but-
-unbuilt piece, and all of them agreed the setup step worked. None noticed that the product
-could not *create* a project at all — it only ever installed governance onto a repository
-that already existed. That was never a spec violation; the specs were written around
-adopting existing code. It was a gap between what the product was believed to do and what
-anyone had ever designed.
+Why: every spec-versus-code sweep can agree that a feature works, while the product cannot do something basic that everyone assumes it does, because no spec ever described it.
 
-So, in every audit, also do this:
+So, in every audit, also do the following:
 
-- **Write down what the product claims** — from its marketing, its onboarding, its own
-  help text, and the sentences the team says out loud about it. Then check each claim
-  against the code, as a claim, independent of whether a spec exists for it.
-  [check: process]
-- **Walk the first-run path as a new user**, not as someone who knows where the working
-  parts are. The gaps a team can't see are the ones their habits route around.
-  [check: process]
-- **Treat "we always said it does X" as a finding to verify**, never as a premise.
-  [check: process]
-- When a claim turns out to be unsupported, the finding is not just the missing code — it
-  is also that the belief went unchallenged, and both belong in the report.
+- **Write down what the product claims**, from its marketing, its onboarding, its help text, and what the team says about it. Then check each claim against the code, whether or not a spec covers it. [check: process]
+- **Walk the first-run path as a new user**, not as someone who knows where the working parts are. The gaps a team cannot see are the ones their habits avoid. [check: process]
+- **Treat "we always said it does X" as a finding to verify**, never as an assumption. [check: process]
+- When a claim turns out to be unsupported, report two findings: the missing code, and the fact that nobody questioned the belief.
 
 ## Case log — what has actually been missed, and the check each one produces
 
-**This list grows.** Every time an audit misses something significant, the miss gets added
-here with the mechanical check that would have caught it. The value of this file is not its
-principles — it is this list, because each entry is a failure that really happened and a
-check that is cheap to run.
+**This list grows.** Each time an audit misses something significant, add the miss here with the mechanical check that would have caught it. Each entry is a real failure paired with a check that is cheap to run, and that list is the most valuable part of this file.
 
-All entries below are from Coast, August 2026. Several audits ran in the same few days and
-all of them came back clean while these were sitting in the code.
+All entries below come from August–September 2026. Several audits in the same few days came back clean while these problems were in the code.
 
 | What was missed | Why it survived the audit | The check that catches it |
 |---|---|---|
-| A specialist agent had a full role definition — rules, tool permissions, refusal messages, question routing — and **no implementation**. Any work needing it stopped and asked a human to do it by hand. | Audits were scoped to a different layer, and no live run had ever contained the kind of work that would trigger it. | **Every case in every enum needs a construction site.** Grep for each case being constructed, not just declared. A case nothing constructs is a design that never shipped. And **every branch in a dispatch table that returns nothing is a missing feature** — read them all. |
-| A pipeline stage would **permanently block** on certain work, with no way for a human to clear it, because the stop was placed before the code that reads a human's decision. | **No test fixture ever set the flag that triggers it.** Every fixture in the suite used the default value. | **List the flags, states, and inputs that no fixture ever exercises**, and read those paths by hand. Unbuilt and broken work survives exactly where the tests never look. |
-| A user-facing setting — a switch a founder could turn on — **was read by nothing.** The feature it promised silently never happened. | Tests confirmed the setting existed and persisted. Nothing tested that anything consumed it. | **Every user-facing setting must have a reader.** For each one, grep for something that consults it in logic, not just something that stores it. |
-| A safety rule ("no work starts before approval") was **silently off in the live product**, because it was conditioned on a record that only the demo path could create. | The rule's code existed and its tests passed — against fixtures that could produce the record. | **A guard conditioned on state that one mode cannot produce is disabled in that mode.** For each guard, ask which modes can actually satisfy its precondition. |
-| A cost-affecting path was computed, shown to the user, and **read by no step that does work.** Users were told the work would be more thorough, and it was identical. | The computation and the display were both correct and both tested. | **Every value that reaches the interface must reach the logic.** Trace each displayed value forward: who acts on it? A value that only ever gets shown is a promise nothing keeps. |
-| Work built and exported, then **never wired in** — its only callers were its own tests. | Coverage looked fine. Tests are callers. | **Grep every exported function for callers outside the test directory.** Test-only callers mean a seam was built and never connected. |
-| Deliverables that existed but **nothing installed** — several documents written for other platforms, unreachable because the only code that installs them refused those platforms. | The documents were real, complete, and reviewed. Nobody checked whether anything consumed them. | **Every artifact needs a consumer.** For each shipped file or asset, find the code that puts it where it's used. |
-| A gap **named inside a decision record** in one month, never transferred to the work list, still open two months later. | The decision log is not the work list, and nobody diffed one against the other. | **Diff the decision log against the work list.** Any decision that names an unfinished thing must have a corresponding filed task, or the gap lives only in prose nobody builds from. |
-| A product **claiming five platforms** whose pipeline had **no per-project platform field at all** — the detection function had one caller, at launch time, falling back to the first platform. So every stage was written for that one platform, and re-corrected sessions kept reproducing it. | Audits went capability by capability — is the gate built, is the scaffold built — and each capability looked complete for the platform it was written for. Nobody walked one project of EACH platform through EVERY stage. | **Build the stage x variant table and fill every cell.** For each dimension the product claims to vary over (platform, project type, tier, locale), walk one instance of each variant through every stage in order and mark each cell supported or not. The table is the audit. A capability list cannot find a variant nothing branches on — and first check that the variant is even *stored* somewhere every stage can read. |
-| A capability everyone believed the product had — **creating a project** — which no specification ever described, so no spec-versus-code audit could find it. | Every sweep compared code to specs. There was no spec to fall short of. | The product-promise method above: **audit the claims, not just the specs.** |
-| An inventory page asserting *"everything not on this page is built"* — **which was false in more than a dozen places.** | The claim was inherited and never re-verified; later sessions trusted it as a premise. | **Treat every completeness claim in a document as an unverified assertion** until this sweep proves it. Retire the ones you can't prove. |
-| A rules document still stating the **opposite of a decision made hours earlier.** | The decision was recorded in one place; the document carrying the old guidance was not updated. | **When a decision reverses guidance, update every document that carries it in the same session** — then grep for the old wording to prove none survives. |
-| A whole screen — the product's home page — **built, tested, screenshot-approved and ticked complete, and mounted only on a debug component gallery.** No route in the app ever drew it; every screen that should have sat on top of it fell back to the door the user came in through. (September 2026.) | The task's acceptance was "on the gallery, captured, matches the drawing" — every criterion was about the component, none about a caller. The gallery is a construction site, so a grep for callers looked satisfied. | **A gallery, harness, storybook, preview or test is not a consumer.** For every public view or component, find a construction site on a route the shipping product has — on by default, or behind a declared feature flag whose off state is a named deferral; a debug-only gallery, a preview or a test does not count. Anything left is either mounted now or written on an explicit not-mounted-yet list with the task that will mount it, and a check holds that list so a new view cannot join it silently. Add "reachable from a route in the product (name the route, and the flag if there is one)" to the acceptance criteria of any UI task. The shared scanner holds it (`unreached-view`, E4.5, 2026-09-15); a project-local guard was the stopgap until it landed. |
+| A specialist agent had a full role definition but **no implementation**. Any work that needed it stopped and asked a person to do it by hand. | Audits covered a different layer, and no live run ever included work that needed this agent. | **Every case in every enum needs a place that creates it.** Grep for each case being created, not just declared. Also read **every dispatch-table branch that returns nothing**: each is a missing feature. |
+| A pipeline stage **blocked permanently** on certain work, with no way for a person to clear it. The stop ran before the code that reads the person's decision. | **No test fixture ever set the flag that triggers it.** Every fixture used the default. | **List the flags, states and inputs that no fixture exercises**, and read those paths by hand. |
+| A user-facing setting **was read by nothing**, so the feature it promised never happened. | Tests checked that the setting existed and was saved, not that anything used it. | **Every user-facing setting must have a reader.** Grep for code that uses it in logic, not just code that stores it. |
+| A safety rule ("no work starts before approval") was **silently off in the live product**. It depended on a record that only the demo path could create. | The rule's code existed, and its tests passed against fixtures that could create the record. | **A guard that depends on state one mode cannot produce is off in that mode.** For each guard, check which modes can meet its precondition. |
+| A cost-affecting option was computed and shown to the user, but **no working step read it.** Users were told the work would be more thorough; it was identical. | The calculation and the display were both correct and both tested. | **Every value shown in the interface must reach the logic.** Trace each displayed value forward to the code that acts on it. |
+| Code was built and exported but **never connected**. Its only callers were its own tests. | Coverage looked fine, because tests count as callers. | **Grep every exported function for callers outside the test directory.** |
+| Documents for other platforms existed, but **nothing installed them**, because the installer refused those platforms. | The documents were complete and reviewed. Nobody checked whether anything used them. | **Every artifact needs a consumer.** For each shipped file or asset, find the code that puts it where it is used. |
+| A gap **named in a decision record** was never added to the work list and was still open two months later. | The decision log is not the work list, and nobody compared the two. | **Compare the decision log with the work list.** Every decision that names unfinished work needs a filed task. |
+| A product **claiming five platforms** had **no per-project platform field**. Detection ran once at launch and fell back to the first platform, so every stage was built for that one platform only. | Audits checked one capability at a time, and each looked complete for its platform. Nobody took one project of EACH platform through EVERY stage. | **Build the stage × variant table and fill every cell.** For each dimension the product claims to vary over (platform, project type, tier, locale), take one instance of each variant through every stage and mark each cell supported or not. First check that the variant is *stored* where every stage can read it. |
+| Everyone believed the product could **create a project**. No spec ever described that, so no spec-versus-code audit could find it was missing. | Every sweep compared code to specs, and there was no spec to fall short of. | The product-promise method above: **audit the claims, not just the specs.** |
+| An inventory page claimed *"everything not on this page is built"*. **It was false in more than a dozen places.** | The claim was inherited and never re-checked. Later sessions took it as true. | **Treat every completeness claim in a document as unverified** until a sweep proves it. Remove the ones you cannot prove. |
+| A rules document still said **the opposite of a decision made hours earlier.** | The decision was recorded in one place, and the document with the old guidance was not updated. | **When a decision reverses guidance, update every document that carries it in the same session.** Then grep for the old wording to prove none is left. |
+| The product's home screen was **built, tested, approved from screenshots and marked complete, but only shown in a debug component gallery.** No route in the app drew it. | The acceptance criteria were all about the component, none about a caller. The gallery made a caller search look satisfied. | **A gallery, harness, storybook, preview or test is not a consumer.** Every public view needs a construction site on a shipping route, or an entry on the not-mounted-yet list with the task that will mount it. UI acceptance criteria name the route (and flag, if any). The rules scanner's `unreached-view` check enforces this. |
 
-The pattern across almost all of these: **the code was honest and the documents were not.**
-Nearly every gap was visible in the source — an empty branch, a comment admitting deferral,
-a message written for a human explaining what wasn't built. What failed was that nobody read
-the code for those signals, and the tracker was trusted instead.
+The pattern in almost every case: **the code was honest and the documents were not.** Nearly every gap was visible in the source: an empty branch, a comment admitting deferral, or a message explaining to a person what was not built. The failure was that nobody read the code for those signals, and everyone trusted the tracker instead.
 [check: process]
 
 ## Reporting
 
-State the scope, the method, and the limits. "I checked every enum case for a
-construction site and every settings dial for a reader; I did not verify
-behaviour of the built paths" is a useful report. A confident "all clear" that
-was never earned is worse than no audit, because it stops the next person from
-looking.
+State the scope, the method and the limits. For example: "I checked every enum case for a place that creates it and every setting for a reader; I did not verify the behavior of the built paths." That is a useful report. A confident "all clear" that was never earned is worse than no audit, because it stops the next person from looking.
 
-Two claims are never made without a sweep that checked them: **"everything
-else is built"** and **"this is complete."** [check: process]
+Never claim **"everything else is built"** or **"this is complete"** without a sweep that checked it. [check: process]
 
 ## When an audit misses something, add it here
 
-This is the maintenance rule for this file. A missed finding is not just a bug to fix — it
-is evidence that the method has a hole. When something significant is found that a previous
-audit should have caught:
+This is how this file is maintained. A missed finding is not just a bug to fix. It shows the audit method has a gap. When you find something significant that an earlier audit should have caught:
 
-1. Add a row to the case log: what was missed, why it survived, and the **mechanical check**
-   that would have caught it. The check is the part that matters — "be more careful" is not
-   a check.
-2. If the miss doesn't fit any existing check, it is a new one. Say so.
-3. Do it in the same session as the discovery, while the reason it survived is still clear.
+1. Add a row to the case log: what was missed, why it survived, and the **mechanical check** that would have caught it. The check is what matters; "be more careful" is not a check.
+2. If the miss does not fit any existing check, it needs a new one. Say so.
+3. Do this in the same session as the discovery, while the reason it was missed is still clear.
 
-Filed 20 August 2026, after several audits in the same week each came back clean while
-major pieces sat unbuilt: the list of learnings exists so that future audits are more
-correct. [check: process]
+The purpose of this list is to make each future audit more accurate than the last. [check: process]
 
 ---
 

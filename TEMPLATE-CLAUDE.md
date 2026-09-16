@@ -1,29 +1,23 @@
 # <Project name> — Agent Context
 
-<!-- Starter CLAUDE.md block for a new project that follows Coast Standards. Copy into the project's CLAUDE.md,
-     fill the blanks, delete these comments. -->
+<!-- Starter CLAUDE.md for a new project that follows Coast Standards. Copy it into the project's CLAUDE.md, fill in the blanks, and delete these comments. -->
 
 ## Standing rules (read before any work)
 
-This project follows the Coast Standards repo, cloned at `<path to your clone>`
-(GitHub: Up-Coast/coast-standards).
+This project follows the Coast Standards repo, cloned at `<path to your clone>` (GitHub: Up-Coast/coast-standards).
 
-Read `rules/00-priority-rules.md` first — the non-negotiables, headed by: **the project
-must stay DRY (rule above all other rules), all user-facing strings externalized for
-localization, all design components created once and reused, OWASP rules followed.**
+Read `rules/00-priority-rules.md` first. Its most important rules:
 
-Then, as the work demands: `01-working-style.md` (always), `02-architecture-and-code.md`,
-`03-security-owasp.md`, `04-localization.md`, `05-design-and-ui.md`, `06-testing.md`,
-`07-documentation-git-process.md`.
+- **Keep the project DRY.** This rule comes before all others.
+- **Put every user-facing string in the localization files.**
+- **Create each design component once and reuse it.**
+- **Follow the OWASP rules.**
 
-This project's checkable rule corpus lives at `docs/domain-rules.md` (seeded from
-`rules/platform/domain-rules-<PLATFORM>.md`). Reviews check every change against exactly
-that file.
+Always read `01-working-style.md`. Read the others when the work touches their area: `02-architecture-and-code.md`, `03-security-owasp.md`, `04-localization.md`, `05-design-and-ui.md`, `06-testing.md`, `07-documentation-git-process.md`.
 
-The enforcement block — what the git and Claude Code hooks refuse, the "rules enforced by a
-check N of M" number, the governing files — is written and kept current by
-`enforcement/adopt.py` between `coast-standards: begin` / `end` markers; do not write
-it by hand, and edit this file outside those markers only.
+This project's checkable rules are in `docs/domain-rules.md`, copied from `rules/platform/domain-rules-<PLATFORM>.md`. Reviews check every change against exactly that file.
+
+`enforcement/adopt.py` writes and updates a block in this file between the `coast-standards: begin` and `end` markers. That block lists what the git and Claude Code hooks refuse, the "rules enforced by a check: N of M" number, and the files agents may not edit. Do not write it by hand. Only edit this file outside those markers.
 
 ## This project
 
@@ -36,7 +30,7 @@ it by hand, and edit this file outside those markers only.
 
 ## Project-specific rules
 
-<!-- Only rules NOT already covered by the standards repo. Cite who decided and when. -->
+<!-- Only rules the standards repo does not already cover. Note who decided each one and when. -->
 
 ## Current state / entry point
 

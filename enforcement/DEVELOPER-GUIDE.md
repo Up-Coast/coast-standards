@@ -1,43 +1,47 @@
-# Coast Standards Enforcement — Internal Developer Guide
+# Coast Standards Enforcement — Developer Guide
 
-*Last updated: 2026-09-08*
+*Last updated: 2026-09-16*
 
-**Audience: people working on this layer itself** — the scanner, the hooks, the installer.
-It is the full technical reference: how a rule is held, what is installed into a project,
-every file and flag the code reads or writes, and how to extend or excuse it. It describes
-what the code does today (release 1.0.0, 7 September 2026). The design rationale and
-the build history live in [README.md](README.md).
+The technical reference for developers who adopt or maintain the enforcement layer: the scanner, the hooks and the installer. The current release number is in the root `CHECKS-VERSION`. The design and build plan are in [README.md](README.md).
 
-If you are a founder or a developer **installing this into your own product**, you want the
-public documentation instead: [docs/](../docs/README.md). It says the same things in plain
-words and leaves out what only a maintainer needs.
+For installing the standards into a product, start with the public docs in [docs/](../docs/README.md). Every installer flag and settings key is listed in [docs/options.md](../docs/options.md).
+
+## Contents
+
+1. [What it is](#1-what-it-is)
+2. [Concepts](#2-concepts)
+3. [Quick start](#3-quick-start)
+4. [The rule documents and the check tag](#4-the-rule-documents-and-the-check-tag)
+5. [The scanner — `check_rules.py`](#5-the-scanner--check_rulespy)
+6. [The doc-comment check — `check_doc_comments.py`](#6-the-doc-comment-check--check_doc_commentspy)
+7. [The verifier — `verify_rules.py`](#7-the-verifier--verify_rulespy)
+8. [The git hooks](#8-the-git-hooks)
+9. [The Claude Code session hooks](#9-the-claude-code-session-hooks)
+10. [The installer — `adopt.py`](#10-the-installer--adoptpy)
+11. [The linter configs](#11-the-linter-configs)
+12. [Versioning](#12-versioning)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Extending](#14-extending)
+15. [Tests](#15-tests)
+16. [Limits, stated plainly](#16-limits-stated-plainly)
 
 ---
 
 ## 1. What it is
 
-A set of rule documents (`rules/`) where every rule names the check that holds it, plus
-the machinery that makes those checks real in any git repository:
+Every rule in `rules/` names the check that enforces it. The enforcement layer runs those checks in any git repository.
 
-- a **scanner** (`check_rules.py`) that runs regex signatures over the lines a change adds,
-  scoped by what kind of file they land in;
-- a **doc-comment check** (`check_doc_comments.py`) for Swift, Kotlin/Java, TypeScript and
-  Python;
-- a **verifier** (`verify_rules.py`) that proves every rule names a check that exists, and
-  prints the honest number, *"enforced by a check N of M"*;
-- **linter configs** with the opt-in rules the documents cite switched on;
-- three **git hooks** (`pre-commit`, `commit-msg`, `pre-push`) and a set of **Claude Code
-  session hooks** that refuse the things an agent must not do;
-- an **installer** (`adopt.py`) that puts all of it into a project idempotently and writes
-  baselines so an existing codebase adopts without a rewrite day.
+| Part | File | What it does |
+|---|---|---|
+| Scanner | `check_rules.py` | Runs regex patterns over added lines, scoped by file type. |
+| Doc-comment check | `check_doc_comments.py` | Finds public declarations with no doc comment. |
+| Verifier | `verify_rules.py` | Confirms every rule names a real check, and prints "enforced by a check N of M". |
+| Linter configs | `lint/` | Linter settings with the rules the documents cite switched on. |
+| Git hooks | `hooks/` | `pre-commit`, `commit-msg`, `pre-push`. |
+| Session hooks | `hooks/claude-hook.py` | Claude Code hooks that refuse actions an agent must not take. |
+| Installer | `adopt.py` | Installs everything into a project, and writes baselines so existing code can adopt. |
 
-Everything is stdlib Python 3 and POSIX `sh`. No network, no model, no package to install
-beyond the platform's own toolchain (Xcode, Gradle, Node, Python) and `jscpd`.
-
-The one principle behind every design choice: **a rule that lives only in a document is a
-request, and a request loses to whatever is cheapest for the session in front of the code.**
-So every rule is sorted into a bin, out loud, and the machine-held ones refuse the change
-on the builder's own machine, in seconds, before anything leaves it.
+It is Python 3 (standard library only) and POSIX `sh`, with no network and no AI model. It also needs the platform's toolchain and `jscpd`.
 
 ---
 
@@ -45,19 +49,22 @@ on the builder's own machine, in seconds, before anything leaves it.
 
 | Term | Meaning |
 |---|---|
-| **Rule** | One bullet in a rule document (`- **L-1** …`) or one leaf section of prose. Every rule ends with a `[…; check: …]` tag. |
-| **Check tag** | The last square bracket in a rule containing `check:`. Names one or more references, comma-separated. See §4. |
-| **Bin** | Where a rule sits: `machine`, `partly`, `advisory`, `review`, `process`, or `open` (a gap). Only `machine` counts toward the headline number. |
-| **Signature** | One row in `rules_signatures.json`: an id, a severity, the path classes it applies to, the words it prints, and a regex per platform it runs on. |
-| **Path class** | A named set of globs in `paths.json` (`theme`, `ui`, `tests`, `governing`, `strings`, …). A file belongs to the first class in the platform's `order` that matches it. Signatures are scoped by class. |
-| **Severity** | `block` (any hit fails), `ratchet` (counted over the tree; the count may only fall), `advisory` (printed, never fails). |
-| **Baseline** | A committed count for a ratchet, with a deadline. `.coast/ratchet-baseline.json` for scanner and tool ratchets; `.coast/jscpd-baseline.json` for duplicate code. |
-| **Seat** | One check in the pre-push battery: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset`. Each prints `gate: <name>` and refuses in its own lines. |
-| **Scope** | What a push changed, read before any seat runs (`scope.py`): `none` (prose only — the code seats are skipped), `files` (code — the seats run on the changed files and the affected modules), `all` (the checks themselves changed — everything runs). |
-| **Governed file** | A file the installer owns and replaces on every run, and that agents may not edit (the session hooks refuse). |
-| **Seed** | A file the installer writes once and the founder owns afterwards (linter configs, `docs/domain-rules.md`). |
-| **Exception** | A human-written entry in `.coast/rules-exceptions.json` excusing one signature on one path, or one seat until a date. |
-| **The number** | "Rules enforced by a check N of M", computed by the verifier from a rules document. It appears in a project's `CLAUDE.md`, in the verifier's output, in the session-start context, and in Coast's Rules tab. Its wording lives in one place, `enforcement/checks/vocabulary.json`, which the verifier, the installer and the hook read (the file ships to projects with the checks). To rename it: change `label`, append the old wording to `retired`, run the tests; `test_vocabulary.py` lists every page still using the old name, and the hook keeps reading CLAUDE.md blocks written under the old name until the project is re-adopted. |
+| **Rule** | A bold bullet or a leaf prose section in a rule document, ending in a `[…; check: …]` tag. |
+| **Check tag** | The last square bracket in a rule that contains `check:` (§4). |
+| **Bin** | How a rule is enforced: `machine`, `partly`, `advisory`, `review`, `process`, or `open` (a gap). Only `machine` counts in the number. |
+| **Signature** | One row in `rules_signatures.json`: an id, a severity, the path classes it covers, a message, and a regex per platform. |
+| **Path class** | A named set of globs in `paths.json`, such as `theme`, `ui`, `tests`, `governing`. |
+| **Severity** | `block` fails on any hit. `ratchet` fails if the count rises. `advisory` only prints. |
+| **Ratchet** | A count of existing problems that may only go down. |
+| **Baseline** | The committed count for a ratchet, with a deadline. |
+| **Seat** | One check in the pre-push hook: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset`. |
+| **Scope** | What a push changed: `none` (prose only), `files` (code), or `all` (the checks themselves). |
+| **Governing file** | A file that defines the checks. The installer replaces it, and agents may not edit it. |
+| **Seed** | A file the installer writes once; the owner controls it afterwards. |
+| **Exception** | A person's entry in `.coast/rules-exceptions.json` that excuses a signature on a path, or a seat until a date. |
+| **The number** | "Rules enforced by a check N of M", shown in `CLAUDE.md`, the verifier output, the session-start context and Coast's Rules tab. |
+
+The number's wording lives in `enforcement/checks/vocabulary.json`. To rename it, change `label`, add the old wording to `retired`, and run the tests. `test_vocabulary.py` lists every page still using the old wording.
 
 ---
 
@@ -65,83 +72,76 @@ on the builder's own machine, in seconds, before anything leaves it.
 
 ### 3.1 Requirements
 
-| Platform | Needs on the machine |
+| Platform | Needs |
 |---|---|
-| all | `python3` 3.10 or newer (the checks use `X \| None` annotations), `git`, `jscpd` 5.1.2 (`npm install -g jscpd@5.1.2`), `gh` optional |
-| ios, macos | Xcode command line tools (`swift`, `xcodebuild`, `xcrun`), `swiftlint`, `swift-format` |
-| android | a Gradle wrapper in the project, `ktlint`; detekt via the Gradle plugin |
-| react-native, web | `node`/`npm`; `typescript`, `eslint`, `prettier` in `node_modules` |
+| all | `python3` 3.10+, `git`, `jscpd` 5.1.2 (`npm install -g jscpd@5.1.2`); `gh` optional |
+| ios, macos | Xcode command line tools, `swiftlint`, `swift-format` |
+| android | a Gradle wrapper, `ktlint`; detekt through the Gradle plugin |
+| react-native, web | `node`, `npm`; `typescript`, `eslint`, `prettier` in `node_modules` |
 | python | `ruff`, `mypy`, `pytest` (or unittest) |
 
-Pinned versions and the primary sources they were verified against are in
-[TOOLCHAIN.md](TOOLCHAIN.md).
+Pinned versions are in [TOOLCHAIN.md](TOOLCHAIN.md).
 
 ### 3.2 Adopt a project
 
-From a clone of this repo, or from a fetched release (the [quickstart](../docs/quickstart.md)
-has the one command that puts the newest release at `~/.cache/coast-standards/<version>/`):
+1. Preview the changes (nothing is written):
 
-```bash
-python3 enforcement/adopt.py /path/to/project --platform ios
-```
+   ```bash
+   python3 enforcement/adopt.py /path/to/project --platform ios --dry-run
+   ```
 
-Add `--dry-run` first to see the report without writing anything. `--platform` may be
-omitted when the project's manifest makes it obvious (see §10.2).
+2. Run it. Leave out `--platform` if the manifest makes it obvious (§10.2). Add `--yes` to skip the on/off questions.
+
+   ```bash
+   python3 enforcement/adopt.py /path/to/project --platform ios
+   ```
+
+3. Commit what it wrote, and push. The first push runs every check.
 
 A first adoption:
 
-1. copies the checks to `.coast/checks/` and the three git hooks to `.githooks/`;
-2. installs the Claude Code session layer (`.coast/hooks/claude-hook.py`; the `hooks`,
-   `disableAllHooks` and `permissions.deny` keys of `.claude/settings.json`, rendered
-   from the template with the layout's paths);
-3. writes `.coast/config.json` (§10.5) — at a terminal it asks the on/off questions first,
-   one screen per group; `--yes` takes every default — and `.coast/layout.sh`, the layout
-   table rendered for the `sh` hooks;
-4. writes the platform's linter seeds (not the ones the config switches off) and
-   `docs/domain-rules.md` if absent;
-5. binds the theme file it finds into `.coast/paths.json`;
-6. **measures** the tree: scanner ratchets (`check_rules.py --tree`), then the build's
-   warnings, the formatter's and linter's findings, and whether a test target exists
-   (`pre-push --measure build,format,lint,tests`); writes them to
-   `.coast/ratchet-baseline.json` with a deadline `ratchet_days` (default 90) out;
-7. writes `.coast/jscpd-baseline.json` from jscpd's fingerprints;
-8. rewrites the marked block in `CLAUDE.md` with the platform, the release, the names
-   from the config and the number (with the count switched off);
-9. sets `git config core.hooksPath .githooks`, recording any previous hooks path so those
-   hooks keep running;
-10. runs a secret scan over every tracked file and exits 1 if it finds anything.
+1. Copies the checks to `.coast/checks/` and the git hooks to `.githooks/`.
+2. Installs the session hook and its keys in `.claude/settings.json`.
+3. Writes `.coast/config.json` and `.coast/layout.sh`.
+4. Writes linter configs and `docs/domain-rules.md` if missing.
+5. Records the theme file in `.coast/paths.json`.
+6. Measures existing problems and writes `.coast/ratchet-baseline.json`, with a deadline `ratchet_days` (default 90) away.
+7. Writes `.coast/jscpd-baseline.json`.
+8. Rewrites the marked block in `CLAUDE.md`.
+9. Sets `core.hooksPath` to `.githooks`, remembering any previous hooks path.
+10. Scans tracked files for secrets, and exits 1 if it finds any.
 
-Then commit what it wrote and push. The first push runs the whole battery; the scanner
-starts at the adoption commit, so lines committed before the checks existed are legacy and
-belong to the baselines.
+The scanner starts from the adoption commit. Older problems are counted in the baselines.
 
 ### 3.3 Take a newer version
 
-Re-run the same command, or ask the installed copy to fetch a release:
-`python3 <copy>/enforcement/adopt.py /path/to/project --release 1.1.0` (or `latest`). The
-release is downloaded into the cache and its own installer runs. Governed files are replaced, seeds you edited are kept with a
-note, a baseline whose count fell is lowered (the deadline does not move), and nothing
-changes when nothing changed. `--measure-tools` forces the tool baselines to be
-re-measured; `--measure-tools format,lint` re-measures without a build.
-`--lower-baselines` writes only the ratchet and jscpd baselines from the tree as it stands,
-measured by the project's own installed scanner, and installs nothing: a count that fell is
-lowered, one that rose is left and reported. It is the answer to a push refused for a fall,
-and an agent may run it — under it a baseline can only tighten.
+```bash
+python3 <copy>/enforcement/adopt.py /path/to/project --release 1.1.0    # or: latest
+```
+
+A re-run replaces governing files, keeps seeds you edited, lowers baselines whose count fell, and changes nothing otherwise.
+
+| Flag | Use |
+|---|---|
+| `--measure-tools [format,lint]` | Re-measure the tool baselines (a list without `build` skips the build). |
+| `--lower-baselines` | Write only the two baselines, lowering counts that fell. Installs nothing; an agent may run it. |
 
 ### 3.4 Run the checks by hand
 
+From the project root:
+
 ```bash
-# the scanner, from the project root
 python3 .coast/checks/check_rules.py --tree --platform ios
 python3 .coast/checks/check_rules.py --staged --platform ios
 python3 .coast/checks/check_rules.py origin/main HEAD --platform ios
 python3 .coast/checks/check_rules.py --files Sources/App/HomeView.swift --platform ios
-
-# one seat of the push battery
 sh .githooks/pre-push --seat lint
 sh .githooks/pre-push --seat build,tests
+```
 
-# the number, from the standards repo (with the project's switches applied)
+The number, from the standards repo, with the project's switches:
+
+```bash
 python3 enforcement/checks/verify_rules.py --document /path/to/project/docs/domain-rules.md --platform ios --config /path/to/project/.coast/config.json
 ```
 
@@ -151,16 +151,10 @@ python3 enforcement/checks/verify_rules.py --document /path/to/project/docs/doma
 
 ### 4.1 What is a rule
 
-The verifier's parser treats these as rules:
+- **A column-0 bullet that opens in bold**, such as `- **L-1 — No hardcoded user-facing text** … [check: …]`. The id is the leading `PREFIX-n` in the bold, or else a slug of the title. Indented lines belong to it; a blank or unindented line ends it.
+- **A leaf prose section**: a heading with no bullet rules and no sub-headings. If it has several tags, the last one counts.
 
-- a column-0 bullet that opens in bold: `- **L-1 — No hardcoded user-facing text** … [check: …]`.
-  The id is the leading `PREFIX-n` inside the bold when there is one; otherwise a slug of the
-  bold title. Indented continuation lines belong to the rule; a blank line or an unindented
-  line ends it.
-- a leaf section (a heading with no bullet rules and no sub-headings) of prose; the tag may
-  appear anywhere in it and the last one wins.
-
-Not rules: the H1, and any section titled "Sources".
+The H1 and any "Sources" section are not rules.
 
 ### 4.2 The tag grammar
 
@@ -172,41 +166,33 @@ Not rules: the H1, and any section titled "Sources".
 
 | Reference | Meaning | Bin |
 |---|---|---|
-| `scan:<id>` | a scanner signature with severity `block` | machine |
-| `ratchet:<id>` | a scanner signature with severity `ratchet` | machine |
-| `advisory:<id>` | a scanner signature that never fails | advisory |
-| `<linter>:<rule>` | a rule the shipped config enables: `swiftlint:force_unwrapping`, `eslint:react-hooks/rules-of-hooks`, `detekt:UnsafeCallOnNullableType`, `androidlint:HardcodedText`, `tsc:strict`, `ruff:E501`, `mypy:strict` | machine |
-| `<linter>` | the linter as a whole: `prettier`, `ktlint`, `swiftformat` | machine |
-| `tool:<name>` | a tool the pre-push battery runs: `tool:jscpd`, `tool:gh-ruleset`, `tool:warnings-as-errors` | machine |
-| `session:<id>` | a Claude Code or git hook: `session:chained-cd`, `session:attribution-trailer` | machine |
-| `review` | only a mind can judge it; a per-rule review row | review |
-| `process` | held by the pipeline or a person | process |
-| `context` | this bullet explains a rule and is not one; not counted (cannot share a tag) | — |
+| `scan:<id>` | a `block` signature | machine |
+| `ratchet:<id>` | a `ratchet` signature | machine |
+| `advisory:<id>` | a signature that never fails | advisory |
+| `<linter>:<rule>` | a rule the shipped config enables, such as `swiftlint:force_unwrapping`, `eslint:react-hooks/rules-of-hooks`, `detekt:UnsafeCallOnNullableType`, `androidlint:HardcodedText`, `tsc:strict`, `ruff:E501`, `mypy:strict` | machine |
+| `<linter>` | a whole linter: `prettier`, `ktlint`, `swiftformat` | machine |
+| `tool:<name>` | a tool the pre-push hook runs: `tool:jscpd`, `tool:gh-ruleset`, `tool:warnings-as-errors`, `tool:tests-deadline` | machine |
+| `session:<id>` | a Claude Code or git hook, such as `session:chained-cd` | machine |
+| `review` | a reviewer judges it | review |
+| `process` | the pipeline or a person enforces it | process |
+| `context` | explains a rule; not counted, and cannot be combined | — |
 
-A rule with more than one reference is `machine` when every reference is a machine check,
-`partly` when a machine check shares the rule with `review`, `process` or `advisory`.
+A rule whose references are all machine checks is `machine`. A machine check combined with `review`, `process` or `advisory` is `partly`.
 
 ### 4.3 How a reference resolves
 
-Resolution is files on disk, nothing else:
+| Reference | Present when |
+|---|---|
+| `scan`, `ratchet`, `advisory` | The id is in the signatures for **every** platform the document covers, with the claimed severity. |
+| `<linter>:<rule>` | `battery.json` lists the linter, its config exists, and the config **names** the rule. Linter defaults do not count. |
+| `tool:<name>` | The manifest's runner file mentions the tool. |
+| `session:<id>` | A session-hook file in the manifest mentions the id. |
 
-- `scan`/`ratchet`/`advisory`: the id is in the signatures table of **every** platform the
-  document applies to, with the severity the tag claims.
-- `<linter>:<rule>`: the platform's `battery.json` entry lists that linter, its config exists,
-  and the config **names** the rule enabled. The verifier reads SwiftLint and detekt YAML,
-  ESLint flat config, `lint.xml`, `tsconfig`, `mypy.ini` and `ruff.toml`. It does not know
-  any linter's default set: a config must name the rule or the rule is not held.
-- `tool:<name>`: the manifest's runner file exists and mentions the tool.
-- `session:<id>`: one of the manifest's session-hook files mentions the id.
-
-Also a gap: a signature that no rule names.
+A signature that no rule names is also a gap.
 
 ### 4.4 Which documents apply to which platform
 
-`battery.json` lists every document with its platforms. The numbered `rules/0x-*.md` files
-apply to all (04 and 05 to the app platforms only); `rules/platform/domain-rules-<p>.md`
-to its platform; `rules/platform/ai-features.md` to all. A project carries one platform
-document as `docs/domain-rules.md`, and its number is computed from that file alone.
+`battery.json` lists each document's platforms. `rules/0x-*.md` apply to all (04 and 05 to app platforms only). `rules/platform/domain-rules-<p>.md` applies to its platform. `rules/platform/ai-features.md` applies to all. A project carries its platform document as `docs/domain-rules.md`, and its number comes from that file.
 
 ---
 
@@ -216,46 +202,31 @@ document as `docs/domain-rules.md`, and its number is computed from that file al
 
 ```
 check_rules.py <base> <head> --platform <p>     lines added between two commits
-check_rules.py <base> WORKTREE --platform <p>   tracked changes since base + every untracked file
-check_rules.py --staged --platform <p>          the index (pre-commit); touched files only, no ratchets
-check_rules.py --files a b c --platform <p>     whole files (editor hook); every line is "added"
-check_rules.py --tree --platform <p>            no diff: tree-scope signatures and ratchets only
-check_rules.py --ratchet <id> --count <n>       judge a tool's count as a ratchet (see §5.5)
+check_rules.py <base> WORKTREE --platform <p>   tracked changes since base + untracked files
+check_rules.py --staged --platform <p>          the index (pre-commit); no ratchets
+check_rules.py --files a b c --platform <p>     whole files; every line counts as added
+check_rules.py --tree --platform <p>            tree-scope signatures and ratchets only
+check_rules.py --ratchet <id> --count <n>       judge a tool's count (§5.5)
 check_rules.py --ratchet <id> --log <log> [--measured <listing>]
-                                                count the tool's own output and judge it; with a
-                                                listing, over those files against the per-file map
-check_rules.py --measure <id> --log <log>       MEASURE and MEASURE-FILE lines for the installer
-check_rules.py --has-baseline <id> [--per-file] exit 0 when the baseline has an entry for <id>
-                                                (with --per-file: one carrying the per-file map)
+                                                count a tool's log and judge it
+check_rules.py --measure <id> --log <log>       print MEASURE / MEASURE-FILE lines
+check_rules.py --has-baseline <id> [--per-file] exit 0 if the baseline has an entry
 ```
 
-Options: `--only id[,id]` runs only the named signatures (used by the installer's secret
-scan; git never passes it); `--paths-override <file>` names a project's own path bindings
-(default `.coast/paths.json`). The platform also comes from `COAST_PLATFORM`. Run from the
-repository root. The project's config (§10.5) is read on every run: a signature in
-`rules.off` is not in the list, a severity in `rules.severity` is lowered, and the
-`retired_words` join the `retired-wording` pattern; a config that asks to raise a
-severity is refused with a `FAIL config` line and exit 1.
+| Option | What it does |
+|---|---|
+| `--only id[,id]` | Runs only these signatures (used by the secret scan). |
+| `--paths-override <file>` | The project's path-class file; default `.coast/paths.json`. |
+| `COAST_PLATFORM` | Sets the platform instead of `--platform`. |
 
-The whole-tree pass with the ratchets is `--tree` alone, and the push runs it once. Every
-other mode judges the change: the added-scope signatures on the added lines, the tree-scope
-`block` signatures on the changed files only, no ratchet — so a commit-time or editor-time
-scan takes seconds on a large repository.
+Run it from the repository root. It applies the project's config on every run, and refuses a config that raises a severity.
 
-What "the change" means, precisely:
+Only `--tree` counts ratchets, and a push runs it once. Other modes check only the change, so they take seconds.
 
-- Every diff is asked for with rename detection (`-M`), and a renamed or copied file is
-  diffed under both its paths, so a `git mv` adds nothing and only the lines the move
-  changed count.
-- A file whose name is a secret or data shape (`.env`, `.p12`, `.sqlite`, `.jks`, …) is
-  `secret-file` when git's status letter says it is new, renamed or copied — its content is
-  never read, because a binary adds no line to any diff.
-- A built-in reads the file as the diff saw it: the index blob for `--staged`, the commit's
-  blob for `<base> <head>`, the worktree file for `WORKTREE`, `--files` and untracked files.
-  Partial staging cannot move or hide a hit.
-
-A diff that touches only governing or git paths passes: gate maintenance is the founder's
-own work.
+- Renames are detected, so a `git mv` adds nothing.
+- A new file named like a secret (`.env`, `.p12`, `.sqlite`, `.jks`, …) hits `secret-file` without its content being read.
+- Built-ins read the file version the diff saw, so partial staging cannot hide a hit.
+- A diff that touches only governing or git files passes.
 
 ### 5.2 Output
 
@@ -267,15 +238,11 @@ PASS rules
 {"result": "pass", "advisories": 0}
 ```
 
-Exit 0 on pass, 1 on any FAIL. The last line is always a JSON summary. The `FAIL` line is
-the format every hook, the battery, CI and Coast parse; keep it stable.
+Exit 0 on pass, 1 on any `FAIL`. The last line is a JSON summary. Hooks, CI and Coast parse the `FAIL` line, so keep its format stable.
 
 ### 5.3 The signature table — `rules_signatures.json`
 
-One row per signature. The row carries the fields every platform shares once; under
-`platforms`, one entry per platform the signature runs on carries that platform's own
-globs and regex, plus any shared field whose value differs there. A signature absent from
-a platform is not listed under it.
+Shared fields sit on the row. Each platform the signature runs on has an entry under `platforms` with its own globs, regex and any overrides.
 
 ```json
 {
@@ -304,54 +271,43 @@ a platform is not listed under it.
 }
 ```
 
-`check_rules.flatten_signatures` turns the file into one list per platform, in row order,
-each entry the row's shared fields with the platform's entry laid over them. That flat
-shape is what the scanner, the plants and the verifier read; nothing downstream sees the
-rows. A platform value equal to the row's is a needless copy — `test_check_rules.py`
-refuses it.
+`check_rules.flatten_signatures` merges each platform entry over the row. A platform value equal to the row's is refused by `test_check_rules.py`.
 
-| Field | Where | Required | Meaning |
-|---|---|---|---|
-| `id` | row | yes | the signature's name; a rule's `scan:<id>` tag names it |
-| `rule` | row, platform may differ | yes | the rule id it holds, printed in brackets on every hit (each platform document numbers its own rules) |
-| `severity` | row | yes | `block`, `ratchet` or `advisory` |
-| `scope` | row | yes | `added` (only added lines) or `tree` (every file, at push) |
-| `applies_to` | row, platform may differ | yes for regex | path classes the signature runs on; `["*"]` for every class |
-| `excludes` | row, platform may differ | no | path classes it never runs on (`tests`, `strings`, `theme`, …) |
-| `kind` | row, or a platform's own | no | `builtin` for signatures implemented in code rather than regex (§5.4) |
-| `group` | row | no | a label such as `native-pattern` or `secret-literal` grouping related ids |
-| `once` | row | no | `true` to report a file once, not per line (`second-theme-file`, `secret-file`) |
-| `words` | row, platform may differ | yes | the sentence printed on a hit — say what is wrong and where it belongs |
-| `files` | platform | no | file globs narrowing it further (`**/*.swift`) |
-| `files_excluded` | platform | no | file globs it skips even inside an applying class |
-| `pattern` | platform | yes for regex | a Python `re` pattern matched against each line |
-| `paired` | platform | no | a second pattern that must also match within the same joined-lines window (native-pattern shape) |
+| Field | Required | Meaning |
+|---|---|---|
+| `id` | yes | The name a `scan:<id>` tag uses. |
+| `rule` | yes | The rule id printed on each hit; a platform may override it. |
+| `severity` | yes | `block`, `ratchet` or `advisory`. |
+| `scope` | yes | `added` (added lines) or `tree` (every file, at push). |
+| `applies_to` | for regex | Path classes it runs on; `["*"]` for all. |
+| `excludes` | no | Path classes it skips. |
+| `kind` | no | `builtin` for a check written in code (§5.4). |
+| `group` | no | A label grouping related ids. |
+| `once` | no | `true` to report a file once, not per line. |
+| `words` | yes | The message: what is wrong and where it belongs. |
+| `files` | no | Platform file globs that narrow it. |
+| `files_excluded` | no | Platform file globs it skips. |
+| `pattern` | for regex | A Python `re` pattern matched per line. |
+| `paired` | no | A second pattern that must match in the same window of lines. |
 
-Every signature has a plant: `checks/tests/plants/<platform>/<id>.fail.<ext>` must hit and
-`<id>.pass.<ext>` must not. `test_check_rules.py` runs every plant in both directions, and
-pins the ids each platform's flattened list holds, in order, so a row that drops a platform
-shows in a test and not in a hook.
+Each signature needs fixtures in `checks/tests/plants/<platform>/`: `<id>.fail.<ext>` must hit and `<id>.pass.<ext>` must not.
 
 ### 5.4 Built-ins
 
-Some rules need more than a line regex. These are implemented in code beside the scanner
-and dispatched by id:
-
-| Built-in | Module | What it does |
+| Built-in | Module | Finds |
 |---|---|---|
-| `ui-string-literal` | `literals.py` | lexes the whole file the way Coast's copy guard did: Swift (with the guard's skip contexts — SF Symbols, identifiers, URLs, comparisons, SQL), Kotlin/XML, TSX/JSX text between tags, bare text on its own line and the known text props (a comparison, an arrow, a generic or one name of a multi-line import is not copy), Python message shapes; only added lines are reported |
-| `doc-comments` | `check_doc_comments.py` | every public declaration without a doc comment (§6) |
-| `import-matrix` | `import_matrix.py` | module-layer imports against `.coast/module-kinds.json` (app / feature / shared) over the platform's layout: Swift package targets, Gradle modules, Node `Modules/<M>/src` or the root `src/`, and for Python the project package's subpackages (`src/<pkg>/` or `<pkg>/`, found by `__init__.py`; the package root is the app target) or, with several packages side by side, each package (imports read with `ast`); a TypeScript named list broken over lines is read as one import |
-| `blocking-call` (python) | `async_blocking.py` | a blocking call counted only inside `async def` |
-| `test-criterion-tag` | `test_criteria.py` | a test declaration with no `AC-<n>` or "criterion" in its name, the three lines above, or its first body line |
-| `type-size` | `type_size.py` | a type past 300 lines or a file past 400, reported once (advisory) |
-| `unreached-view` | `unreached_views.py` | tree scope: a public view or component (Swift `public struct X: View`; a public top-level `@Composable` in a `ui`/`ui_lib` file; an exported PascalCase function or const in a `ui`/`ui_lib` file) that nothing on a route in the product constructs — a file the path classes put under `gallery`, `tests`, `generated` or `plans` is not a route, nor is a Swift `#Preview` block or a Kotlin `@Preview` function; a `not-mounted-yet: <task>` line in the comment above the declaration is a named deferral and passes (rule 08) |
-| `secret-file` | `check_rules.py` | a file whose name matches the signature's globs, judged from git's status letter (new, renamed, copied); the content is never read, so a binary is caught |
-| `plaintext-http` | `check_rules.py` | a plain `http://` URL or `usesCleartextTraffic="true"` on a line, and the plist toggle `<key>NSAllowsArbitraryLoads</key>` followed by `<true/>` on the same or the next line — reported at the `<true/>` line, the one a flip adds |
-| `exported-component` (android) | `check_rules.py` | a manifest component with `android:exported="true"`, no `android:permission` on the tag and no LAUNCHER category in its body, the tag spanning any number of lines — reported at the `exported` line |
+| `ui-string-literal` | `literals.py` | User-facing text written inline (Swift, Kotlin/XML, TSX/JSX, Python). |
+| `doc-comments` | `check_doc_comments.py` | Public declarations with no doc comment (§6). |
+| `import-matrix` | `import_matrix.py` | Imports that break the app / feature / shared layers in `.coast/module-kinds.json`. |
+| `blocking-call` (python) | `async_blocking.py` | Blocking calls inside `async def`. |
+| `test-criterion-tag` | `test_criteria.py` | Tests with no `AC-<n>` or "criterion" in the name, the three lines above, or the first body line. |
+| `type-size` | `type_size.py` | Types over 300 lines or files over 400 (advisory). |
+| `unreached-view` | `unreached_views.py` | Public views or components no route constructs. Previews, galleries and tests do not count as routes. A `not-mounted-yet: <task>` comment above the declaration passes. |
+| `secret-file` | `check_rules.py` | New, renamed or copied files named like secrets. |
+| `plaintext-http` | `check_rules.py` | `http://` URLs, `usesCleartextTraffic="true"`, and `NSAllowsArbitraryLoads` set to `<true/>`. |
+| `exported-component` (android) | `check_rules.py` | Manifest components exported with no permission and no LAUNCHER category. |
 
-An added-scope built-in lexes the whole file and reports only the added lines, so a hit that
-needs context (the key above a toggled value) survives a one-line edit.
+Added-scope built-ins read the whole file but report only added lines.
 
 ### 5.5 Ratchets and baselines
 
@@ -361,62 +317,48 @@ needs context (the key above a toggled value) survives a one-line edit.
 {
   "baselines": [
     {"id": "spacing-literal", "count": 839, "deadline": "2026-12-03",
-     "written": "2026-09-04", "by": "Pat Lee", "moves": []},
+     "written": "2026-09-04", "by": "the owner", "moves": []},
     {"id": "build-warnings",  "count": 22,  "deadline": "2026-12-03",
-     "written": "2026-09-04", "by": "Pat Lee", "moves": []}
+     "written": "2026-09-04", "by": "the owner", "moves": []}
   ]
 }
 ```
 
-Two kinds of ratchet share the file:
+| | Scanner ratchets | Tool ratchets |
+|---|---|---|
+| Ids | `spacing-literal`, `inline-comment`, `pii-in-log` | `build-warnings`, `format-findings`, `lint-findings`, `tests-missing` |
+| Count rises | fails | fails |
+| Count falls | fails until the baseline is lowered in the same commit | passes with a note |
+| No entry | baseline is 0 | the check runs strict |
 
-- **Scanner ratchets** (`spacing-literal`, `inline-comment`, `pii-in-log`): the scanner counts
-  the tree deterministically. Above the baseline fails. Below it fails too, until the baseline
-  is lowered in the same commit (the message says the number). No entry means a baseline of 0.
-- **Tool ratchets** (`build-warnings`, `format-findings`, `lint-findings`, `tests-missing`):
-  the pre-push seat runs the tool into a log and hands the log to
-  `check_rules.py --ratchet <id> --log <log>`, the one reader of the `file:line:col:
-  warning|error:` lines (`tests-missing` hands a count). Above the baseline fails; **below it
-  passes with a note**, because a build's warning count depends on what it recompiled. With
-  no entry the seat runs strict (`-warnings-as-errors`, `--strict`), so a fresh repository is
-  held at zero from its first push.
-- **The per-file map** (`files`, written by `adopt.py --measure-tools`): each tool entry
-  carries the count per file beside its total. A scoped push (§8.3) hands the seat's
-  listing as `--measured`, and the judgment is over those files — plus any file the tool
-  reported on — against the same files' baseline: a rise refuses and names the file, a fall
-  passes with the note, files the push did not touch keep their numbers. An entry without
-  the map cannot judge a scoped run (`--has-baseline <id> --per-file` says so), so the seat
-  runs whole and prints the re-measure that enables it. The map follows a lowered or equal
-  total; a rise leaves entry and map as they were.
+**Per-file map.** `adopt.py --measure-tools` also stores per-file counts for tool ratchets. A scoped push then judges only the changed files, and a rise names the file. Without the map, the check runs on the whole tree and prints the command to add it.
 
-Past the deadline every ratchet becomes `block`: anything above zero refuses. An entry with
-no `deadline` is refused before any count is judged (`FAIL ratchet
-.coast/ratchet-baseline.json:0:<id>: … has no deadline`) — a baseline without a date would be
-a permanent allowance nobody agreed to. Lowering the count never moves the date. Only a person moves a deadline, and the move is recorded under
-`moves` with who and why. The installer writes and lowers baselines; nothing raises one.
+**Deadlines.**
+
+- After the deadline, the ratchet blocks any count above zero.
+- An entry with no `deadline` is refused.
+- Lowering a count never moves the deadline.
+- Only a person moves a deadline, recorded under `moves`.
+- Nothing raises a count.
 
 ### 5.6 Path classes — `paths.json` and `.coast/paths.json`
 
-Per platform: `extensions` (what counts as source), `order` (which class wins when several
-match), and `classes` (name → globs). The shipped classes are `git`, `governing`, `plans`,
-`generated`, `schema`, `theme`, `ui_lib`, `strings`, `manifest`, `docs`, `design_bundle`,
-`tests`, `gallery`, `ui`, `config_home`; a file in none of them is ordinary product source.
-`gallery` (1.4.0) is a component catalogue, preview or storybook — `*Entries.swift`,
-`*Catalog.swift`, `Previews/`, `*Preview.kt`, `*.stories.*`, `.storybook/` and their kin:
-a construction site that is not a route, read by `unreached-view` and left alone by the
-string-literal check (its labels name states, not screens).
+Each platform has `extensions` (source file types), `order` (which class wins) and `classes` (name → globs). A file belongs to the first matching class in `order`.
 
-A project overrides bindings in `.coast/paths.json`, which is merged **over** the platform's
-defaults class by class (a class you name replaces the shipped globs for that class;
-`extensions` replaces too):
+Shipped classes: `git`, `governing`, `plans`, `generated`, `schema`, `theme`, `ui_lib`, `strings`, `manifest`, `docs`, `design_bundle`, `tests`, `gallery`, `ui`, `config_home`. Anything else is product source.
+
+- `gallery` holds previews and component catalogues. They are not routes, and the string-literal check ignores them.
+- `strings` is the only allowed home for string catalogs (`one-catalog-per-locale`).
+
+A project overrides classes in `.coast/paths.json`. A named class replaces the shipped globs for that class:
 
 ```json
 {
   "platforms": {
     "ios": {
       "classes": {
-        "theme": ["KetoTracker/DesignSystem/Theme.swift"],
-        "ui_lib": ["KetoTracker/DesignSystem/**"],
+        "theme": ["App/DesignSystem/Theme.swift"],
+        "ui_lib": ["App/DesignSystem/**"],
         "plans": ["plans/**", "docs/handoff/**"]
       }
     }
@@ -424,56 +366,43 @@ defaults class by class (a class you name replaces the shipped globs for that cl
 }
 ```
 
-The installer writes the first version of this file when it finds a theme-shaped file
-outside the default theme path. It is governing after that.
-
-The `strings` class is the one catalog home: `one-catalog-per-locale` never fires inside it
-and fires on every catalog file outside it (`messages.json` beside a feature, a `strings.json`
-in a module). Rebinding the class moves the exemption with it — on web and React Native the
-table carries no hand-listed catalog paths of its own.
+The installer writes it first when it finds a theme file outside the default path. After that it is governing.
 
 ### 5.7 Exceptions
 
-`.coast/rules-exceptions.json` excuses one signature on one path:
+`.coast/rules-exceptions.json` excuses one signature on one path (exact path or `dir/**`):
 
 ```json
 {
   "exceptions": [
     {"id": "secret-literal", "path": "Tests/AuthTests/FixtureKeys.swift",
      "reason": "a fake sk-ant key read by the code under test",
-     "who": "Pat Lee", "when": "2026-09-04"}
+     "who": "the owner", "when": "2026-09-04"}
   ]
 }
 ```
 
-`path` is an exact path or a `dir/**` glob. Coast projects also honour the plan's
-`approved_native_deviations` in `plans/<feature>/proof.json`. The file is governing: an agent
-cannot write it. The same file carries seat exceptions (§8.6).
+The file is governing, so agents cannot write it. It also holds seat exceptions (§8.6). Coast projects also honour `approved_native_deviations` in `plans/<feature>/proof.json`.
 
 ---
 
 ## 6. The doc-comment check — `check_doc_comments.py`
 
 ```
-check_doc_comments.py --files a b c --platform <p>   named files (a Swift file reads its whole module so extensions fold)
-check_doc_comments.py --all --platform <p>           the tree
+check_doc_comments.py --files a b c --platform <p>   named files
+check_doc_comments.py --all --platform <p>           the whole tree
 ```
 
-Reports `FAIL doc-comments <path>:<line>:<name>: …` for every public declaration with no
-doc comment directly above it.
+It prints `FAIL doc-comments <path>:<line>:<name>: …` for each undocumented public declaration.
 
-| Language | Public means | Doc comment means |
+| Language | Public | Doc comment |
 |---|---|---|
-| Swift | `public`/`open`, membership of a public extension or protocol, a case of a public enum; extensions fold into their type per module (`Sources/<Target>`, `Modules/<M>/Sources`) | `///` or `/** */` |
-| Kotlin / Java | Kotlin public by default; Java only when declared; a Java interface's members | `/** */` |
-| TypeScript | exported declarations and the non-private members of exported classes and interfaces; read over JavaScript-sanitized source (single-, double-quoted and template strings emptied, `${…}` interpolations still read) | `/** */` directly above; decorators (multi-line ones too) and `//` comments may sit between, a blank line may not |
-| Python | PEP 257, read with the stdlib `ast` module: public module-level defs and classes (inside `if`/`try`/`with` too), public methods, `__init__` and nested public classes of a public class; functions nested in a function body are not read; an `@overload` signature and a property's setter or deleter need no doc | a docstring as the first statement |
+| Swift | `public`/`open`, and members of public extensions, protocols and enums; extensions fold into their type per module | `///` or `/** */` |
+| Kotlin / Java | Kotlin by default; Java when declared, plus interface members | `/** */` |
+| TypeScript | exports, and non-private members of exported classes and interfaces | `/** */` directly above; decorators and `//` may sit between, a blank line may not |
+| Python | PEP 257 public functions, classes, methods and `__init__` (read with `ast`); `@overload` and property setters are exempt | a docstring |
 
-A Python file the interpreter cannot parse reports nothing. A TypeScript regex literal
-holding a quote is the JavaScript sanitizer's one blind spot.
-
-It is also the `doc-comments` built-in signature, so the scanner holds it on added lines at
-commit and push; the pre-push seat prints the whole-tree count as an advisory.
+A Python file that does not parse reports nothing. The scanner also runs this as the `doc-comments` built-in on added lines. The pre-push hook prints the whole-tree count as advisory.
 
 ---
 
@@ -481,185 +410,129 @@ commit and push; the pre-push seat prints the whole-tree count as an advisory.
 
 ```
 verify_rules.py                                   the whole corpus, from the standards repo root
-verify_rules.py --summary                         per-document lines and totals only
+verify_rules.py --summary                         per-document lines and totals
 verify_rules.py --document <file> --platform <p>  one project's copy (repeatable)
 verify_rules.py --json                            machine-readable report
-verify_rules.py --baseline <file>                 ratchet mode: pass only while the gap count equals the file's count
+verify_rules.py --baseline <file>                 pass only while the gap count equals the file's
+verify_rules.py --config <file>                   apply a project's switches
 ```
 
-Output: one line per document, `FAIL verify-rules <path>:<line>:<id>: <words>` per gap, the
-totals, exit 1 on any gap. The standards repo's own pre-commit hook runs it in ratchet mode
-against `checks/verify-baseline.json` (currently 0 gaps, deadline 2026-12-03) and then the
-whole test suite.
+It prints a line per document, a `FAIL verify-rules` line per gap, and totals, and exits 1 on any gap. The standards repo's pre-commit hook runs it against `checks/verify-baseline.json` (0 gaps), then runs the test suite.
 
-The verifier and `battery.json` are **not** installed into projects: they read the
-standards repo's layout. The installer runs the verifier at adoption to compute the number
-for `CLAUDE.md`.
+The verifier and `battery.json` are not installed into projects. The installer runs the verifier at adoption to write the number into `CLAUDE.md`.
 
 ---
 
 ## 8. The git hooks
 
-All three are POSIX `sh`, installed at `.githooks/` with `core.hooksPath` pointed there.
-Each sources `.coast/layout.sh` (the layout table rendered at adoption — the one name a
-hook carries is the state dir) and evaluates `config.py --sh` from the checks dir, so a
-seat, a linter or the attribution check the config switches off prints `gate: <name> OFF
-(config)` and runs nothing. Every refusal is a `FAIL` line on stderr. Every hook clears git's `GIT_DIR`-family variables
-first so the checks act on the right repository, and exports `PYTHONDONTWRITEBYTECODE=1`
-so no `__pycache__` lands in the project.
+The three hooks are POSIX `sh` in `.githooks/`. Each one:
+
+- reads `.coast/layout.sh` and the config (a switched-off check prints `gate: <name> OFF (config)`);
+- prints refusals as `FAIL` lines on stderr;
+- clears git's `GIT_DIR` variables and sets `PYTHONDONTWRITEBYTECODE=1`.
 
 ### 8.1 `pre-commit`
 
-The scanner on the staged diff (`--staged`). The doc-comment check runs inside it as the
-`doc-comments` built-in signature, on added lines. Seconds.
+Runs the scanner on the staged changes, including the doc-comment check. Takes seconds.
 
 ### 8.2 `commit-msg`
 
-- a subject line that exists and fits in 100 characters;
-- `session:attribution-trailer`: a commit from an agent session (Claude Code exports
-  `CLAUDECODE`) must carry `Co-Authored-By: Claude <Model> <version> <email>`; any Claude
-  trailer from any session must name a model. A bare "Claude" or "Claude Code" refuses.
+Refuses:
 
-A comment line is `#` alone or `#` followed by a space or tab, as git writes them; a
-subject like `#123 fix the crash` is kept. The messages git writes itself — `Merge branch
-…`, `Merge remote-tracking branch … into …`, `Merge pull request …`, `Merge tag …`, and
-`Revert "…"` over `This reverts commit <sha>.` — are git's words: the length and trailer
-rules do not apply to them, and the hook says so with a `gate:` line.
+- a missing subject, or one over 100 characters;
+- `session:attribution-trailer`: an agent commit (`CLAUDECODE` is set) without `Co-Authored-By: Claude <Model> <version> <email>`. Any Claude trailer must name a model.
+
+Git's own merge and revert messages are exempt, and the hook prints a `gate:` line saying so.
 
 ### 8.3 `pre-push` — the battery
 
-**What the push changed comes first.** Before any seat, `scope.py` reads the pushed
-ranges (git's ref lines on stdin) and prints one of three kinds, which the hook echoes as
-`gate: scope <kind> — <reason>`:
+First, `scope.py` decides the scope from the pushed ranges and prints `gate: scope <kind> — <reason>`:
 
-| Kind | When | What runs |
+| Scope | When | What runs |
 |---|---|---|
-| `none` | no code changed: only paths in the `docs`, `plans`, `design_bundle`, `generated` or `git` classes, or with a prose extension (`paths.json`: `not_code_classes`, `prose_extensions`) | the diff scan, `gh-ruleset`, the project's own hooks; every other seat prints `gate: <name> SKIPPED — no code changed` |
-| `files` | code changed | `lint` and `format` on the changed files of their kind (`swiftlint --force-exclude`, `swift-format`, `eslint`, `prettier`, `ruff`, `ktlint` take the list). The build and the tests follow the platform's module graph — the targets that own the changed files plus every target that depends on them, transitively: a Swift package by `swift package describe` (`build` rebuilds the affected targets, `tests` runs `swift test --filter '^(A\|B)\.'`, and says so when no test target depends on the change); Gradle by `settings.gradle[.kts]` and `project(':x')` edges (`./gradlew :m:build`, `:m:test`); npm workspaces by the root `package.json` (`npm test -w`), and with a `jest` or `vitest` test script the changed files go to `--findRelatedTests` / `vitest related` instead; Python by every file's imports resolved in the tree (`pytest` on the test files the change reaches, `SKIPPED` when none). An Xcode project, `tsc`, `mypy`, `npm run build` and `detekt` run whole; the tree scan, `doc-comments` and `jscpd` run whole |
-| `all` | a `governing` or `manifest` path changed (`full_run_classes`), a code file no target owns, `--measure`, or `COAST_SCOPE=all` in the environment | everything, as before |
+| `none` | Only docs, plans, design, generated, git or prose files changed. | The diff scan, `gh-ruleset`, and the project's own hooks. |
+| `files` | Code changed. | `lint` and `format` on changed files; `build` and `tests` on the affected targets and their dependants; everything else whole. |
+| `all` | Governing or manifest files changed, a code file has no target, `--measure` was passed, or `COAST_SCOPE=all` is set. | Everything. |
 
-Seats run in this order; each prints `gate: <name>` and stops the push on failure.
+Affected targets come from `swift package describe`, Gradle `project(':x')` edges, npm workspaces (with `--findRelatedTests` / `vitest related` for jest or vitest), or Python imports. Xcode builds, `tsc`, `mypy`, `npm run build` and `detekt` always run whole.
 
-| Seat | ios / macos | android | react-native / web | python |
+Then the checks run in this order, and any failure stops the push:
+
+| Check | ios / macos | android | react-native / web | python |
 |---|---|---|---|---|
-| `build` | SwiftPM: `swift build -Xswiftc -warnings-as-errors`; Xcode: `xcodebuild build` with `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` (or the warnings ratchet on a full rebuild) | `allWarningsAsErrors` required in the build files, then `gradlew build test lint` | `tsconfig` must have `strict: true`; `tsc --noEmit`; `npm run build` if the script exists | — |
-| `tests` | `swift test` or `xcodebuild test` on the newest iPhone simulator (falls back to the Mac's Designed-for-iPad destination); or the `tests-missing` ratchet | in `build` | `npm test` | `pytest -q` (or unittest) under `PYTHONWARNINGS=error` |
-| `lint` | `swiftlint --strict` (or the `lint-findings` ratchet) | `gradlew detekt` | `eslint . --max-warnings 0` | `ruff check .`, `mypy .` |
-| `format` | `swift-format lint --strict` on every tracked Swift file (or the `format-findings` ratchet) | `ktlint` | `prettier --check .` | `ruff format --check .` |
-| `rules-scan` | the scanner on the lines added by what is being pushed — each `<local sha>` from git's ref lines on stdin against its `<remote sha>` (a new ref against the remote's default branch), starting at the adoption commit on the first push — then `--tree` with the ratchets, once per push | same | same | same |
+| `build` | `swift build -Xswiftc -warnings-as-errors`, or `xcodebuild build` with `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` (or the warnings ratchet) | requires `allWarningsAsErrors`; `gradlew build test lint` | requires `strict: true`; `tsc --noEmit`; `npm run build` if present | — |
+| `tests` | `swift test`, or `xcodebuild test` on the newest iPhone simulator; or the `tests-missing` ratchet | part of `build` | `npm test` | `pytest -q` with `PYTHONWARNINGS=error` |
+| `lint` | `swiftlint --strict` (or ratchet) | `gradlew detekt` | `eslint . --max-warnings 0` | `ruff check .`, `mypy .` |
+| `format` | `swift-format lint --strict` (or ratchet) | `ktlint` | `prettier --check .` | `ruff format --check .` |
+| `rules-scan` | the scanner on the pushed lines, then `--tree` once | same | same | same |
 | `doc-comments` | whole-tree count, advisory | same | same | same |
-| `jscpd` | `jscpd . --min-tokens 50 --baseline .coast/jscpd-baseline.json --fail-on-new-clones`; past the deadline `--exit-code` | same | same | same |
-| `gh-ruleset` | read-only through `gh api`: the default branch has an active ruleset with `pull_request`, `deletion`, `non_fast_forward` and no bypass actors; a note when `gh` is absent or offline | same | same | same |
+| `jscpd` | `jscpd . --min-tokens 50 --baseline .coast/jscpd-baseline.json --fail-on-new-clones` | same | same | same |
+| `gh-ruleset` | read-only `gh api` check that the default branch has an active ruleset with `pull_request`, `deletion`, `non_fast_forward` and no bypass | same | same | same |
 
-A missing tool is a refusal with its install line, never a silent pass.
-
-Xcode projects: the scheme is `.coast/xcode-scheme` if present, else the first scheme
-`xcodebuild -list` prints. Builds run with `CODE_SIGNING_ALLOWED=NO`.
+- **Time limit.** Test runs are stopped after `tests_deadline_seconds` (default 900), and the push is refused with a message saying a test is hanging.
+- A missing tool is a refusal with its install command.
+- Xcode uses the scheme in `.coast/xcode-scheme`, or the first one listed. Builds run with `CODE_SIGNING_ALLOWED=NO`.
 
 ### 8.4 Running seats by hand
 
 ```
-sh .githooks/pre-push --seat lint,format        run named seats
-sh .githooks/pre-push --measure build,format    counting mode: prints MEASURE <id> <count> and MEASURE-FILE <id> <count> <path>
+sh .githooks/pre-push --seat lint,format        run the named checks
+sh .githooks/pre-push --measure build,format    print MEASURE and MEASURE-FILE counts
 ```
 
-Git never passes these flags, so they are not a bypass. A `--seat` or `--measure` run takes
-no push lock and runs no previous hooks. A `--seat` run reads git's ref lines when they are
-piped to it (the tests push a branch that is not HEAD this way); with none, it judges HEAD
-against its upstream — with no upstream, against the empty tree, so everything is code that
-changed. `COAST_SCOPE=all` runs every seat whole regardless of what changed; `--measure`
-always measures the whole tree.
+Git never passes these flags. Such runs take no lock and skip previous hooks. With no ref lines piped in, `--seat` compares HEAD to its upstream (or to the empty tree). `--measure` always covers the whole tree.
 
 ### 8.5 One push at a time
 
-The hook serialises on a lock directory in the common git dir (`mkdir` is atomic; the
-lock's age is the directory's own mtime). A lock older than an hour is broken. A signal
-releases the lock and stops the gate. After waiting it re-fetches, and if
-the remote moved and this branch does not contain it, it says so in seconds instead of
-building for half an hour and losing the race.
+A lock directory in the git directory lets one push run per checkout. A lock older than an hour is removed. After waiting, the hook fetches again and stops quickly if the remote moved ahead of this branch.
 
 ### 8.6 Excusing a seat
 
-A person can skip one seat until a date:
+A person can skip one check until a date in `.coast/rules-exceptions.json`:
 
 ```json
 {"exceptions": [
   {"seat": "build", "reason": "the build needs env vars this checkout has not got",
-   "who": "Pat Lee", "when": "2026-09-05", "until": "2026-09-19"}
+   "who": "the owner", "when": "2026-09-05", "until": "2026-09-19"}
 ]}
 ```
 
-Seat names: `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`,
-`gh-ruleset`. The hook prints who excused it and why on every push and refuses again the
-day after `until`. An entry with no `until` is ignored: a permanent skip is how enforcement
-quietly dies. `--no-verify` stays forbidden because it turns everything off at once and
-leaves no record.
+- `seat` is one of `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset`.
+- `until` is required; an entry without it is ignored.
+- Every push prints who excused it and why. The check returns the day after `until`.
+- `--no-verify` stays forbidden.
 
 ### 8.7 A project's own hooks keep running
 
-If the project had `core.hooksPath` set before adoption, the path is recorded in
-`.coast/previous-hooks-path`; with no `core.hooksPath`, git's own hooks directory
-(`git rev-parse --git-path hooks`, where pre-commit-framework, lefthook and the old husky
-install) is recorded when it holds an executable `pre-commit`, `pre-push` or `commit-msg`.
-Each shipped hook runs the previous hook of the same name after its own checks pass, with
-the same arguments and the same ref lines on stdin. An executable previous hook runs as
-itself (its shebang may say python or bash); one that is not executable is handed to `sh`.
-The installer also warns when a `package.json` `prepare` script would set the old path back.
+The installer records the previous hooks path (`core.hooksPath`, or git's hooks directory if it has executable hooks) in `.coast/previous-hooks-path`. Each shipped hook runs the previous hook of the same name after its own checks pass. The installer warns if a `package.json` `prepare` script would reset the path.
 
 ---
 
 ## 9. The Claude Code session hooks
 
-Committed in `.claude/settings.json` (the `hooks`, `disableAllHooks` and `permissions.deny`
-keys; other keys are the founder's). One entry point, `.coast/hooks/claude-hook.py
-<hook-id>`, reads the event JSON on stdin and exits 2 with the reason on stderr to refuse.
-A hook id in the config's `session_hooks.off` exits 0 with a one-line note on stderr and
-checks nothing; "ask the owner in one line first" says the owner's name when the config
-gives one.
-Every behaviour was verified against Anthropic's hooks reference
-(https://code.claude.com/docs/en/hooks) and the quotes are in the file's docstring.
+The hooks are wired in the `hooks`, `disableAllHooks` and `permissions.deny` keys of `.claude/settings.json`. The entry point is `.coast/hooks/claude-hook.py <hook-id>`. It refuses by exiting 2 with the reason on stderr. A hook in `session_hooks.off` exits 0 with a note.
 
-| Hook id | Event | Matcher | Refuses |
-|---|---|---|---|
-| `governing-edit` | PreToolUse | `Edit\|Write\|MultiEdit\|NotebookEdit` | a path in the platform's `governing` class, `.claude/settings.json` or `.claude/settings.local.json` |
-| `chained-cd` | PreToolUse | `Bash` | a `cd`/`pushd` followed by another command: `cd X && …`, `cd X; …`, `if cd X; then`, `builtin cd X && …`, a `cd` line followed by more; a bare `cd`, or `cd` as the last command, passes |
-| `infra-command` | PreToolUse | `Bash` | fly/flyctl, wrangler, cloudflared, terraform/tofu, pulumi, doctl, aws, gcloud, az, nsupdate — except their read-only forms (a verb such as status, logs, list, ls, show, describe-…, get-…, plan, preview, validate, output, whoami, version among the first three non-option words and no mutating verb beside it: `fly status`, `aws s3 ls`, `terraform plan` pass) — `gh repo delete`, `gh secret\|variable\|ruleset`, a mutating `gh api` on repo/ruleset/secret/hook/key/environment/deployment/protection endpoints |
-| `no-verify` | PreToolUse | `Bash` | `--no-verify`, `git commit -n`, `-c core.hooksPath=` |
-| `force-push` | PreToolUse | `Bash` | `git push` with `--force`, `-f`, `--force-with-lease`, `--force-if-includes`, or a `+refspec` |
-| `scan-at-commit` | PreToolUse | `Bash` | a red `check_rules.py --staged` on the repository the command commits to (it reads the command itself; anything but a commit passes) |
-| `scan-on-edit` | PostToolUse | `Edit\|Write\|MultiEdit` | nothing (the edit happened); exits 2 so the model sees the findings on stderr |
-| `unpushed-at-stop` | Stop | — | ending the turn with commits not on the remote or uncommitted product-source changes; honours `stop_hook_active`; no upstream passes with a note |
-| `rules-at-start` | SessionStart | — | nothing; prints the platform, the ratchet counts and what will refuse, as context |
+Behaviour follows Anthropic's hooks reference (https://code.claude.com/docs/en/hooks).
 
-The platform comes from `.coast/platform` or `COAST_PLATFORM`; the checks resolve from
-`../checks/` beside the hook (the standards repo's layout and the installed one alike) then
-the checks dir the project's config names under `layout`.
+| Hook id | Event | Refuses |
+|---|---|---|
+| `governing-edit` | PreToolUse (edit tools) | editing a governing file, `.claude/settings.json` or `.claude/settings.local.json` |
+| `chained-cd` | PreToolUse (Bash) | `cd` followed by another command |
+| `infra-command` | PreToolUse (Bash) | mutating infrastructure commands (below) |
+| `no-verify` | PreToolUse (Bash) | `--no-verify`, `git commit -n`, `-c core.hooksPath=` |
+| `force-push` | PreToolUse (Bash) | `git push` with `--force`, `-f`, `--force-with-lease`, `--force-if-includes`, or `+refspec` |
+| `scan-at-commit` | PreToolUse (Bash) | a commit whose staged scan fails |
+| `scan-on-edit` | PostToolUse (edit tools) | nothing; shows the scanner's findings to the model |
+| `unpushed-at-stop` | Stop | ending a turn with unpushed commits or uncommitted source changes |
+| `rules-at-start` | SessionStart | nothing; prints the platform, ratchet counts and what will be refused |
 
-How a Bash hook reads the command. A backslash-newline continuation is joined first. The
-text is split, outside quotes, on `&&`, `||`, `;`, `|`, `|&`, `&` and newlines; the bodies of
-`$(…)`, backticks, `(…)` and `{ …; }` are commands of their own. In each command every
-leading `VAR=value`, every wrapper (`sudo`, `env`, `time`, `timeout`, `nohup`, `nice`,
-`command`, `builtin`, `exec`, `xargs`, `npx`, `pnpm dlx`, `bunx`, `yarn dlx`, `npm exec`)
-and the shell keywords (`if`, `then`, `do`, …) are skipped to reach the program; a version
-suffix (`wrangler@3`) is dropped. The string a shell runs (`sh|bash|zsh -c "…"`, `eval …`)
-and the command after `find … -exec` are read the same way. `test_claude_hooks.py`
-(`BashBypasses`) lists every route that passed before E2.8.
+**`infra-command`** refuses `fly`/`flyctl`, `wrangler`, `cloudflared`, `terraform`/`tofu`, `pulumi`, `doctl`, `aws`, `gcloud`, `az` and `nsupdate`, unless the command is read-only (for example `fly status`, `aws s3 ls`, `terraform plan`). It also refuses `gh repo delete`, `gh secret|variable|ruleset`, and mutating `gh api` calls on repo settings endpoints.
 
-The permission layer. The same settings file carries `permissions.deny` rules and
-`"disableAllHooks": false`. Anthropic's hooks page says to use the permission system, not a
-hook, for a hard deny, and the permissions page says a deny rule applies inside subshells,
-`$(…)` and loops and past `VAR=value`, whatever a hook returns. The rules name the mutating
-forms — `Bash(git push --force*)`, `Bash(git * --no-verify *)`, `Bash(fly deploy*)`,
-`Bash(fly * destroy*)`, `Bash(terraform apply*)`, `Bash(aws * delete*)`, `Bash(gh repo
-delete*)`, `Bash(nsupdate*)` — never a whole program, because "a deny rule can't carry
-allowlist exceptions" and the read-only forms must stay open; `Edit(./.claude/settings.json)`,
-`Edit(./.coast/**)` and the other governing paths are denied to the edit tools too (the
-template carries them as layout placeholders; the installer renders them). The hook still runs first and explains the refusal in words. `disableAllHooks: false`
-in the project file overrides a `true` in the user's settings (the hooks page says so), so a
-user setting cannot switch the hooks off; only `claude --settings '{"disableAllHooks": true}'`
-on the command line can, for one run — that is the human's own machine, and the git hooks
-still stand. `.claude/settings.local.json` sits above the project file in precedence, which
-is why `governing-edit` refuses it.
+Bash hooks split a command on `&&`, `||`, `;`, pipes and newlines, and look inside `$(…)`, `sh -c`, `eval` and `find -exec`. They skip `VAR=value`, wrappers such as `sudo`, `env` and `npx`, and shell keywords. `test_claude_hooks.py` (`BashBypasses`) covers these routes.
+
+**Permission layer.** `permissions.deny` blocks the mutating forms (`Bash(git push --force*)`, `Bash(git * --no-verify *)`, `Bash(fly deploy*)`, `Bash(terraform apply*)` and others) and edits to governing paths. It holds even where a hook cannot see the command.
+
+**Switching hooks off.** The project's `"disableAllHooks": false` overrides a user setting. Only `claude --settings '{"disableAllHooks": true}'` turns them off, for one run; the git hooks still apply.
 
 ---
 
@@ -671,233 +544,185 @@ is why `governing-edit` refuses it.
 adopt.py <project> [--platform ios|macos|android|react-native|web|python]
                    [--dry-run] [--by <name>] [--secret-scan]
                    [--jscpd-bin <path>] [--measure-tools [build,format,lint,tests]]
-                   [--release <version>|latest]
+                   [--release <version>|latest] [--lower-baselines]
                    [--init | --yes] [--owner <name>] [--product <name>] [--org <name>]
                    [--checks-dir <path>]
 ```
 
-| Flag | What it does |
+Every flag is described in [docs/options.md](../docs/options.md), and `adopt.py --help` prints them.
+
+| Environment variable | Use |
 |---|---|
-| `--platform` | the target platform; omitted when the manifest makes it obvious (§10.2) |
-| `--dry-run` | print the report, write nothing |
-| `--by <name>` | the name recorded on the baselines; defaults to the git user name |
-| `--secret-scan` | run the whole-tree secret scan again |
-| `--jscpd-bin <path>` | the jscpd executable to use |
-| `--measure-tools [list]` | re-measure the tool baselines; a list without `build` skips the build |
-| `--release <version>` | fetch that published release (`1.1.0`, or `latest`) into the cache and run its own installer with the other flags forwarded. The one thing in the installer that touches the network. |
-| `--init` | ask the on/off questions (§10.5) and write the answers to the config; a first adoption at a terminal asks anyway, once |
-| `--yes` | take every default without asking (everything on); a run with no terminal does the same |
-| `--owner`, `--product`, `--org` | the names in the config's `owner` object, which every sentence that names a person or a product reads |
-| `--checks-dir <path>` | put the checks elsewhere than the layout's default; recorded under `layout.checks_dir` in the config |
+| `COAST_STANDARDS_CACHE` | Release cache (default `~/.cache/coast-standards/`). |
+| `COAST_STANDARDS_RELEASES` | Mirror address for release tarballs. |
 
-The cache is `~/.cache/coast-standards/<version>/`, or `COAST_STANDARDS_CACHE` when set.
-`COAST_STANDARDS_RELEASES` overrides the address the tarballs are fetched from (the
-default is the repository's `archive/refs/tags/`), for a mirror. A fetched release whose
-own `CHECKS-VERSION` does not say the version asked for is refused.
-
-The report prints one line per file: `wrote`, `replaced`, `unchanged`, `kept (founder-edited)`,
-`would write` under `--dry-run`, plus `note` lines.
+`--release` is the only network use. A downloaded release whose `CHECKS-VERSION` does not match is refused. The report prints `wrote`, `replaced`, `unchanged`, `kept (founder-edited)` or `would write` for each file.
 
 ### 10.2 Platform detection
 
-Without `--platform`, the installer reads `.coast/platform` if present, else the manifests:
-`Package.swift` with `.iOS(` only → ios, `.macOS(` only → macos; otherwise an
-`.xcodeproj` (in the root or one folder down) whose `project.pbxproj` names `iphoneos` only
-in `SDKROOT` / `SUPPORTED_PLATFORMS` → ios, `macosx` only → macos (both or neither: ask);
-Gradle files → android; `package.json` with `react-native` in its dependencies → react-native,
-otherwise web; `pyproject.toml`/`requirements.txt`/`setup.py` → python.
+Without `--platform`, the installer reads `.coast/platform`, or else:
+
+| Found | Platform |
+|---|---|
+| `Package.swift` with only `.iOS(` / only `.macOS(` | ios / macos |
+| `.xcodeproj` whose `SDKROOT` / `SUPPORTED_PLATFORMS` name only `iphoneos` / only `macosx` | ios / macos (both or neither: asks) |
+| Gradle files | android |
+| `package.json` depending on `react-native` | react-native |
+| other `package.json` | web |
+| `pyproject.toml`, `requirements.txt`, `setup.py` | python |
 
 ### 10.3 What lands where
 
-| Path | Ownership | Contents |
+| Path | Owner | Contents |
 |---|---|---|
-| `.coast/checks/*.py`, `*.json` | governed | the scanner, its modules and tables, `layout.py`/`layout.json`, `config.py`/`config.default.json` (not the verifier) |
-| `.coast/hooks/claude-hook.py` | governed | the session hooks' entry point |
-| `.coast/config.json` | governed, written once, human-edited | the switches and names (§10.5); a later run rewrites only the keys a flag names |
-| `.coast/layout.sh` | governed | the layout table rendered for the `sh` hooks |
-| `.githooks/pre-commit`, `commit-msg`, `pre-push` | governed | the git hooks |
-| `.claude/settings.json` → `hooks`, `disableAllHooks` | governed keys | the session hook wiring, replaced from the template; other keys kept |
-| `.claude/settings.json` → `permissions.deny` | merged | the shipped deny rules first, once each, then the project's own; `allow` and `ask` untouched |
-| `.coast/platform` | governed | one word |
-| `.coast/standards-version` | governed | the release adopted: `1.0.0` from a release tarball or a clone at the tag, `1.0.0+<commit>` from a clone that is not at a release tag |
-| `.coast/seeds.json` | governed | sha256 of each seed as shipped, with the date |
-| `.coast/installed.json` | governed | every governed file the last run installed; a later run removes any of them it did not put back — a file a newer release stops shipping, or one the layout moved (a project adopted before 1.1.0 carried them under `Scripts/`); a file the founder put there is not listed and stays |
-| `.coast/paths.json` | governed, written once | the project's path-class bindings (theme, plans, ui) |
-| `.coast/ratchet-baseline.json` | governed | the ratchet counts and deadlines |
-| `.coast/jscpd-baseline.json` | governed | jscpd fingerprints plus `clones`, `deadline`, `written`, `by`, `moves` |
-| `.coast/previous-hooks-path` | governed | the hooks path the project had before (`core.hooksPath`, or git's own hooks directory when it held executables) |
-| `.coast/rules-exceptions.json` | governed, human-written | signature and seat exceptions |
-| `.coast/module-kinds.json` | governed, human-written | app / feature / shared targets for the import matrix |
-| `.coast/xcode-scheme` | optional, human-written | the scheme the battery builds |
-| linter configs (`.swiftlint.yml`, `.swift-format`, `detekt.yml`, `lint.xml`, `.editorconfig`, `eslint.config.mjs`, `tsconfig.json`, `.prettierrc.json`, `ruff.toml`, `mypy.ini`) | seed | written when absent; replaced while still equal to a shipped seed; kept when edited |
-| `docs/domain-rules.md` | seed | the platform's rules document; never replaced at the same corpus version. An older version is upgraded and the old copy kept as `docs/domain-rules.v<N>.md` |
-| `CLAUDE.md` | the block between `<!-- coast-standards: begin -->` / `end -->` (the older `up-coast-standards` markers are recognised and replaced) | rewritten from `TEMPLATE-PROJECT-CLAUDE.md`; text outside the markers untouched; appended once if no markers. Markers in any other arrangement (an end before its begin, a begin with no end, two blocks) refuse the whole run before anything is written, naming the count found |
+| `.coast/checks/` | governing | The scanner, its modules and tables, `layout`, `config` (not the verifier). |
+| `.coast/hooks/claude-hook.py` | governing | The session hook. |
+| `.coast/config.json` | governing; edited by a person | Switches and names (§10.5). |
+| `.coast/layout.sh` | governing | The layout table for the `sh` hooks. |
+| `.githooks/` | governing | The three git hooks. |
+| `.claude/settings.json` | governing keys only | `hooks` and `disableAllHooks` are replaced; `permissions.deny` is merged; other keys are kept. |
+| `.coast/platform`, `.coast/standards-version` | governing | The platform, and the adopted release. |
+| `.coast/seeds.json`, `.coast/installed.json` | governing | Seed hashes, and the files the last run installed (so later runs remove stale ones). |
+| `.coast/paths.json` | governing; written once | Path-class overrides. |
+| `.coast/ratchet-baseline.json`, `.coast/jscpd-baseline.json` | governing | Baselines. |
+| `.coast/previous-hooks-path` | governing | The previous hooks path. |
+| `.coast/rules-exceptions.json`, `.coast/module-kinds.json` | governing; written by a person | Exceptions, and module layers. |
+| `.coast/xcode-scheme` | optional; written by a person | The Xcode scheme to build. |
+| Linter configs | seed | Written when missing; updated while unedited; kept once edited. |
+| `docs/domain-rules.md` | seed | Upgraded from an older rules version, keeping the old copy as `docs/domain-rules.v<N>.md`. |
+| `CLAUDE.md` | the marked block only | Rewritten from `TEMPLATE-PROJECT-CLAUDE.md` between `<!-- coast-standards: begin -->` and `end -->`. Broken markers stop the run before anything is written. |
 
 ### 10.4 Idempotency
 
-Running twice on the same tree produces no change the second time. The tests prove it:
-adopt twice and diff, `--dry-run` writes nothing, founder text outside the block survives,
-an edited seed is kept while an unedited one takes the new version.
+A second run changes nothing. The tests check this, along with: `--dry-run` writes nothing, text outside the `CLAUDE.md` block survives, and edited seeds are kept.
 
 ### 10.5 Configuration — `.coast/config.json`
 
-One file, GOVERNING, read by one loader (`config.py`, shipped beside the scanner) from
-the scanner, the verifier, the session hook, the installer and the git hooks (`config.py
---sh` renders the switches as shell variables). The shape is `config.default.json`:
+Every key, default and layout path is listed in [docs/options.md](../docs/options.md). What a maintainer needs:
 
-```json
-{"version": 1,
- "owner": {"name": "", "product": "", "org": ""},
- "rules": {"off": [], "severity": {}, "retired_words": []},
- "seats": {"off": []},
- "session_hooks": {"off": []},
- "linters": {"off": []},
- "ratchet_days": 90,
- "tests_deadline_seconds": 900,
- "layout": {}}
-```
-
-Merge order: the shipped defaults, then the project's file (an object merges key by key,
-a list replaces the default list), then the flags of the run (`--owner`, `--product`,
-`--org`, `--checks-dir`). Validation refuses, with a sentence: a severity above the
-table's (`rules.severity` may only lower — block → ratchet → advisory), a `layout.state_dir`
-(the anchor the hooks find the file by), a non-list `off`, a `ratchet_days` or a
-`tests_deadline_seconds` that is not a whole number. `config.py --sh` also renders
-`config_tests_deadline_seconds`, the limit `pre-push`'s `timed_tests` holds every platform's
-test run to: a run still silent at the limit is killed with its process tree and refused
-(`tool:tests-deadline`, on the `tests` seat).
-
-What `off` does, and where it shows:
-
-| Switch | Effect | In the number |
-|---|---|---|
-| `rules.off: [id]` | the scanner never runs the signature (`--only` cannot bring it back) | every rule whose only machine check it was is `off`; a rule with another live check is `partly` |
-| `seats.off: [name]` | `pre-push` prints `gate: <name> OFF (config)` and runs nothing for it; `--measure` measures nothing for it | a `tool:` reference on that seat is off (`tool:jscpd` → `jscpd`, `tool:gh-ruleset` → `gh-ruleset`, `tool:warnings-as-errors` → `build`) |
-| `linters.off: [name]` | the seat skips that linter; the installer seeds no config for it | every `<linter>:<rule>` reference is off |
-| `session_hooks.off: [id]` | the session hook exits 0 with a note; `attribution-trailer` in `commit-msg` prints `OFF (config)` | every `session:<id>` reference is off |
-
-`verify_rules.py --config <file>` applies the switches (the installer passes the project's
-config, a dry run included); the headline reads `enforced by a check 21 of 74 (3 switched
-off)`, the `off` bin is in `--json`'s totals and each rule's `off` list names the
-references switched off. The `CLAUDE.md` block and `rules-at-start` say the same number.
-
-The questions (`--init`, or a first adoption at a terminal): one screen per group — the
-signatures with their `words`, the eight seats, the ten session hook ids — each a list
-with a sentence and one question, "names to switch OFF, Enter keeps every one on". An
-unknown name is said and asked again. `--yes` writes `config.default.json` byte-for-byte
-(`test_config.py` holds it to that).
-
-The layout (`layout.json` beside the checks) is the one home of every path the layer
-names: `checks_dir`, `hooks_dir`, `session_hook`, `settings_file`, `state_dir`,
-`rules_document`, `ai_rules_document`, `context_file`, `lock_name`, `temp_prefix`,
-`env_prefix` and the jscpd ignore list. A value may name another key as `{key}`;
-`paths.json`'s governing classes and `claude-settings.json` are written that way and
-rendered when read or installed. A project overrides a key under the config's `layout`
-(never `state_dir`); `layout.sh` in the state dir is the table rendered for the `sh` hooks,
-which carry one name of their own — the state dir — and source the rest. `test_config.py`
-greps every shipped file for the old literals and fails on any.
+- One loader, `config.py`, reads the file for every part of the layer. `config.py --sh` prints it as shell variables for the hooks.
+- Defaults are in `config.default.json`. The project file merges over them (objects by key; lists replace), then the run's flags.
+- The loader refuses a raised severity, a `layout.state_dir`, a non-list `off`, and a non-integer `ratchet_days` or `tests_deadline_seconds`.
+- An `off` switch also counts in the number. `verify_rules.py --config` shows it, for example `enforced by a check 21 of 74 (3 switched off)`.
+- `--init` asks one screen of on/off questions per group. `--yes` writes `config.default.json` byte for byte.
+- `layout.json` is the only place that names the layer's paths. Values may refer to other keys as `{key}`. `test_config.py` fails if any shipped file hard-codes an old path.
 
 ---
 
 ## 11. The linter configs
 
-Shipped under `lint/`, with the opt-in rules the documents cite switched on. The verifier
-reads each config and fails when a cited rule is not named there.
+The configs in `lint/` switch on the rules the documents cite. The verifier fails if a cited rule is missing.
 
-| File | Lands as | Notable settings |
+| File | Installed as | Notable settings |
 |---|---|---|
-| `swiftlint.yml` | `.swiftlint.yml` | `force_unwrapping` opt-in at error; `force_cast`, `force_try` error; `type_body_length` 300 and `file_length` 400 as warnings |
-| `swift-format.json` | `.swift-format` | Apple swift-format configuration |
-| `eslint.config.mjs` | same | `recommendedTypeChecked` with `projectService`; `@typescript-eslint/no-floating-promises`; `max-lines` warn; `react-hooks/rules-of-hooks` and `exhaustive-deps` when `eslint-plugin-react-hooks` is installed — the plugin is required inside a `try`, so a web project without React lints without it |
+| `swiftlint.yml` | `.swiftlint.yml` | `force_unwrapping`, `force_cast`, `force_try` at error; type 300 and file 400 lines as warnings |
+| `swift-format.json` | `.swift-format` | Apple swift-format config |
+| `eslint.config.mjs` | same | type-checked rules, `no-floating-promises`, react-hooks rules when the plugin is installed |
 | `.prettierrc.json` | same | |
-| `tsconfig.seed.json` | `tsconfig.json` | a complete starter: `strict`, `noImplicitAny`, `noEmit`, bundler resolution, `jsx: react-jsx`, `include: ["src"]`; written only when the project has no `tsconfig.json` — a project's own is kept and the push gate reads `strict` from it |
-| `detekt.yml` | same | layered on the default set; `UnsafeCallOnNullableType`, `LargeClass` 300 |
+| `tsconfig.seed.json` | `tsconfig.json` | a strict starter, written only if the project has none |
+| `detekt.yml` | same | `UnsafeCallOnNullableType`, `LargeClass` 300 |
 | `lint.xml` | same | `HardcodedText` at error |
-| `.editorconfig` | same | ktlint's settings |
-| `ruff.toml` | same | `B` (bugbear) selected |
+| `.editorconfig` | same | ktlint settings |
+| `ruff.toml` | same | `B` (bugbear) |
 | `mypy.ini` | same | `strict = True` |
 
 ---
 
 ## 12. Versioning
 
-- Every release is a semantic version in the root `CHECKS-VERSION`, a git tag `v<number>`,
-  and an entry in the root `CHANGELOG.md` (`## 1.0.0 — 2026-09-07`). The workflow
-  `.github/workflows/release.yml` refuses a tag that does not match the file or has no
-  changelog entry, then publishes a GitHub release with that entry.
-- `.coast/standards-version` records the release a project adopted: `1.0.0` when the
-  installer ran from a release tarball or a clone at the tag, `1.0.0+<commit>` when it ran
-  from a clone that is not at a release tag. Re-running the installer moves it, and its
-  last line prints the value.
-- Each project holds its own copy of the checks. Nothing global carries the rules, so a
-  project upgrades on its own schedule with `--release`.
-- `docs/domain-rules.md` carries `<!-- coast-rules-version: N -->` on its first line. The
-  corpus is at version 8. A project's copy at an older version is upgraded at adoption with
-  the old copy preserved; a copy at the current version that differs is a founder's edit and
-  is left alone.
-- Coast vendors `enforcement/` pinned by commit and checksum, with a parity test (phase E3,
-  not yet built).
+| What | Where |
+|---|---|
+| Release number | `CHECKS-VERSION` (semantic version) |
+| Tag | `v<number>` |
+| Notes | `CHANGELOG.md`, one `## <number> — <date>` section per release |
+| Publishing | `.github/workflows/release.yml` checks the tag and publishes the GitHub release. |
+| A project's release | `.coast/standards-version`: `1.0.0` from a tarball or tagged clone, `1.0.0+<commit>` otherwise |
+| Rules version | First line of `docs/domain-rules.md`: `<!-- coast-rules-version: N -->`. The rules are at version 9. |
+
+Each project has its own copy of the checks and upgrades on its own schedule with `--release`. An older rules document is upgraded at adoption. A current-version copy that differs is the owner's edit, and is left alone.
 
 ### 12.1 Cutting a release
 
-1. Bump `CHECKS-VERSION` (semantic version, no `v`).
-2. Write the entry in `CHANGELOG.md` as `## <number> — <date>`, in plain words: what a
-   project that upgrades will notice.
-3. Commit both.
-4. `git tag v<number>` and push the tag. The workflow checks the tag against the file and
-   the changelog, and publishes the GitHub release with the entry as its notes.
-5. Re-adopt the reference implementation and the adopted apps against it:
-   `adopt.py <project> --release <number>` in each, then commit and push what changed.
-   A project adopted before 1.1.0 carried the checks under `Scripts/`; the re-adopt moves
-   them under `.coast/` and removes the old copies (the manifest names them).
+1. Bump `CHECKS-VERSION`. Use a semantic version with no `v`.
+
+   | Change | Release type |
+   |---|---|
+   | A new check, switch or refusal | minor |
+   | Fixes only | patch |
+   | A change that makes an adopted project's setup stop working | major |
+
+2. In `CHANGELOG.md`, move the entries under `## Unreleased` into a new `## <version> — <YYYY-MM-DD>` section. Put it directly under `## Unreleased`, which stays, empty.
+3. Commit both files.
+4. Tag and push the tag:
+
+   ```bash
+   git tag v<version>
+   git push origin v<version>
+   ```
+
+   The release workflow checks the tag against `CHECKS-VERSION` and the changelog. It then publishes the GitHub release, with that changelog section as its notes.
+
+5. Do not re-adopt the owner's projects as part of a release. Each project takes the new release when its owner asks, with `adopt.py <project> --release <version>`.
+
+#### How to write release notes
+
+Add entries to `## Unreleased` in this format as each change lands. Then a release only moves them.
+
+**Format:**
+
+1. After the heading, one sentence that sums up the release.
+2. Entries grouped under `### Added`, `### Changed`, `### Fixed` and `### Removed`. Include only the groups that have entries.
+3. A final `### Upgrading` section: what an adopting project must do, or "Re-run `adopt.py <project>`. No other changes are needed."
+
+**Each bullet:**
+
+- Is **one line**. Do not wrap it. GitHub release pages show every line break, so a wrapped bullet shows as broken lines.
+- Starts with a bold phrase that says what changed, in plain words.
+- Follows with one or two sentences: the problem it solves, and what the reader needs to do or set, if anything.
+- Names things the way a developer using the tool sees them. Write "the test step of the pre-push hook", not "the tests seat". Write "time limit", not "wall-clock deadline".
+- Leaves out history: no incident stories, no dates other than the heading, no "born of", no rule numbers, no task ids, no internal decision numbers.
+
+**Example of a good bullet:**
+
+```markdown
+- **The pre-push hook now stops test runs that take longer than 15 minutes.** A hanging test used to block the push forever with no message; now the push is refused with a message saying a test is hanging. Set `tests_deadline_seconds` in `.coast/config.json` to allow longer runs.
+```
 
 ---
 
 ## 13. Troubleshooting
 
-**A push hangs at "another push is running in this checkout".** Another gate holds the lock,
-or one died within the last hour. Wait, or remove the lock directory named in the message.
+Refusals a developer meets day to day (a count went up or down, a hanging test, a build warning, another push running, no simulator, jscpd missing, a refused file, a wrong check) are covered in [docs/when-a-check-stops-you.md](../docs/when-a-check-stops-you.md). The cases below are the ones a maintainer meets.
 
-**"A check is wrong."** Say so in plain words and stop; do not bypass. The founder excuses
-the seat (§8.6) or the signature on the path (§5.7), with a reason and a date. If the
-signature is genuinely wrong, fix it in the standards repo with a plant that proves both
-directions, then re-adopt.
+**A ratchet count fell and the push was refused.**
 
-**The push was refused for a ratchet that fell.** A scanner ratchet below its baseline
-asks for the baseline lowered in the same commit: run `adopt.py <project> --lower-baselines`
-from the standards repo, which writes only the two baselines and only ever lowers, and commit
-the baseline with the change. The baseline file is governing, but this is not an edit an
-agent needs a person for — the command cannot loosen anything, so the agent runs it itself.
-(A full re-run of `adopt.py` lowers the count too, but also reinstalls the checks from
-whatever standards checkout is on disk, which is a different decision.) A tool ratchet below
-its baseline just passes with a note.
+- *What it means:* a scanner count is below its baseline.
+- *What to do:* run `adopt.py <project> --lower-baselines` and commit the baseline with the change. An agent may do this, because it only lowers counts.
 
-**The build's warning count read zero, then refused as a rise.** Warning counts are only
-comparable on a full build. The ratcheted build seat rebuilds the project's own targets
-(SwiftPM) or runs `clean build` (xcodebuild) for exactly this reason. If another session is
-building in the same checkout, the push lock (§8.5) serialises them.
+**"the rules scanner is not installed."**
 
-**No iOS simulator matched.** The tests seat picks the iPhone on the newest installed
-runtime by id. If xcodebuild sees no concrete simulator at all, it falls back to the Mac's
-Designed-for-iPad destination. Install a runtime matching the deployment target if you want
-the simulator.
+- *What it means:* the project is not adopted, or its checks are missing.
+- *What to do:* run `adopt.py` on the project.
 
-**"the rules scanner is not installed."** Run `adopt.py` on the project.
+**The session hooks never fire.**
 
-**jscpd: the clone baseline was never written.** jscpd was missing at adoption. Install it
-(`npm install -g jscpd@5.1.2`) and re-run `adopt.py`.
+- *What it means:* the session did not start at the repository root, or the settings are missing.
+- *What to do:* start at the root, and check `.claude/settings.json` has `hooks` and `"disableAllHooks": false`, and that `.coast/hooks/claude-hook.py` exists.
 
-**The session hooks never fire.** They fire only for a session started at the repository
-root. Check `.claude/settings.json` has the `hooks` key and `"disableAllHooks": false`, and
-that `.coast/hooks/claude-hook.py` exists. A user-level `disableAllHooks: true` does not
-turn them off (the project `false` wins); `claude --settings '{"disableAllHooks": true}'` does.
+**The secret scan flagged a test fixture.**
 
-**The secret scan flagged a test fixture.** A value beginning `test-`, `fake_`, `dummy.`,
-`sample-`, `stub-` is already excused. A value shaped like a real credential (`sk-ant-…`,
-`ghp_…`, `AKIA…`, a PEM header) is reported wherever it appears on purpose. Excuse the
-path in `.coast/rules-exceptions.json` if it is a fixture.
+- *What it means:* the value looks like a real credential (`sk-ant-…`, `ghp_…`, `AKIA…`, a PEM header). Values starting `test-`, `fake_`, `dummy.`, `sample-` or `stub-` are already excused.
+- *What to do:* excuse the path in `.coast/rules-exceptions.json` (§5.7).
 
-**The commit was refused for the subject length.** 100 characters. Put the rest in the body.
+**A signature is wrong.**
+
+- *What it means:* the pattern flags good code.
+- *What to do:* fix it in the standards repo with fixtures that prove both directions (§14.1), then re-adopt. Until then, the owner can excuse it (§5.7, §8.6).
+
+**`CLAUDE.md` markers stop the run.**
+
+- *What it means:* the `coast-standards` begin/end markers are out of order, unmatched or duplicated.
+- *What to do:* fix the markers so there is exactly one block, then re-run.
 
 ---
 
@@ -905,79 +730,72 @@ path in `.coast/rules-exceptions.json` if it is a fixture.
 
 ### 14.1 Add a signature
 
-1. Add a row to `checks/rules_signatures.json` with a `platforms` entry for every platform the
-   rule applies to, then add its id to `EXPECTED_IDS` in `test_check_rules.py`.
-2. Add `checks/tests/plants/<platform>/<id>.fail.<ext>` and `<id>.pass.<ext>` for each.
-3. Tag the rule in the platform document(s): `[…; check: scan:<id>]` (or `ratchet:`/`advisory:`).
-4. Run the tests and the verifier; both must be green. If the rule is new, the verifier's
-   baseline count must not rise.
-5. Re-adopt the projects that should carry it.
-
-A signature needs a rule and a rule needs a check: the verifier fails on either half missing.
+1. Add a row to `checks/rules_signatures.json`, with a `platforms` entry for each platform.
+2. Add its id to `EXPECTED_IDS` in `test_check_rules.py`.
+3. Add `<id>.fail.<ext>` and `<id>.pass.<ext>` under `checks/tests/plants/<platform>/`.
+4. Tag the rule: `[…; check: scan:<id>]` (or `ratchet:` / `advisory:`).
+5. Run the tests and the verifier. The verifier's gap count must not rise.
+6. Re-adopt the projects that need it.
 
 ### 14.2 Add a built-in
 
-Implement it as a module beside the scanner, register its id in `check_rules.builtin_hits`,
-and mark the signature `"kind": "builtin"`. Add plants like any other signature. The
-installer ships every `.py` and `.json` file in `checks/` except the verifier's three, so a
-new module travels on its own.
+1. Write a module beside the scanner.
+2. Register its id in `check_rules.builtin_hits`.
+3. Set `"kind": "builtin"` on the signature, and add fixtures.
+
+The installer ships every `.py` and `.json` in `checks/` except the verifier's files.
 
 ### 14.3 Add a seat
 
-Add the case to `hooks/pre-push` behind `wants <name>`, print `gate: <name>`, refuse in a
-`FAIL` line, name it in `battery.json` under `tools` for each platform, and tag the rule
-`tool:<name>`. Seat exceptions (§8.6) match on the name you chose, so nothing else is needed
-for a person to be able to excuse it. Add a test to
-`test_hooks_and_adopt.py` that runs `pre-push --seat <name>` on a fixture that fails and one
-that passes.
+1. In `hooks/pre-push`, add the case behind `wants <name>`, print `gate: <name>`, and report failures as `FAIL` lines.
+2. List it under `tools` in `battery.json` for each platform.
+3. Tag the rule `tool:<name>`.
+4. Add a passing and a failing test in `test_hooks_and_adopt.py`.
+
+Seat exceptions work for the new name automatically.
 
 ### 14.4 Add a session hook
 
-Add the id to `claude-hook.py` (a function and the dispatch), wire it in
-`claude-settings.json` with a `statusMessage` naming the id, tag the rule `session:<id>`,
-and add a test in `test_claude_hooks.py` that feeds the documented stdin JSON.
+1. Add a function and dispatch entry in `claude-hook.py`.
+2. Wire it in `claude-settings.json` with a `statusMessage` naming the id.
+3. Tag the rule `session:<id>`.
+4. Add a test in `test_claude_hooks.py`.
 
 ### 14.5 Add a platform
 
-Add the platform to `paths.json`, `rules_signatures.json` and `battery.json`; write a
-`rules/platform/domain-rules-<p>.md`; add the `pre-push` case and the linter seeds; add the
-platform to the installer's `PLATFORMS` and `LINT_DESTINATIONS` and its detection rule.
+1. Add it to `paths.json`, `rules_signatures.json` and `battery.json`.
+2. Write `rules/platform/domain-rules-<p>.md`.
+3. Add the `pre-push` case and the linter configs.
+4. Add it to `PLATFORMS`, `LINT_DESTINATIONS` and platform detection in the installer.
 
 ---
 
 ## 15. Tests
 
-`python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py'` from the standards
-repo root. About two minutes; jscpd must be installed or the jscpd test fails out loud
-(never skips).
+```bash
+python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py'
+```
+
+Run from the standards repo root. It takes about two minutes. jscpd and node must be installed, or their tests fail.
 
 | File | Covers |
 |---|---|
-| `test_check_rules.py` | every scanner mode on a synthetic git repo, exceptions, the ratchet in both directions and past its deadline, advisory, every plant in both directions, the web precision cases (TSX shapes that are not copy, the strings home rebound, a multi-line import) |
-| `test_verify_rules.py` | the parser grammar, every config reader, every bin, both ratchet directions, the real corpus against the baseline |
-| `test_corpus_sections.py` | every app document carries DRY-1..7, L-1..12, DES-1..4 |
-| `test_lint_configs.py` | every config exists and every linter tag the corpus cites is enabled in it; the ESLint seed loads under `node` with and without a stub hooks plugin (node must be installed — fails out loud) |
-| `test_claude_hooks.py` | every session hook fed the documented stdin JSON in a fixture repo with a bare origin |
-| `test_hooks_and_adopt.py` | adopt twice = no diff, dry-run writes nothing, seeds kept/replaced, the secret scan, each git hook as installed, the jscpd seat, seat exceptions, previous hooks, a `scripts/` folder beside the state dir, the move from the pre-1.1.0 layout |
-| `test_config.py` | the layout table (no old literal in any shipped file or document, the settings template and governing classes render), every switch (rule, severity, retired words, seat, linter, session hook), the verifier's `off` bin and `--config`, the names from the config, the prompt driven by a scripted answer file, `--yes` byte-for-byte |
+| `test_check_rules.py` | Scanner modes, exceptions, ratchets, and every fixture. |
+| `test_verify_rules.py` | The parser, config readers, bins, and the real corpus. |
+| `test_corpus_sections.py` | Required sections in every app document. |
+| `test_lint_configs.py` | Every cited linter rule is enabled; the ESLint config loads. |
+| `test_claude_hooks.py` | Every session hook. |
+| `test_hooks_and_adopt.py` | Installer idempotency, seeds, secret scan, git hooks, exceptions, previous hooks, layout moves. |
+| `test_config.py` | The layout table, every switch, `--config`, the questions, and `--yes`. |
 
 ---
 
 ## 16. Limits, stated plainly
 
-- The scanner is line regex scoped by file kind. It holds "a literal in the wrong file"
-  precisely and does not understand program structure. A rule that needs an AST is deferred
-  (Semgrep is the named candidate).
-- Kotlin/Java doc-comment scanning does not read nested members or accessors.
-- The warnings, lint and format ratchets exist for the Swift seats. Android, web and Python
-  seats run strict until a repository on one of them adopts and needs them.
-- The verifier is not installed into projects, so a project's number is computed at
-  adoption and written into `CLAUDE.md`; it is not recomputed by the session-start hook.
-- Reviewer-bin rules (about half the corpus) are held by nothing mechanical yet. Coast's
-  per-rule review rows (phase E3) are design, not code.
-- The Claude Code hooks depend on the session being started at the repository root; a
-  `--settings '{"disableAllHooks": true}'` on the command line turns them off for that run.
-  The `permissions.deny` rules hold the named mutating forms without them.
-- The read-only allowlist of `infra-command` reads verbs, not the programs' own grammars: a
-  read-only command with several option values before its verb is refused (reorder it), and a
-  mutating verb the list does not know passes only when a read-only verb stands beside it.
+- The scanner reads lines, not program structure. Rules that need a syntax tree are deferred.
+- Kotlin/Java nested members and accessors are not checked for doc comments.
+- Warning, lint and format ratchets exist only for Swift. Other platforms run strict.
+- The number is computed at adoption. The session-start hook does not recompute it.
+- About half the rules are reviewer rules, with no machine check yet.
+- Session hooks need a session started at the repository root, and a command-line `--settings` can turn them off for one run.
+- `infra-command` reads verbs, not each tool's grammar. A read-only command with several option values before its verb is refused; reorder it.

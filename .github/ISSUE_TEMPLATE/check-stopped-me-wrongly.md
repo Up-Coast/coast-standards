@@ -4,10 +4,10 @@ about: A scanner, hook or linter refused a change that does not break the rule i
 labels: false-positive
 ---
 
-**The check and the rule it names** (the `FAIL <check> <path>:<id>` line, verbatim):
+**The refusal line** (copy the full `FAIL <check> <path>:<id>` line):
 
-**The line it refused** (paste the code, with the file's language):
+**The code it refused** (paste it, and say which language):
 
-**Why the rule is not broken here:**
+**Why this code does not break the rule:**
 
 **Platform** (ios / macos / android / react-native / web / python):

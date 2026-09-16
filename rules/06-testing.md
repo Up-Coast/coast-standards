@@ -1,274 +1,145 @@
 # Testing
 
-The floor is non-negotiable; the depth dials scale with the project's risk tier. No safety
-gate is ever toggleable.
+The floor below always applies. The depth of the other test types scales with the project's risk tier. No safety check can ever be switched off.
 
 ## The floor (always required)
 
-- **TDD:** write the failing test first, then the code. Run the relevant suite before and
-  after every work session; keep the full suite green before every commit on shared files.
-  [check: process]
+- **TDD:** write the failing test first, then the code. Run the relevant tests before and after every work session. Keep the full suite passing before every commit that touches shared files. [check: process]
 - **Unit tests: every function has one.** [check: review]
-- **Every acceptance criterion has ≥1 automated test, and each test states which criterion
-  it verifies.** [check: scan:test-criterion-tag]
-- **Never weaken a test to make it pass. Never mark a failing task complete. Never start
-  the next task with the app broken.** [check: scan:test-weakened]
-- **Merge-gating tests are hermetic** — they run without live external services; live-service
-  tests run separately (opt-in flag) and never block a merge.
-  [check: scan:hermetic-test]
+- **Every acceptance criterion has ≥1 automated test, and each test states which criterion it verifies.** [check: scan:test-criterion-tag]
+- **Never weaken a test to make it pass. Never mark a failing task complete. Never start the next task with the app broken.** [check: scan:test-weakened]
+- **Merge-gating tests are hermetic** — they run without live external services. Tests that use live services run separately, behind an opt-in flag, and never block a merge. [check: scan:hermetic-test]
 
 ## What counts as coverage
 
-A test proves behavior: it fails when the behavior it names is broken. The worst outcome is
-a false-passing test. Known false-passing patterns to reject in review:
+A test proves behavior: it fails when the behavior it names is broken. The worst outcome is a test that passes when it should fail. Reject these patterns in review:
 
-- Tautologies — asserting a value against itself or a constant copied from the
-  implementation.
+- Tautologies: asserting a value against itself, or against a constant copied from the implementation.
 - Asserting only that no error was thrown.
 - Testing a stub or mock instead of the behavior.
-- Assertions so weak any implementation passes.
-- Redundant volume — cosmetic input variations on an already-pinned path add noise, not
-  coverage.
+- Assertions so weak that any implementation passes.
+- Redundant volume: cosmetic input variations on a path that is already tested add noise, not coverage.
 
-Tests are reviewed by something that didn't write them — passing is not the question;
-whether passing means anything is. Reviewers of tests never edit them.
+Tests are reviewed by someone or something that did not write them. The question is not whether they pass, but whether passing means anything. A reviewer of tests never edits them.
 [check: review]
 
 ## Test-first for existing code
 
-Before changing code, check that tests exist for everything the change touches **or
-affects** — including downstream code its data flows into. If they don't exist, write them
-for the existing code first, then start the feature. [check: process]
+Before changing code, check that tests exist for everything the change touches **or affects**, including downstream code that its data flows into. If they do not exist, write them for the existing code first. Then start the feature. [check: process]
 
 ## Required test types per feature (risk/cost dials)
 
-- **Negative tests:** assert that things that should fail still fail. Keep a visible
-  negative-coverage registry so "what we reject" is auditable. (Classic miss: nobody checked
-  the phone field rejects letters.) [check: review]
-- **Data-variation tests, exhaustive** where input is user text: ALL CAPS, leading/trailing/
-  multiple spaces, punctuation, empty, very long. AI testing is cheap — catch every edge.
-  [check: review]
-- **Domain-invariant tests** generated from the project's rules doc: totals equal the sum of
-  parts; a record can't be in two exclusive states; a tenant can never read another tenant's
-  data. [check: review]
-- **Localization robustness:** long strings, pseudo-loc, (RTL when in scope) — the UI must
-  survive real translations. Locale-formatting correctness for dates/numbers.
-  [check: review]
-- **Accessibility tests:** labels present, large-type doesn't clip, contrast, target size.
-  [check: review]
-- **Interaction tests** including abandon-and-return flows (exit a screen mid-action, come
-  back, observe what should and shouldn't have persisted). [check: review]
-- **Client-side performance** (launch time, scroll jank, leaks) and **low-connectivity
-  behavior** on everything network-touching. [check: review]
-- **Security tests** on sensitive-flagged code: abuse/load, injection (including prompt
-  injection where a model consumes external text), authorization (every endpoint rejects the
-  wrong tenant/role). [check: review]
-- **Migration forward/backward tests** whenever schema changes. [check: review]
+- **Negative tests:** assert that things that should fail still fail. Keep a visible list of negative tests so anyone can audit what the product rejects. (Example of a miss: nobody checked that the phone field rejects letters.) [check: review]
+- **Data-variation tests, exhaustive** wherever the input is user text: ALL CAPS, leading, trailing and multiple spaces, punctuation, empty, very long. AI-written tests are cheap, so cover every edge case. [check: review]
+- **Domain-invariant tests** generated from the project's rules doc. Examples: totals equal the sum of their parts; a record cannot be in two exclusive states; a tenant can never read another tenant's data. [check: review]
+- **Localization robustness:** long strings, pseudo-localization, and right-to-left layout when in scope. The UI must survive real translations. Dates and numbers are formatted correctly for each locale. [check: review]
+- **Accessibility tests:** labels are present, large text does not clip, contrast is sufficient, touch targets are big enough. [check: review]
+- **Interaction tests**, including abandon-and-return flows: leave a screen mid-action, come back, and check what should and should not have been saved. [check: review]
+- **Client-side performance** (launch time, scroll stutter, memory leaks) and **low-connectivity behavior** for everything that uses the network. [check: review]
+- **Security tests** on code flagged as sensitive: abuse and load, injection (including prompt injection wherever a model reads external text), and authorization (every endpoint rejects the wrong tenant or role). [check: review]
+- **Migration forward/backward tests** whenever the schema changes. [check: review]
 
 ## Verification discipline
 
-- Verify in live mode against the real data path; demo/fixture modes make broken screens
-  look finished.
-- A task is not done until its tracking row/record says so with a verdict — a claim in a
-  report is not the record.
-- Screenshot-vs-design comparison is a quality dial; the honest walk of the whole product
-  is the gate. [check: process]
+- Verify in live mode against the real data path. Demo and fixture modes make broken screens look finished.
+- A task is not done until its tracking record says so, with a verdict. A claim in a report is not the record.
+- Comparing screenshots against the design is a depth setting that scales with risk. A full, honest walk through the whole product is always required. [check: process]
 
 ## Every failure path gets a test
 
-A feature that calls a model, a network service, or a file ships with one
-test per outcome the real thing can return — the answer, the refusal, the
-timeout, the empty reply, the answer in the wrong shape. Each test asserts
-two things: what the person sees, in the product's own words, and what
-they can do next. A flow proven only against a stand-in that always
-answers has not been tested; the stand-in must be able to produce every
-outcome (see "A stand-in must fail the way production fails").
+A feature that calls a model, a network service or a file needs one test for each outcome the real thing can return: the answer, the refusal, the timeout, the empty reply, and the answer in the wrong shape. Each test asserts two things: what the person sees, in the product's own words, and what they can do next.
 
-Origin (2026-09-15): a review step was tested with a scripted provider that
-always answered. Against a real key that hung to its watchdog, and a real
-model that returned nothing, the step's Continue re-ran the review forever
-and offered no way on; the provider's words never reached the screen. Both
-handlers existed. Neither had a test that put a person in front of them.
+A flow tested only against a stand-in that always answers has not been tested. The stand-in must be able to produce every outcome (see "A stand-in must fail the way production fails").
+
+Why: error handlers that no test reaches can leave a person stuck in a loop with no way forward and no explanation on screen.
 [check: review]
 
 ## Done means used
 
-A screen or flow task closes only after its builder drives it in the built
-product as a person would — through the screens, buttons and links, never
-through the code or a debug route — and records what was seen: captures
-saved to disk, the store read after each act. A screenshot of the pane
-just built is not that walk. The window around the pane, its title, its
-settings, navigation in and out, discard, and a relaunch are part of the
-flow and are used too.
+A screen or flow task is closed only after its builder has used it in the built product the way a person would. Use the screens, buttons and links, never the code or a debug route. Record what you saw: save captures to disk, and read the stored data after each action.
 
-Origin (2026-09-15): seven defects on one screen — the wrong project's
-title and settings, a relaunch onto another project, a discard that left
-the person inside the deleted project, a resume that forgot half the
-input — every one outside the pane the tests and the builder's screenshots
-looked at. [check: process, review]
+A screenshot of the pane you just built is not enough. The window around the pane, its title, its settings, navigating in and out, discarding, and relaunching are part of the flow, and you must use them too.
+
+Why: defects often sit outside the pane that the tests and screenshots looked at, such as the wrong title, a relaunch that opens something else, or a discard that leaves the person inside deleted data. [check: process, review]
 
 ## The build result is the truth — never an agent's word for it
 
-An agent does not know whether its code compiles unless something actually ran the build.
-Never accept "it compiles" or "tests pass" as a claim; require that a build/test step
-*actually ran* and passed, verified by a step that cannot be skipped. **Build result =
-truth; the author's word ≠ truth.** Anything that must happen lives in a hook, a script, or
-CI — never in prose telling someone to remember. [check: process]
+An agent does not know whether its code compiles unless something actually ran the build. Never accept "it compiles" or "tests pass" as a claim. Require proof that a build or test step *actually ran* and passed, checked by a step that cannot be skipped. **The build result is the truth; the author's word is not.** Anything that must happen lives in a hook, a script or CI, never in a written reminder. [check: process]
 
 ## Changing a test is a decision made before the work, not during it
 
-**This rule protects the integrity of the codebase, not the sanctity of the tests.** Tests
-absolutely do need to change sometimes — when the required behaviour genuinely changed, the
-test asserting the old behaviour is now wrong, and changing it is the correct move.
+**This rule protects the integrity of the codebase, not the tests themselves.** Tests do sometimes need to change. When the required behavior really changes, the test for the old behavior is wrong, and changing it is correct.
 
-What is being prevented is the specific failure of an implementer meeting a red test and
-making it green by editing the test instead of the code — and its uglier twin, **contorting
-the implementation into something convoluted purely to avoid touching a test.** Both damage
-the codebase. Writing spaghetti to dodge a test edit is a worse outcome than the edit.
+This rule prevents two failures. The first is making a failing test pass by editing the test instead of the code. The second is **twisting the implementation into something convoluted just to avoid touching a test.** Both damage the codebase. Convoluted code written to dodge a test edit is worse than the edit.
 
-So the discipline is about *when and by whom* the decision gets made:
+So the rule is about *when and by whom* the decision is made:
 
-- **Decide test changes when planning the work, not while fighting a red run.** If the
-  behaviour is changing, say so up front and change the test then — with the change visible
-  and reviewable as part of the plan rather than buried in an implementation diff.
-  [check: scan:test-weakened]
-- **Mid-implementation, a red test is a question, not a licence.** If it turns out the test
-  encodes an assumption the new behaviour invalidates, stop and raise it — then change the
-  test deliberately, and record why. What is never acceptable is silently weakening or
-  deleting a test so a run goes green. [check: process]
-- **Every test change states the reason.** "The behaviour changed, here's how" is a good
-  reason. "It was failing" is not a reason. [check: scan:test-weakened]
-- The original concern: an agent doing work that touches tests must not simply change the
-  tests so that they pass. Writing tests before the work starts is one of the best defences
-  against this, and it also means any test that needs to change is changed before the work
-  starts. The clarification (20 Aug 2026): if the function itself changed, the test changes
-  with it; nobody writes spaghetti code to avoid modifying a test. The rules around tests
-  are not about the tests themselves but about the integrity of the codebase, and sometimes
-  a test does need to be modified.
+- **Decide test changes when planning the work, not while fighting a red run.** If the behavior is changing, say so up front and change the test then. The change is then visible and reviewable as part of the plan, not buried in the implementation diff. [check: scan:test-weakened]
+- **Mid-implementation, a red test is a question, not a licence.** If the test encodes an assumption that the new behavior makes wrong, stop and raise it. Then change the test on purpose and record why. Never silently weaken or delete a test to make a run pass. [check: process]
+- **Every test change states the reason.** "The behavior changed, and here is how" is a reason. "It was failing" is not. [check: scan:test-weakened]
+- Writing tests before the work starts is one of the best protections here: any test that needs to change is changed before the work begins. If a function's behavior changes, its test changes with it. Nobody writes convoluted code to avoid editing a test.
 
 ## Three nets, each for what only it can catch
 
-Spend the expensive net only where judgment is genuinely needed:
+Use the expensive net (review) only where judgment is really needed:
 
-- **Structure → a deterministic script.** Schema diffs and symbol graphs: anything in the
-  change that isn't on the approved item list fails mechanically.
-  [check: context]
-- **Behaviour → tests.** Locked by the rule above. [check: context]
-- **Quality and justification → review judgment.** The only net that needs a mind.
-  [check: context]
+- **Structure → a deterministic script.** Schema diffs and symbol graphs: anything in the change that is not on the approved item list fails automatically. [check: context]
+- **Behaviour → tests.** Enforced by the rule above. [check: context]
+- **Quality and justification → review judgment.** The only net that needs a person or model to judge. [check: context]
 
 ## Red main stops everything
 
-Failing tests on the main branch halt the *start* of all new work — the fix is the only job
-until it's green. This covers breakage that arrived from outside (a teammate's push), not
-just your own merges. [check: process]
+When tests fail on the main branch, nobody *starts* new work. Fixing main is the only job until it passes. This applies to breakage from outside (for example, a teammate's push), not just your own merges. [check: process]
 
 ## Cadence — verify everything, waste nothing
 
-Quality never drops; the goal is to stop paying for runs that prove nothing.
+Quality never drops. The goal is to stop paying for runs that prove nothing.
 
-- Parallel lanes run their own target during the loop, and the **full suite once** before
-  the lane's final commit. A serial merge step re-runs it after each merge.
-- Sessions working on shared files keep the full suite green before every commit.
-- **One review pass per task, at the end** — not per file, not per commit.
-  [check: process]
-- Bundle verification: one full-suite run over a batch, not one per merge, and never a
-  re-run of a suite nothing has changed since.
-- No extraneous test-suite runs, and nothing run separately that could be bundled and run
-  later. Test your own work — quality never drops, for any reason — but do not be
-  wasteful.
+- Parallel work streams run their own test target while working, and the **full suite once** before their final commit. A serial merge step re-runs the full suite after each merge.
+- Sessions working on shared files keep the full suite passing before every commit.
+- **One review pass per task, at the end** — not per file, not per commit. [check: process]
+- Batch verification: run the full suite once over a batch, not once per merge. Never re-run a suite when nothing has changed since its last run.
+- Do not run the test suite when it is not needed, and do not run separately what could be batched and run later. Always test your own work, but do not waste runs.
 
 ## Never re-run a proven paid pipeline as routine verification
 
-Where a test path costs real money per run, a proven end-to-end path is not re-verified out
-of habit. Verify with the free suite, a mock run, or records that already exist. A real
-metered run needs **both** a concrete reason — a major change to that subsystem, a genuinely
-new stage, or a live seam unverifiable any other way — **and** explicit sign-off. A
-deliberately dead credential may be a spend guard; don't chase it as a bug.
+When a test path costs real money per run, do not re-verify a proven end-to-end path out of habit. Verify with the free suite, a mock run, or records that already exist. A real paid run needs **both** a concrete reason **and** explicit sign-off. A concrete reason is a major change to that subsystem, a new stage, or a live connection that cannot be verified any other way.
+
+A credential that does not work may be deliberate, to prevent spending. Do not chase it as a bug.
 [check: process]
 
 ## Long runs: watchdog, don't wait
 
-- Know what a healthy run looks like for the project, in wall-clock terms, before you start
-  one.
-- **Never pipe a long run through `tail` alone** — it starves the log until exit, so nobody
-  can tell stuck from slow. Stream through `tee` to a file and give the human the path.
-  [check: process]
-- Build the test target first, then run under a **hard timeout** sized to a healthy run. A
-  fired timeout means a wedge: kill it, re-run with the known-hanging suite skipped, and
-  **say in the report that you skipped it.** The push battery holds the same line by
-  machine: the tests seat runs under the config's wall-clock deadline
-  (`tests_deadline_seconds`, default 900), and a run still silent at the deadline is killed
-  with its whole process tree and refused in words — a push never waits on a wedge.
-  [check: tool:tests-deadline]
-- A suite that can wedge is a defect with a root cause. Find it; a permanent skip is not a
-  fix.
-- A guard that reads a rendered bitmap reads a **fixed region or a fixed sample** of it —
-  a row, a band, a grid of points whose place the layout decides. A pattern slid pixel by
-  pixel across a whole render is pixels × pattern per screen, hours in a debug build across
-  a harness; one such search held a run silent for five hours. [check: review]
+- Before starting a run, know how long a healthy run takes for this project.
+- **Never pipe a long run through `tail` alone.** `tail` shows nothing until the run exits, so nobody can tell stuck from slow. Stream output through `tee` to a file and give the person the file path. [check: process]
+- Build the test target first. Then run the tests under a **hard timeout** sized to a healthy run. If the timeout fires, the run is hung: kill it, re-run with the hanging suite skipped, and **say in your report that you skipped it.** The pre-push hook enforces the same limit: its test step runs under the time limit in the config (`tests_deadline_seconds`, default 900). A run with no result at the limit is killed with its whole process tree, and the push is refused with an explanation. A push never waits on a hung run. [check: tool:tests-deadline]
+- A suite that can hang is a defect with a root cause. Find it. A permanent skip is not a fix.
+- A check that reads a rendered bitmap reads a **fixed region or a fixed sample** of it: a row, a band, or a grid of points whose position the layout decides. Never slide a pattern pixel by pixel across a whole render. That costs pixels × pattern size per screen and can take hours in a debug build. [check: review]
 
 ## Proving a background run is alive
 
-- The reliable signal is **recent file activity on disk** (a transcript or output file being
-  written), not a process count — work may run in-process — and not a launch confirmation.
-- Set a watchdog that polls for that activity after launching anything long-running.
-- A dead run's partial work survives on disk: relaunch with instructions to review and
-  resume, **never blind-restart**.
-- When a status claim is challenged, re-verify from primary evidence rather than restating
-  it more softly. (Origin: a status claim had to be challenged three times before it was
-  checked against the evidence.)
+- The reliable signal is **recent file activity on disk**, such as a transcript or output file being written. A process count is not reliable, because work may run in-process. A launch confirmation is not reliable either.
+- After launching anything long-running, set a watchdog that checks for that file activity.
+- A dead run's partial work survives on disk. Relaunch it with instructions to review and resume. **Never restart blindly.**
+- When someone challenges a status claim, check it again against the primary evidence. Do not just restate it more softly.
 [check: process]
 
 ## Fixtures the size of the real thing, and pressure past it
 
-A fixture built to be convenient tests the fixture. Test data must be the
-size, shape and messiness of the real thing: lists long enough to overflow
-a container, names long enough to truncate, documents written in the
-industry's words rather than the product's own vocabulary.
+A fixture built for convenience only tests the fixture. Test data must match the size, shape and messiness of real data: lists long enough to overflow their container, names long enough to be truncated, and documents written in the industry's words, not the product's own vocabulary.
 
-And push past it deliberately, as its own discipline: many more items than
-anyone would have, values at and beyond the declared limits, empty and
-enormous, slow and absent. Every surface that renders project data carries
-at least one case at real size and one past it.
+Also push past real size on purpose: far more items than anyone would have, values at and beyond the declared limits, empty and huge inputs, slow and missing responses. Every surface that shows project data has at least one test at real size and one beyond it.
 
-Origin (Coast, 2026-08-22, a walk of a real adopting app): the primary intake
-screen overprinted itself on a real project, drawing a screen list over
-the section beneath it — because every fixture project carried a handful
-of screens and the real one carried thirteen. In the same evening: a
-document checker that passed its own fixtures and refused a real 24 KB,
-14-section PRD, because the fixtures were written in the product's
-vocabulary by the same hand as the matcher; and a blueprint that showed
-"1 module · 0 data models" where the real answer was 17 and 9.
-
-The owner corrected the framing that real data breaks what fixtures
-cannot: test mocks should use data similar to what would be used for
-real, the mocks need improving, and pressure testing belongs alongside
-realistic mocks. The first framing blames
-the world; the second blames the tests, and only the second produces work.
+Why: fixtures that are small, or written in the product's own words by the same person who wrote the code, pass while real data overflows layouts, gets rejected, or is miscounted. When real data breaks something, the fix is better mocks and pressure tests, not blaming the data.
 [check: review]
 
 ## A stand-in must fail the way production fails
 
-A test double that can only succeed or fail cleanly never exercises the
-paths that break in production. Every stand-in for an external service
-must be able to express that service's real refusal modes — the partial
-denial ("403 — I won't even list them"), the plan-gated feature, the
-empty-but-valid answer, the malformed response — not just success and a
-clean thrown error.
+A test double that can only succeed, or fail with a clean error, never tests the paths that break in production. Every stand-in for an external service must be able to return that service's real failure responses, not just success and a clean thrown error. These include a partial denial (for example, a 403 that refuses even to list items), a feature not available on the current plan, an empty but valid answer, and a malformed response.
 
-Origin (Coast, 2026-08-22, the same walk): four chained defects
-shipped behind a GitHub stand-in that could not say "403 — I won't tell
-you". Each had correct handling code that was never reached (one read the
-wrong account's plan; one turned an unreadable ruleset listing into a
-hard failure before its own skip branch could run — ordering, not logic).
-The walk found them all in one evening because production refused where
-the stand-in never could.
+Why: handling code that exists but that no stand-in can reach ships broken, including bugs caused by the order of checks rather than their logic.
 
-Practice: when writing a stand-in, enumerate the real service's
-documented failure responses first and make the double able to produce
-each one; when a live defect is traced to an unreachable handler, teach
-the stand-in that refusal in the same fix. [check: review]
+In practice: when writing a stand-in, first list the real service's documented failure responses, and make the double able to return each one. When a live defect is traced to a handler no test reached, teach the stand-in that failure in the same fix. [check: review]
 
 ---
 

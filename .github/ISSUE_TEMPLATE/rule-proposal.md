@@ -1,13 +1,13 @@
 ---
 name: Propose a rule
-about: A rule that should be in the corpus, with the check that would hold it
+about: Suggest a new rule and the check that would enforce it
 labels: rule
 ---
 
-**The rule, in one sentence a reviewer can answer yes or no to:**
+**The rule** (one sentence a reviewer can answer yes or no to):
 
-**The platforms it applies to:**
+**Platforms it applies to:**
 
-**The check that would hold it** (a scanner signature, a linter rule, a tool, or "review" if only a person can judge it):
+**The check that would enforce it** (a scanner signature, a linter rule, a tool, or "review" if only a person can judge it):
 
-**What went wrong without it** (the origin story, if there is one):
+**The problem it prevents** (what goes wrong without it):

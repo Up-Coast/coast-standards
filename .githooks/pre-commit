@@ -1,5 +1,5 @@
 #!/bin/sh
-# Coast Standards — pre-commit. This repo has no CI; the hook is the battery.
+# Coast Standards — pre-commit. The same checks run in CI (.github/workflows/ci.yml).
 # 1. Every rule must name its check and every check must run — measured against
 #    the committed gap baseline, which may only fall (enforcement/README.md §4.1, decision 2).
 # 2. The enforcement checks' own tests must pass.

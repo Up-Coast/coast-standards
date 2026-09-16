@@ -1,194 +1,129 @@
 # Changelog
 
-*Last updated: 2026-09-16*
-
-What a project that upgrades will notice, one entry per release. The number lives in
-`CHECKS-VERSION`; the release is the git tag `v<number>`.
+What changes for a project that upgrades, one section per release. The version number is in `CHECKS-VERSION`, and each release is the git tag `v<version>`. How to write an entry: [Cutting a release](enforcement/DEVELOPER-GUIDE.md#121-cutting-a-release).
 
 ## Unreleased
 
+### Added
+
+- **Sections shared by several platforms are written once.** They live in `rules/platform/shared/`, and `tools/build_rules.py` fills them into each platform file. A test refuses a platform file that no longer matches, and a section copied by hand into two files.
+
+### Changed
+
+- **The documentation is shorter and easier to follow.** The README, the guides and the rule documents were rewritten in plain words, with steps, tables and one line per paragraph. No rule changed what it requires.
+- **The rule documents are at rules version 9.** Re-running `adopt.py` replaces a project's `docs/domain-rules.md` with the new wording and saves the old copy as `docs/domain-rules.v8.md`, so any edits you made are still there to copy across.
+
+### Fixed
+
+- **`adopt.py --release` works from a git worktree of the standards repo.** It used to install from the worktree's own files instead of downloading the requested release, because it only recognised a checkout whose `.git` is a folder.
+
 ## 1.5.0 — 2026-09-16
 
-A wedged test run is killed and refused, and a count that fell is lowered by a command, never a hand edit.
+The pre-push hook stops a hanging test run, and a new installer option updates the baseline files after a count goes down.
 
-- **The tests seat runs under a wall-clock deadline** (`tests_deadline_seconds` in the
-  config, default 900; `tool:tests-deadline` on rule 06's long-runs line). A test run still
-  silent at the deadline is killed with its whole process tree and the push is refused in
-  words — a wedge, not a slow run — on every platform's runner. Born of a real run on
-  2026-09-16: a new guard slid a word stamp pixel by pixel over a whole-window bitmap for
-  every screen on a harness and held a test process at full CPU, silent, for five hours;
-  nothing in the layer would have ended it. Rule 06 also names the shape that caused it:
-  a render guard reads a fixed region or sample, never a search across the whole render.
-  A project picks the deadline up by re-running adopt.py; the config key is optional.
-- **`adopt.py --lower-baselines`**: a push refused because a ratchet count FELL no longer
-  sends anyone to hand-edit the governing baseline. The new switch writes only the ratchet
-  and jscpd baselines from the tree as it stands (measured by the project's own installed
-  scanner), lowers a count that fell, leaves and reports one that rose, and installs
-  nothing — so an agent runs it itself. The scanner's and the jscpd seat's refusal lines
-  now name that command. Born of a real push on 2026-09-15: a fix removed one trailing
-  comment, the scanner refused the push until the baseline read the fallen count, and the
-  agent handed the owner a one-line edit to a file it is told never to touch.
-- **`**/*.log` joins the jscpd ignore list** (enforcement/checks/layout.json). A build
-  log saved as walk evidence is a record, not code; two such logs in one project
-  matched each other and refused a documentation push as a "new clone" (2026-09-15).
-  A project picks it up by re-running adopt.py.
+### Added
+
+- **`adopt.py <project> --lower-baselines` updates the baseline files after a count goes down.** When a count of existing problems goes down, the push is refused until the baseline file matches, and agents are not allowed to edit that file. This option updates only the two baseline files, only ever lowers a number, and installs nothing else, so an agent can run it. The refusal message now names this command.
+
+### Changed
+
+- **The pre-push hook now stops test runs that take longer than 15 minutes.** A hanging test used to block the push forever with no message. The hook now stops the run, refuses the push, and says a test is hanging. Set `tests_deadline_seconds` in `.coast/config.json` to allow longer runs.
+- **Log files are no longer checked for duplicate code.** Saved build logs were reported as copied code and blocked pushes. Files ending in `.log` are now skipped.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
 
 ## 1.4.0 — 2026-09-15
 
-A gallery is not a consumer: the scanner refuses a built view nothing mounts.
+The scanner refuses a screen or component that no part of the app displays.
 
-- **The `unreached-view` check** (rule 08, "Every built surface is on a route"; enforcement
-  task E4.5). A public view or component that nothing on a route in the product constructs
-  refuses the push — on every platform: Swift `public struct X: View`, a public top-level
-  `@Composable` screen, an exported PascalCase component. A debug component gallery, a
-  catalogue, a preview (`#Preview`, `@Preview`), a storybook or a test is a construction
-  site and not a route; a feature flag is a route. A view deliberately not mounted yet
-  declares it in the comment above its declaration, `not-mounted-yet: <the task that
-  mounts it>`, so the deferred list lives with the code. Born of a real miss: a product's
-  home screen built, tested, captured and ticked complete, drawn only by its debug
-  gallery, with every screen that should have sat on top of it falling back to the door.
-- **A new path class, `gallery`**, ordered after `tests` and before `ui`: the catalogue,
-  preview and storybook paths per platform. The string-literal check no longer judges
-  those files (their labels name states, not screens). A project's `.coast/paths.json`
-  may rebind it like any class.
-- Rule 08 gains the rule the check holds, and its case log the miss that produced it,
-  with the wording a feature flag needs: a route the product has, on by default or behind
-  a declared flag whose off state is named.
-- **Rule 06 / TEST-6: every failure path gets a test** — one per outcome a model, network or
-  file can return, asserting what the person sees and can do next.
-- **Rule 00 clause 3, rule 06, TEST-7: done means used** — a screen task closes only after
-  the builder drives it in the built product as a person, with captures on disk; the
-  window, title, settings, navigation and relaunch are part of the flow. Both born of the
-  same day's walk of an adopting product (a review that ran and said nothing, a refused
-  key that locked a step).
+### Added
+
+- **New check: every public view or component must be used somewhere in the app.** A view that is only shown in a debug gallery, a preview, a storybook or a test is refused at push. This catches screens that were built and tested but never connected. A view behind a feature flag counts as used. To defer one on purpose, add `not-mounted-yet: <the task that will add it>` in the comment above its declaration. Applies to SwiftUI views, Jetpack Compose screens and exported React components.
+- **New path class `gallery`** for component catalogues, previews and storybooks. The user-facing text check no longer flags labels in those files. A project can change which paths it covers in `.coast/paths.json`.
+- **Rule: every failure path has a test.** Each outcome a model, network call or file read can return needs a test of what the person sees and can do next.
+- **Rule: a screen task is done only when it works in the built app.** The builder uses the screen in the running product, including the window, title, settings, navigation and relaunch, and saves screenshots.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. The new check may refuse views that nothing displays. Connect each one, or mark it `not-mounted-yet`.
 
 ## 1.3.0 — 2026-09-09
 
-Every platform's push runs on what it changed, not only Swift's.
+The pre-push hook checks only what a push changed on every platform, not just Swift.
 
-- **Module graphs for Android, the web and Python.** The hook reads the platform's own
-  graph: Gradle modules from `settings.gradle[.kts]` and each module's `project(':x')`
-  dependencies (a push builds and tests the affected modules, `./gradlew :m:build` /
-  `:m:test`); npm workspaces from the root `package.json` (a push tests the affected
-  workspaces, `npm test -w`); and for Python every tracked `.py` file with its imports
-  resolved to files in the tree, the `src` layout and relative imports included, so a push
-  runs exactly the test files whose imports reach what changed, and says so when none do.
-- **The runner's own related-tests mode.** When the web test script is `jest` or `vitest`,
-  a push hands the changed files to `jest --findRelatedTests` or `vitest related`: the
-  tests that import the changed files, transitively, whether or not the project has
-  workspaces.
-- **ktlint reads the changed files** like the other formatters already did.
-- `tsc`, `mypy`, `npm run build` and `detekt` still run whole when code changed: the first
-  two are whole-program by nature, the others are not scoped by their tools.
+### Changed
 
+- **Android pushes build and test only the affected Gradle modules.** The hook reads the modules from `settings.gradle` or `settings.gradle.kts` and their `project(':x')` dependencies.
+- **Web pushes test only the affected npm workspaces.** The hook reads the workspaces from the root `package.json` and runs `npm test -w` for each affected one.
+- **Web pushes with Jest or Vitest run only the related tests.** The hook passes the changed files to `jest --findRelatedTests` or `vitest related`, with or without workspaces.
+- **Python pushes run only the test files that import the changed code.** The hook follows imports through the project, including the `src` layout and relative imports, and says so when no test is affected.
+- **ktlint checks only the changed files**, like the other formatters.
 
+`tsc`, `mypy`, `npm run build` and `detekt` still run on the whole project when code changed.
 
-The push battery runs on what the push changed.
+### Upgrading
 
-- **A push of documents alone runs no code check.** The hook reads what the push changed
-  before it runs anything. Documents, plans and other prose (`docs/`, `plans/`, `.md`,
-  `.txt` and the like) are not code: the build, the tests, the linter, the formatter, the
-  whole-tree scan, the doc-comment count and jscpd all print `SKIPPED — no code changed`
-  and the push takes seconds. The scanner still reads the added lines, and the
-  protected-main check still runs. Origin: a push that changed one internal note ran the
-  whole battery, for a change no check could have an opinion on.
-- **A push of code runs the checks on that code.** The linter and the formatter read the
-  changed files. On a Swift package, the build rebuilds the targets that changed and every
-  target that depends on them, and the tests run for the test targets that depend on them
-  (`swift test --filter`), by the package's own graph: a change in a leaf module runs its
-  tests alone, and the hook says so when no test target depends on what changed. A file
-  no target owns, a change to the checks, a linter configuration, a baseline or the package
-  manifest runs everything, as does `COAST_SCOPE=all` in the environment (CI's word).
-  An Xcode project has no graph the hook reads yet: its build and tests run whole when
-  code changed; its linter and formatter are file-scoped. On the web and Python platforms
-  eslint, prettier and ruff read the changed files; the other tools run whole when code
-  changed. Module graphs for Gradle, npm workspaces and Python packages are filed (E8.6).
-- **The starting lines judge a scoped run by file.** A tool's baseline entry
-  (`build-warnings`, `lint-findings`, `format-findings`) now carries a count per file
-  beside its total, so a scoped push is held on the files it rebuilt or linted: their
-  count may not rise against those same files' baseline, and a rise names the file. Files
-  the push did not touch keep their numbers. The seats' counters live in one place now
-  (`check_rules.py --ratchet <id> --log <log>`); `--measure` prints the per-file lines the
-  installer writes.
-  *Upgrading:* re-run the installer with `--measure-tools` once, so the baseline gains
-  the per-file counts; until then a scoped push runs those seats whole and prints the
-  line that says so. The re-measure never raises a count.
-- `rules/07`: "the full gate battery runs before every push" now says what the battery
-  runs on. The rule's check is unchanged.
+Re-run `adopt.py <project>`. No other changes are needed.
+
+## 1.2.0 — 2026-09-09
+
+The pre-push hook checks only what a push changed.
+
+### Changed
+
+- **A push that changes only documents skips the code checks.** Documentation, plans and other text files skip the build, tests, linter, formatter, whole-project scan and duplicate-code check, so the push takes seconds. The scanner still reads the added lines, and the protected-branch check still runs.
+- **A push that changes code checks only that code.** The linter and formatter check the changed files. On a Swift package, the build and tests cover the changed targets and every target that depends on them. A change to the checks, a linter config, a baseline or `Package.swift` runs everything. Set `COAST_SCOPE=all` to always run everything, for example in CI. Xcode projects still build and test the whole project.
+- **Baselines for warnings, lint and formatting findings now count per file.** A push that checks only some files is compared against those files' counts, and a new finding names its file.
+
+### Upgrading
+
+Run `adopt.py <project> --measure-tools` once to record the per-file counts. Until you do, those checks run on the whole project. Re-measuring never raises a count.
 
 ## 1.1.1 — 2026-09-08
 
-A project that runs Python can complete its first push.
+Python projects can complete their first push.
 
-- **The linter stops reporting on the layer itself.** The seeded `ruff.toml` and `mypy.ini`
-  read the whole tree, so the checks and the session hook — which ship as they are and are
-  not the project's code — came back as the project's own findings, and a first push could
-  not go green. The seeds now exclude the layer's folder, and the push battery excludes it
-  too, so a seat stays right whatever is later edited into a seed. A Swift or Node project
-  was never affected: the layer holds no source of their kind.
-  *Upgrading:* re-run the installer. A seed you have edited is left alone, as always — so
-  add `extend-exclude = [".coast"]` to your `ruff.toml` and `exclude = ^\.coast/` to your
-  `mypy.ini` yourself, or the battery will pass while your own `ruff check .` keeps
-  reporting the layer.
-- **Seeds are rendered, not copied.** A linter seed may name a layout key as `{state_dir}`
-  the way the settings file and the governing classes already do, so a project that moves
-  the layer's folder gets a seed that matches. The layout table gains `state_dir_regex`
-  beside `state_dir`, for a tool whose exclude is a regular expression.
-- **The module-layering check reads Python.** `import-matrix` (ARCH-2) knew only the Swift,
-  Gradle and Node layouts, so on a Python project it stopped the push with "unknown
-  platform" — while the Python rules document promised the check. It now reads a Python
-  layout: one package (under `src/`, else the root) makes that package's subpackages the
-  modules and its root files the app target; several packages side by side each count as a
-  module. A `src.`-prefixed absolute import is tolerated, and module names are matched
-  without regard to case, so a lowercase `domain` package is the shared centre the rule
-  expects.
+### Fixed
+
+- **The Python linters no longer report the standards' own files.** The seeded `ruff.toml` and `mypy.ini` checked the `.coast/` folder, so a first push could not pass. The seeds and the pre-push hook now skip that folder.
+- **The layering check works on Python projects.** It used to stop the push with "unknown platform". It now treats a package's subpackages as modules, and matches module names without regard to case.
+
+### Changed
+
+- **Linter seeds can use layout values**, such as `{state_dir}`, so they match a project that moves the `.coast/` folder.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. If you edited `ruff.toml` or `mypy.ini`, the installer leaves them alone. Add `extend-exclude = [".coast"]` to `ruff.toml` and `exclude = ^\.coast/` to `mypy.ini` yourself.
 
 ## 1.1.0 — 2026-09-08
 
-The switches, the config file, and one folder for the layer.
+A settings file for turning checks off, and one folder for everything the standards install.
 
-- **One folder.** The checks and the Claude Code session hook now live under `.coast/`
-  (`.coast/checks/`, `.coast/hooks/claude-hook.py`) instead of `Scripts/`. A project that
-  already had a `scripts/` folder no longer collides with them on a Mac. Re-running the
-  installer moves an existing project over and removes the old copies; the `CLAUDE.md`
-  block, `.claude/settings.json` and the hooks are rewritten to the new paths.
-- **A config file, asked once.** `.coast/config.json` holds the switches and the names.
-  A first install at a terminal asks the on/off questions once — one screen each for the
-  rules, the push-gate seats and the session hooks, every default on; `--yes` skips the
-  questions, `--init` asks them again. A switched-off rule is not run, a switched-off seat
-  prints `gate: <name> OFF (config)`, a switched-off session hook exits with a note, a
-  switched-off linter is neither run nor seeded. A severity may be lowered in the config,
-  never raised. `retired_words` add to the retired-wording check; `ratchet_days` sets the
-  starting-line deadline.
-- **The number stays honest.** A rule whose every check is switched off is counted as
-  `off`, not enforced: "enforced by a check 24 of 74 (3 switched off)" in the verifier, the
-  `CLAUDE.md` block and the session-start line.
-- **Names from the config.** `--owner`, `--product` and `--org` fill `owner` in the config;
-  every refusal sentence and the `CLAUDE.md` block read them ("ask Pat Lee in one line
-  first"), with general words when they are blank. No shipped file carries a name.
-- **The block title** now reads "Coast Standards — the standing rules, enforced by machines
-  where a machine can hold them".
-- **Docs.** The developer guide gains "Configuration" and the layout table; the options
-  page gains the switches.
+### Added
+
+- **A settings file, `.coast/config.json`.** The first install at a terminal asks once which rules, pre-push checks and session hooks to switch off. Everything is on by default. `--yes` skips the questions and `--init` asks them again. A setting can lower a check's severity but never raise it. See the [settings reference](https://github.com/Up-Coast/coast-standards/blob/main/docs/options.md).
+- **`--owner`, `--product` and `--org`** put names into every refusal message and the `CLAUDE.md` block.
+- **The rule count reports switched-off rules.** A rule whose checks are all switched off is no longer counted as enforced, for example "enforced by a check 24 of 74 (3 switched off)".
+
+### Changed
+
+- **Everything installs under `.coast/`.** The checks moved from `Scripts/` to `.coast/checks/`, and the Claude Code session hook to `.coast/hooks/claude-hook.py`. This avoids a clash with an existing `scripts/` folder on a Mac.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. It moves the files, removes the old copies, and updates `CLAUDE.md`, `.claude/settings.json` and the git hooks.
 
 ## 1.0.0 — 2026-09-07
 
-The first public release, under the Coast Standards License (source-available: use
-and share unchanged, no resale, no derived products; see LICENSE.md).
+The first public release, under the Coast Standards License. The code is source-available: you may use and share it unchanged, but not resell it or build products from it. See [LICENSE.md](https://github.com/Up-Coast/coast-standards/blob/main/LICENSE.md).
 
-- **Rules.** Six platform rule documents (iOS, macOS, Android, React Native, Web, Python
-  backend) at corpus version 8, plus the AI-features rules; every rule names the check
-  that holds it. Rules enforced by a check: 170 of 643 across the corpus.
-- **Checks.** The rules scanner with per-platform signature tables, the doc-comment
-  check, the import matrix, the type-size advisory, the async-blocking check, the
-  duplicate-code seat (jscpd 5.1.2), the secret scan, and the shipped linter configs.
-- **Hooks.** `pre-commit`, `commit-msg` and `pre-push` for git; the Claude Code session
-  hooks that refuse edits to governed files, infrastructure commands, `--no-verify` and
-  force-pushes, and that scan every edited file.
-- **Installer.** `adopt.py` installs all of it into a project in one command, records
-  starting lines with a 90-day deadline, and upgrades in place. It records the release
-  it installed in `.coast/standards-version` and can fetch a named release itself
-  (`--release 1.0.0`, or `latest`), so no clone is needed.
-- **The `CLAUDE.md` block** is written between `coast-standards: begin` / `end` markers.
-  A block written by an earlier private build under the older `up-coast-standards`
-  markers is recognised and replaced.
+### Added
+
+- **Rules** for iOS, macOS, Android, React Native, Web and Python backends, plus rules for AI features. Each rule names the check that enforces it.
+- **Checks:** the rules scanner, doc-comment check, module-layering check, type-size warning, blocking-call check, duplicate-code check (jscpd 5.1.2), secret scan, and linter configs.
+- **Git hooks:** `pre-commit`, `commit-msg` and `pre-push`.
+- **Claude Code session hooks** that refuse edits to the check files, infrastructure commands, `--no-verify` and force pushes, and that scan every edited file.
+- **The installer, `adopt.py`,** which installs everything with one command and updates in place. It records existing problems as baselines with a 90-day deadline, and can download a release itself with `--release <version>` or `--release latest`.

@@ -1,16 +1,10 @@
 # Which rules apply to your project
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-16*
 
-Read this before applying the rules to a project that is not an app with a
-user interface. **Not every rule here makes sense everywhere**, and applying
-UI rules to a headless service produces noise that trains people to ignore
-rules — the opposite of what a standards repo is for.
+Read this before applying the rules to a project that is not an app with a user interface. **Not every rule makes sense for every project.** UI rules applied to a headless service only create noise, and noise teaches people to ignore rules.
 
-Filed 20 August 2026, when the owner ruled that different kinds of projects
-need different rules. Correcting an earlier claim in this repo that
-the numbered rules were language-agnostic — they are not. They were extracted
-from an app project and several of them assume a screen.
+The numbered rules are not language- or project-neutral. They were written for an app, and several assume a screen. This page says which ones apply to your kind of project.
 
 ## The project types
 
@@ -21,9 +15,7 @@ from an app project and several of them assume a screen.
 | **C — Data / ML pipeline** | Ingestion, transformation, scoring, models | A scoring engine, an ETL pipeline, a training job |
 | **D — Library, CLI, or internal tool** | Code other developers use | A shared package, a command-line utility, a build script |
 
-A real project is often more than one: a product with a web frontend and a
-Python API is A **and** B, and each part follows its own set. Say which part
-you are working in before you invoke a rule.
+Many projects are more than one type. A product with a web frontend and a Python API is A **and** B, and each part follows its own rules. Say which part you are working in before you apply a rule.
 
 ## What applies where
 
@@ -46,48 +38,23 @@ you are working in before you invoke a rule.
 
 ## The scoping notes
 
-**Priority rule 2 (all user-facing strings externalized)** is an
-interface-project rule. A backend, pipeline, or CLI has little or no
-user-facing text, and forcing a localization catalog on it is ceremony. The
-backend equivalent — which does apply — is that any text a person will
-eventually read (API error messages, emails, notifications, CLI output) has
-**one home** rather than being scattered as literals through handlers. That is
-`types/backend-service.md`'s message rule, and it satisfies rule 2 for types
-B, C, and D.
+**Priority rule 2 (never hardcode user-facing text)** is for projects with an interface. A backend, pipeline or CLI has little or no user-facing text, and a localization catalog would be needless overhead. The backend version does apply: any text a person will read (API error messages, emails, notifications, CLI output) is defined in **one place**, not scattered as literals through handlers. That is the message rule in `types/backend-service.md`, and it meets rule 2 for types B, C and D.
 
-**`02-architecture-and-code.md` is partly app-shaped.** These parts are
-universal and apply to every type: layering and one-way module dependencies,
-data access confined to one layer, single responsibility, no speculative
-abstraction, naming and doc-comment rules, zero-warnings/clean-linter, and all
-of the DRY mechanics. These parts assume a screen and do **not** apply to
-types B, C, or D: the MVVM view/view-model split, reactive state and
-observation, responsive layout, and "nothing blocking is callable from the
-UI." Types B and C get their equivalents — request/handler separation, async
-and worker discipline, backpressure — from `types/backend-service.md`.
+**`02-architecture-and-code.md` partly assumes an app.**
 
-**"Native/platform-standard first"** (priority rule 8) generalizes cleanly:
-use the framework's own mechanism rather than inventing one that fights it.
-For a backend that means the framework's dependency injection, its migration
-system, its validation layer, its task queue — not a hand-rolled substitute.
+- These parts apply to every type: layering and one-way module dependencies, data access in one layer only, single responsibility, no speculative abstraction, naming and doc-comment rules, zero warnings and a clean linter, and all of the DRY rules.
+- These parts assume a screen and do **not** apply to types B, C or D: the MVVM view/view-model split, reactive state and observation, responsive layout, and "nothing blocking is callable from the UI."
+- Types B and C get their equivalents (request/handler separation, async and worker practice, backpressure) from `types/backend-service.md`.
 
-**The checks travel with the rules.** Every rule in every file names the check that
-holds it (`[check: …]`), and `enforcement/adopt.py` installs the same scanner, hooks and
-linter configs whatever the type; the platform file decides which signatures apply (the
-Python file for types B and C, the app file for A). The "enforced by a check N of M" line
-in a project's `CLAUDE.md` is computed from that project's own `docs/domain-rules.md`.
+**"Native/platform-standard first"** (priority rule 8) applies to every type: use the framework's own mechanism instead of inventing one that fights it. For a backend, that means the framework's dependency injection, migration system, validation layer and task queue, not home-made substitutes.
 
-**Security applies everywhere, but the weight shifts.** For an app, the
-emphasis is storage, transport, and platform permissions. For a backend it is
-authorization on every endpoint, injection, and secrets. Read
-`03-security-owasp.md` for both, then the platform file for the checkable
-version.
+**The checks come with the rules.** Every rule names the check that enforces it (`[check: …]`). `enforcement/adopt.py` installs the same scanner, hooks and linter configs for every type. The platform file decides which checks apply: the Python file for types B and C, an app file for type A. The "enforced by a check N of M" line in a project's `CLAUDE.md` is counted from that project's own `docs/domain-rules.md`.
+
+**Security applies everywhere, with a different focus.** For an app, focus on storage, transport and platform permissions. For a backend, focus on authorization on every endpoint, injection and secrets. Read `03-security-owasp.md` for both, then your platform file for the checkable version.
 
 ## When a project doesn't fit
 
-Add a type rather than bending an existing one. A new type file states what
-kind of project it covers, which universal rules it scopes or replaces, and
-why — the same shape as the two that exist. A rule that has to be explained
-away every time it is applied is a rule in the wrong file.
+Add a new type instead of stretching an existing one. A new type file states what kind of project it covers, which general rules it narrows or replaces, and why, in the same format as the two that exist. If a rule has to be explained away every time it is applied, it is in the wrong file.
 
 ---
 

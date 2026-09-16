@@ -1,149 +1,64 @@
 # Architecture and code
 
-> **Applies to:** all project types for layering, granularity, naming, and DRY; the
-> **Platform behavior** section (MVVM split, reactive state, responsive layout, UI
-> threading) is for project type A — apps with a user interface — only. Backends and
-> pipelines get their equivalents from `types/backend-service.md`. See `PROJECT-TYPES.md`.
+> **Applies to:** all project types for layering, granularity, naming and DRY. The **Platform behavior** section (MVVM split, reactive state, responsive layout, UI threading) applies only to project type A, apps with a user interface. Backends and pipelines get their equivalents from `types/backend-service.md`. See `PROJECT-TYPES.md`.
 
-The engineering standards Coast enforces on every project it builds, generalized for any
-project that adopts them. Per-platform checkable versions live in `platform/domain-rules-*.md`;
-this file is the reasoning layer behind them.
+The engineering standards for every project that adopts them. The checkable version for each platform is in `platform/domain-rules-*.md`. This file explains the reasoning behind those rules.
 
 ## Layering
 
-- **Code lives in its layer:** screens/views display, view models prepare, services hold
-  business rules, repositories do data access. Business rules never in screens or view
-  models; UI never talks to storage directly. (MVVM + Service layer + Repository)
-  [check: scan:layer-import, review]
-- **Why services:** service classes give the abstraction that allows swapping things out
-  and testing functionality clearly. [check: context]
-- **Data is grabbed one way.** All data access goes through the repository/data layer —
-  nothing else touches the database directly.
-  [check: scan:layer-import, scan:import-matrix]
-- **Module dependencies flow one way, no cycles.** No transitively smuggled forbidden
-  imports (e.g. a domain service taking a wire-format DTO parameter).
-  [check: scan:import-matrix]
+- **Code lives in its layer:** views display, view models prepare, services hold business rules, and repositories access data. Business rules never go in views or view models. The UI never talks to storage directly. (MVVM + Service layer + Repository) [check: scan:layer-import, review]
+- **Why services:** service classes provide an abstraction that makes it easy to swap implementations and to test behaviour clearly. [check: context]
+- **Data is grabbed one way.** All data access goes through the repository (data) layer. Nothing else touches the database directly. [check: scan:layer-import, scan:import-matrix]
+- **Module dependencies flow one way, no cycles.** Don't sneak a forbidden dependency in indirectly, for example a domain service that takes a wire-format DTO as a parameter. [check: scan:import-matrix]
 
 ## Granularity
 
-- **Modularize everything.** Break things into tiny decoupled parts — heavy decoupling is
-  what makes the volume manageable. Clear APIs between layers.
-  [check: advisory:type-size, review]
-- **SRP to the class level:** favour more, smaller classes over fewer, bigger ones — better
-  for testing and robustness. Functions as small as possible. Automated size warnings are
-  advisory signals, never automatic failures.
-  [check: advisory:type-size, review]
-- **No speculative abstraction (YAGNI).** A protocol/interface exists only where something
-  real substitutes for it (module-boundary seams qualify by definition).
-  [check: review]
+- **Modularize everything.** Split code into small, decoupled parts with clear APIs between layers. Strong decoupling is what keeps a large codebase manageable. [check: advisory:type-size, review]
+- **SRP to the class level:** prefer more, smaller classes over fewer, bigger ones; they are easier to test and more robust. Keep functions as small as possible. Automatic size warnings are advisory only; they never fail the build. [check: advisory:type-size, review]
+- **No speculative abstraction (YAGNI).** Only create a protocol or interface when something real substitutes for it. Module-boundary seams always qualify. [check: review]
 
 ## Platform behavior
 
-- **Native/platform-standard first.** Standard needs (navigation, state, modals, windowing,
-  dependency wiring) are met with the platform's standard mechanism, never an invented
-  framework that fights the platform. "Every piece is a native control" is not a defence
-  when the pieces are assembled into a workaround for a native feature.
-  [check: scan:native-pattern]
-- **Never chase workarounds.** An unexplained failure on a native platform is a reason to
-  pause, confirm the failure is real, and ask — not to iterate on non-native hacks. Any
-  approved deviation is named on the plan so it's visible at approval time, never introduced
-  silently. [check: scan:native-pattern, process]
-- **Reactive state (Coast decision):** always use reactive programming. Done properly it
-  costs nothing, because data is only output when something subscribes to it — and it
-  saves an inexperienced developer from spending weeks building something static that in
-  the end needed to be dynamic. Anything that
-  can change while displayed, or outlives a function call, is published through the
-  platform's observation system — never polled, never manually refreshed. One-shot values
-  stay plain. [check: review]
-- **Responsive layout:** platform-standard layout system, no fixed screen dimensions,
-  correct behavior on screen-size changes. (Exception: a design that deliberately targets a
-  fixed canvas — but then that decision is filed, not assumed.)
-  [check: advisory:fixed-screen-size, review]
-- **Never block a thread.** Long waits are asynchronous; nothing blocking is callable from
-  the UI. [check: scan:blocking-call]
-- **No crash on bad input.** Typed, surfaced errors; assertions reserved for programmer
-  errors. Background work's lifetime is tied to its parent — no orphaned processes.
-  [check: review]
+- **Native/platform-standard first.** Use the platform's standard mechanism for standard needs: navigation, state, modals, windowing and dependency wiring. Never invent a framework that fights the platform. "Every piece is a native control" is no defence if the pieces are assembled into a workaround for a native feature. [check: scan:native-pattern]
+- **Never chase workarounds.** When something fails on a native platform and you don't know why, stop, confirm the failure is real, and ask. Don't keep trying non-native hacks. Any approved deviation is named in the plan so it is visible at approval time, never added silently. [check: scan:native-pattern, process]
+- **Reactive state (Coast decision):** always use reactive programming. Done well it costs nothing, because data is only produced when something subscribes to it. It also stops a developer building something static that later has to become dynamic. Anything that can change while on screen, or that lives longer than a function call, is published through the platform's observation system. Never poll it and never refresh it manually. One-time values stay plain. [check: review]
+- **Responsive layout:** use the platform's standard layout system. No fixed screen dimensions. Layout must behave correctly when the screen size changes. Exception: a design that deliberately targets a fixed canvas, and then that decision is written down, not assumed. [check: advisory:fixed-screen-size, review]
+- **Never block a thread.** Long waits are asynchronous. Nothing that blocks can be called from the UI. [check: scan:blocking-call]
+- **No crash on bad input.** Return typed errors and show them. Use assertions only for programmer errors. Tie background work's lifetime to its parent, so no processes are left orphaned. [check: review]
 
 ## Naming, comments, and honesty
 
-- **No abbreviations or shortcuts in names.** Clear, concise naming of everything; code
-  should be self-explanatory. A name says what a thing is, in industry-standard vocabulary,
-  and never claims a different role than the code performs. [check: review]
-- **No inline comments** unless genuinely required to explain something non-obvious.
-  [check: ratchet:inline-comment]
-- **Doc comments required** on every public/exported type and function (structured
-  function/parameter docs, not inline narration). A doc that reads wrong is a code problem,
-  not a wording problem. [check: scan:doc-comments]
-- **Zero new compiler warnings + clean linter run** on every change. Use the platform's
-  standard linter (SwiftLint, ktlint/Android lint, ESLint/Prettier + strict TypeScript,
-  ruff/mypy for Python). [check: tool:warnings-as-errors]
+- **No abbreviations or shortcuts in names.** Name everything clearly and concisely, so the code explains itself. A name says what a thing is, in standard industry terms, and never suggests a different role from what the code does. [check: review]
+- **No inline comments** unless one is really needed to explain something non-obvious. [check: ratchet:inline-comment]
+- **Doc comments required** on every public or exported type and function. Use structured function and parameter docs, not inline narration. A doc comment that reads wrong means the code has a problem, not just the wording. [check: scan:doc-comments]
+- **Zero new compiler warnings + clean linter run** on every change. Use the platform's standard linter: SwiftLint, ktlint or Android lint, ESLint/Prettier with strict TypeScript, or ruff/mypy for Python. [check: tool:warnings-as-errors]
 
 ## DRY mechanics (the how of priority rule 1)
 
-- One theme file; one string catalog per locale; one home per cross-cutting concern; one
-  computation site per derived value; one predictably-named document per subject.
-- **Reuse comes first:** when an existing key/token/component covers the need, use it and
-  name the reuse; a near-duplicate is a review rejection with the existing item named.
-  [check: review]
-- **Creation must be justified:** a new helper/component/template states why nothing
-  existing was reused. [check: review]
-- Reviews mechanically scan diffs for inlined strings, styling literals, hand-rolled
-  versions of platform features, and duplicated logic.
+- One theme file. One string catalog per locale. One place for each cross-cutting concern. One place where each derived value is computed. One predictably named document per subject.
+- **Reuse comes first:** when an existing key, token or component covers the need, use it and say that you reused it. A near-duplicate is rejected in review, with the existing item named. [check: review]
+- **Creation must be justified:** a new helper, component or template states why nothing existing could be reused. [check: review]
+- Reviews scan every diff for inlined strings, styling literals, home-made versions of platform features, and duplicated logic.
 
 ## Boundaries the build system enforces
 
-- **Module boundaries are packages, not conventions.** Realize the module layer so a
-  forbidden import is a **compile error**, not a lint finding someone can ignore. Where
-  the language can't do it
-  natively, use the ecosystem's enforcement tool — dependency-cruiser (JS), import-linter
-  (Python), ArchUnit (JVM). [check: scan:import-matrix]
-- **Why this matters beyond tidiness:** modularization exists so that agents have better
-  context — they need to learn only the API of each module they interact with, not its
-  code. The boundary is what makes a small working context possible. [check: context]
-- **And it draws the line of responsibility.** Each module has someone — a person or an
-  agent — responsible for it. They are not responsible for anyone else's module and must
-  not write their code to accommodate the internals of one. Agents are responsible for
-  their own area of the code; they do not build their code to make it work with code
-  another agent is responsible for. The boundaries of responsibility are drawn
-  deliberately, and as long as the other API returns the information the agent needs, that
-  is the only thing the agent should care about. Practically: if the API gives you what you
-  need, you are done looking. If it doesn't, that is a conversation with its owner about
-  the API — never a workaround built on knowledge of their internals, and never a fix you
-  reach in and make yourself. [check: context]
-- **Enforcement is structural, not detection-only.** It should be impossible for an agent
-  to make a change it is not authorized to make. Scoping by prompt or by convention is not
-  sufficient on its own; out-of-authority changes should be technically impossible. Detection
-  sits behind the wall, never as the wall. [check: process]
+- **Module boundaries are packages, not conventions.** Build the module layer so that a forbidden import is a **compile error**, not a lint finding someone can ignore. Where the language can't do this natively, use the ecosystem's enforcement tool: dependency-cruiser (JS), import-linter (Python) or ArchUnit (JVM). [check: scan:import-matrix]
+- **Why this matters beyond tidiness:** modules give agents a smaller context. An agent only needs to learn the API of each module it uses, not the module's code. The boundary is what makes that small context possible. [check: context]
+- **And it draws the line of responsibility.** Each module has one owner, a person or an agent. Owners are responsible only for their own module. They must not write their code around the internals of someone else's module. Responsibility boundaries are drawn on purpose. If another module's API returns the information you need, that is all you should care about, and you are done looking. If it doesn't, talk to that module's owner about the API. Never build a workaround that depends on their internals, and never reach in and change their code yourself. [check: context]
+- **Enforcement is structural, not detection-only.** An agent should be unable to make a change it is not authorized to make. Limiting an agent by prompt or by convention is not enough on its own; out-of-scope changes should be technically impossible. Detection is a backup behind that barrier, never the barrier itself. [check: process]
 
 ## Granularity, with numbers
 
-The advisory thresholds, so "too big" is checkable rather than argued: a type over **300
-lines**, or with more than **7 initializer-injected dependencies**, raises a warning. These
-are inputs to a judgment about granularity — warnings, never automatic failures — and the
-constants live in config the agent can't reach. [check: advisory:type-size]
+These advisory limits make "too big" measurable instead of a matter of opinion. A type raises a warning if it is over **300 lines**, or has more than **7 dependencies injected through its initializer**. The warnings feed a judgement about granularity; they never fail the build automatically. The limits are stored in config that agents cannot edit. [check: advisory:type-size]
 
 ## Prove it runs before building it out
 
-- **The first task of a feature is a runnable spike.** Decompose into small tasks and make
-  task one invoke something that actually runs, with an optional pause for a human to try
-  it. This front-loads the "this approach doesn't work" discovery so review cycles aren't
-  spent finding it later. [check: process]
-- **Flag data and external dependencies in the plan, before writing code.** List the
-  non-code inputs the product needs to be genuinely usable — content datasets, third-party
-  services, licensing, accounts — with sourcing options, rough effort, and a recommendation,
-  in the same plan as the code. (Origin: an entire app was built before anyone flagged that
-  its headline feature depended on a food database nobody had sourced. It should have been
-  flagged before starting.) [check: process]
+- **The first task of a feature is a runnable spike.** Break the feature into small tasks. Make task one call something that actually runs, optionally pausing so a person can try it. This finds out early if an approach doesn't work, instead of during later reviews. [check: process]
+- **Flag data and external dependencies in the plan, before writing code.** In the same plan as the code, list the non-code inputs the product needs to be usable: content datasets, third-party services, licensing and accounts. For each, give sourcing options, rough effort and a recommendation. This prevents building a whole app before anyone notices that its main feature depends on data nobody has sourced. [check: process]
 
 ## No silent rework, no silent stalls
 
-Nothing retries, re-runs, or spends invisibly. Every automatic re-run is budget-bounded,
-visible while it happens, and recorded afterwards. Hitting any attempt, authority, or write
-limit fails **loudly**, with the full log as the cause — never a quiet stall, and never a
-loop that burns money where nobody can see it. The owner filed this as a rule for the
-whole architecture, binding on anything added later: customers must never burn through
-credits because of a stuck loop. [check: process]
+Nothing retries, re-runs or spends money without being visible. Every automatic re-run has a budget limit, is visible while it runs, and is recorded afterwards. When any limit on attempts, authority or writes is reached, fail **loudly**, with the full log as the cause. Never stall quietly, and never loop and spend money where nobody can see it. This applies to the whole architecture, including anything added later: customers must never burn through credits because of a stuck loop. [check: process]
 
 ---
 

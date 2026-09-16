@@ -1064,7 +1064,7 @@ def main(argv=None):
 
     if args.release:
         version = latest_release() if args.release == "latest" else args.release.lstrip("v")
-        if version != checks_version() or os.path.isdir(os.path.join(STANDARDS_ROOT, ".git")):
+        if version != checks_version() or os.path.exists(os.path.join(STANDARDS_ROOT, ".git")):
             # Not this copy: fetch the release and let its own installer do the work.
             release_dir = fetch_release(version)
             forwarded, skip = [], False

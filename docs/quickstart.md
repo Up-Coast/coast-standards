@@ -1,51 +1,42 @@
 # Quickstart
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-16*
 
-Ten minutes from an existing project to live checks.
+About ten minutes from an existing project to live checks. You need macOS or Linux, `git`, and Python 3.10 or newer.
 
 ## 1. Install the programs the checks run
 
-The checks do not bundle a linter or a test runner; they run your platform's own, and
-the push gate refuses with an install line when one is missing. Install them first, so
-your first push is not stopped by a missing program after you have already committed.
+The checks use your platform's own linter, formatter and test runner. Install them first, so your first push is not refused for a missing program.
 
 | Your project | Install |
 |---|---|
-| iOS, macOS | Xcode (the build seat runs `xcodebuild`), then `brew install swiftlint swift-format` |
+| iOS, macOS | Xcode, then `brew install swiftlint swift-format` |
 | Android | `brew install ktlint` (detekt comes through the Gradle plugin) |
-| React Native, Web | `npm install` in the project — `tsc`, `eslint` and `prettier` are run from its own `node_modules` |
-| Python | `pip install ruff mypy pytest` — `ruff` and `mypy` are required; without `pytest` the tests seat falls back to `unittest` |
-| every project | `npm install -g jscpd@5.1.2` — the duplicate-code seat |
+| React Native, web | `npm install` in the project (`tsc`, `eslint` and `prettier` run from its `node_modules`) |
+| Python | `pip install ruff mypy pytest` (without `pytest`, the tests fall back to `unittest`) |
+| Every project | `npm install -g jscpd@5.1.2` (the duplicate-code check) |
 
-`gh` (`brew install gh`) is optional: without it the branch-protection check prints that
-it was skipped rather than failing. The pinned versions, and what each program is used
-for, are in [enforcement/TOOLCHAIN.md](../enforcement/TOOLCHAIN.md).
+`gh` (`brew install gh`) is optional. Without it, the branch-protection check is skipped, not failed. Pinned versions are in [enforcement/TOOLCHAIN.md](../enforcement/TOOLCHAIN.md).
 
 ## 2. Get the newest release
 
-One command. It reads the newest version from the releases page, fetches that release,
-and leaves it at `~/.cache/coast-standards/<version>/`. No clone is needed.
+This command downloads the newest release to `~/.cache/coast-standards/<version>/` and sets `$v` to the version. No clone is needed.
 
 ```bash
 v=$(curl -fsSL https://api.github.com/repos/Up-Coast/coast-standards/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"].lstrip("v"))') && mkdir -p ~/.cache/coast-standards && curl -fsSL "https://github.com/Up-Coast/coast-standards/archive/refs/tags/v$v.tar.gz" | tar xz -C ~/.cache/coast-standards && rm -rf ~/.cache/coast-standards/"$v" && mv ~/.cache/coast-standards/coast-standards-"$v" ~/.cache/coast-standards/"$v" && echo "Coast Standards $v is at ~/.cache/coast-standards/$v"
 ```
 
-The last line prints the version. The commands below use `$v` from the same shell.
-(Contributors who want to change the rules or the checks clone the repository instead;
-see [CONTRIBUTING.md](../CONTRIBUTING.md).)
+Run the next steps in the same shell, so `$v` is still set. To change the rules or checks themselves, clone the repository instead; see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## 3. See what would change
+## 3. Preview the changes
 
-Nothing is written yet. This prints a list of every file the installer would add or
-replace in your project.
+This lists every file the installer would add or replace. It writes nothing.
 
 ```bash
 python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project --dry-run
 ```
 
-The installer works out your platform from your project files. If it cannot, add
-`--platform ios` (or `macos`, `android`, `react-native`, `web`, `python`).
+If the installer cannot tell your platform, add `--platform` with `ios`, `macos`, `android`, `react-native`, `web` or `python`.
 
 ## 4. Install
 
@@ -53,18 +44,25 @@ The installer works out your platform from your project files. If it cannot, add
 python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project
 ```
 
-This takes a few minutes on a first run because it builds your project once to measure
-where it stands today. It:
+1. Answer the on/off questions, or press Enter to keep everything on. They appear once, at a terminal. Add `--yes` to skip them.
+2. Wait a few minutes. A first install builds your project once to measure where it stands.
+3. Check the last line. It prints the version your project now carries.
 
-- adds the checks and the git hooks to your project
-- adds a linter configuration for your platform, if you did not have one
-- adds a copy of the rules for your platform at `docs/domain-rules.md`
-- records the current state of your code as a starting line (more on this below)
-- writes a short block into your `CLAUDE.md` so AI coding agents know the rules
-- records the version it installed in `.coast/standards-version`
-- scans every file for secrets and stops if it finds any
+The installer stops if it finds a secret in any tracked file.
 
-Its last line says which version your project now carries.
+What it adds:
+
+| Where | What |
+|---|---|
+| `.coast/checks/` | The checks |
+| `.githooks/` | The git hooks (`pre-commit`, `commit-msg`, `pre-push`) |
+| `.coast/hooks/`, `.claude/settings.json` | Guard-rails for AI coding agents |
+| `.coast/config.json` | Your settings (see [Options](options.md)) |
+| `.coast/ratchet-baseline.json`, `.coast/jscpd-baseline.json` | Baselines (see below) |
+| `.coast/standards-version` | The installed version |
+| `docs/domain-rules.md` | The rules for your platform, if you had no copy |
+| Linter config | For your platform, if you had none |
+| `CLAUDE.md` | A short block so AI agents know the rules |
 
 ## 5. Commit and push
 
@@ -74,40 +72,29 @@ git commit -m "Adopt Coast Standards"
 git push
 ```
 
-The first push runs every check. It should pass, because anything your project was
-already doing wrong has been recorded as a starting line rather than treated as new.
+The first push runs every check. It should pass, because existing problems were recorded as baselines.
 
-## What "starting line" means
+## What a baseline is
 
-An existing project usually has warnings, style findings, and a few duplicated blocks
-already. Rather than demand you fix all of them before the first push, the installer
-counts them and writes the counts down with a date 90 days out. From then on the counts
-may go down but never up. After the 90 days, the counts must be zero.
+Most existing projects already have warnings, style findings and some duplicated code. The installer counts them and records each count with a deadline 90 days out.
+
+- A count may go down, never up.
+- After the deadline, the count must be zero.
 
 ## Updating later
-
-Your project holds its own copy of the checks, like a dependency, and the copy you
-installed from can fetch any other release itself:
 
 ```bash
 python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project --release latest
 ```
 
-Name a version instead of `latest` to take that one (`--release 1.1.0`). The installer
-downloads the release into the cache and runs it. It replaces its own files, leaves
-anything you edited alone, and lowers any starting-line count that has fallen. Then
-commit and push.
+Use a version number instead of `latest` to take a specific release, for example `--release 1.2.0`. The installer replaces its own files, keeps files you edited, and lowers any baseline count that fell. Then commit and push.
 
 ## For AI coding agents
 
-If you would rather have an agent do the install, copy the folder
-`skills/adopt-coast-standards/` from any release into `~/.claude/skills/` (for every
-project) or into your project's `.claude/skills/`. The skill holds only where the
-releases are and the commands above, and tells the agent to dry-run and ask you the few
-real questions first. The rules themselves never live in the skill; they live in your
-project's copy. See [Working with AI coding agents](ai-agents.md).
+To have an agent do the install, copy `skills/adopt-coast-standards/` from any release into `~/.claude/skills/` (all projects) or your project's `.claude/skills/`. The skill tells the agent where the releases are and to dry-run and ask you first. See [Working with AI coding agents](ai-agents.md).
 
 ## Next
 
-- [How it works](how-it-works.md) for what runs and when
-- [Options](options.md) if the defaults do not fit your project
+- [Options](options.md): every setting, installer flag and file.
+- [How it works](how-it-works.md): what runs, and when.
+- [When a check stops you](when-a-check-stops-you.md): what to do after a refusal.

@@ -1,69 +1,80 @@
 <!-- coast-standards: begin (this block is written by enforcement/adopt.py; edit outside it) -->
-## Coast Standards — the standing rules, enforced by machines where a machine can hold them
+## Coast Standards — the standing rules, and the checks that enforce them
 
-{{PRODUCT}} follows the Coast Standards repo,
-`{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards), adopted for
-the **{{PLATFORM}}** platform from standards release `{{STANDARDS_COMMIT}}`.
-Read `rules/00-priority-rules.md` there first (DRY is the rule above all
-other rules), then `rules/01-working-style.md`, and the others as the work
-touches their areas. This project's own checkable rules document is
-`{{RULES_DOCUMENT}}`; reviews judge every change against exactly that file.
+{{PRODUCT}} follows the Coast Standards repo, `{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards). It was adopted for the **{{PLATFORM}}** platform from standards release `{{STANDARDS_COMMIT}}`.
 
-**Rules enforced by a check: {{ENFORCED}} of {{TOTAL}}** in that document{{SWITCHED_OFF}}
-(partly {{PARTLY}}, advisory {{ADVISORY}}, reviewer {{REVIEW}}, process {{PROCESS}},
-switched off {{OFF}}, still open {{OPEN}}). A rule is in one of these bins:
+1. Read `rules/00-priority-rules.md` in that repo first. DRY is the rule above all other rules.
+2. Then read `rules/01-working-style.md`.
+3. Read the other rules files when the work touches their area.
 
-- **machine** — a check refuses the change: the rules scanner
-  (`{{CHECKS_DIR}}/check_rules.py`), the platform's linter with the shipped
-  config, a tool the pre-push battery runs (jscpd, warnings-as-errors, the tests deadline,
-  gh-ruleset), or a hook (git and Claude Code).
-- **partly** — a machine check and a reviewer share the rule, or one of the
-  rule's checks is switched off in the config.
-- **advisory** — the scanner reports it; nothing fails.
-- **reviewer** — only a mind can judge it; every review returns a row per
-  rule with evidence.
-- **process** — held by the pipeline or by a person, named as such.
-- **switched off** — every check that held it is off in `{{CONFIG_FILE}}`;
-  no machine holds it until a person turns the check back on.
+This project's checkable rules are in `{{RULES_DOCUMENT}}`. Reviews judge every change against exactly that file.
 
-What will refuse you, and where it lives — all GOVERNING, none of it is
-yours to edit:
+**Rules enforced by a check: {{ENFORCED}} of {{TOTAL}}** in that document{{SWITCHED_OFF}} (partly {{PARTLY}}, advisory {{ADVISORY}}, reviewer {{REVIEW}}, process {{PROCESS}}, switched off {{OFF}}, still open {{OPEN}}).
 
-- `{{HOOKS_DIR}}/pre-commit` — the scanner on the staged diff (every added
-  line, the doc-comment check among them), in seconds.
-- `{{HOOKS_DIR}}/commit-msg` — a subject line under 100 characters; a commit
-  from an agent session names the model that did the work
-  (`Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>`).
-- `{{HOOKS_DIR}}/pre-push` — the battery, on what the push changed: build
-  with warnings as errors, tests, lint, format, the scanner on everything
-  added since the remote and on the whole tree, the whole-tree doc-comment
-  count (advisory), jscpd (no new duplicated code against
-  `{{STATE_DIR}}/jscpd-baseline.json`), and the protected-main ruleset. A push
-  of documents alone runs none of the code checks; a push of code runs the
-  linter and formatter on the changed files and the tests of the modules
-  that depend on what changed; a push that changes the checks themselves
-  runs everything.
-- `{{SESSION_HOOK}}` with `{{SETTINGS_FILE}}` — the Claude Code session
-  hooks: edits to governing files, chained `cd`, infrastructure commands,
-  `--no-verify`, force pushes and a red scan at commit are refused.
-- `{{STATE_DIR}}/ratchet-baseline.json` — the legacy counts the ratchet checks
-  may only lower (the scanner's ratchets, and on a repository that came
-  with warnings, linter or formatter findings, `build-warnings`,
-  `lint-findings`, `format-findings` and, with no test target yet,
-  `tests-missing`); each carries a deadline after which the check blocks.
-  A count that FELL is recorded by running `adopt.py <project>
-  --lower-baselines` from the standards repo and committing the file with
-  the change — that command writes only the two baselines and only ever
-  lowers, so an agent runs it itself; it never hands the edit to a person.
-  Raising a count or moving a deadline stays a person's.
-- `{{CONFIG_FILE}}` — the switches and names: which rules, seats, linters and
-  session hooks are off, and who to ask. A person's file; an agent cannot
-  write it, and the number above counts what it switches off.
-- `{{STATE_DIR}}/platform`, `{{STATE_DIR}}/paths.json` (when present), `{{CHECKS_DIR}}/`.
+Each rule is in one of these groups:
 
-Never `--no-verify`. Never edit the files above. When a check is wrong, say so
-in plain words and stop — and say which seat and why, because there is a door
-and it is {{OWNER}}'s to open, not yours:
+| Group | What holds the rule |
+|---|---|
+| **machine** | A check refuses the change: the rules scanner (`{{CHECKS_DIR}}/check_rules.py`), the platform's linter with the shipped config, a tool the pre-push hook runs (jscpd, warnings-as-errors, the test time limit, gh-ruleset), or a git or Claude Code hook. |
+| **partly** | A check and a reviewer share the rule, or one of the rule's checks is switched off in the config. |
+| **advisory** | The scanner reports it, but nothing fails. |
+| **reviewer** | Only a reviewer can judge it. Every review returns one row per rule, with evidence. |
+| **process** | The pipeline or a named person holds it. |
+| **switched off** | Every check that held it is off in `{{CONFIG_FILE}}`. Nothing enforces it until a person turns a check back on. |
+
+### What will refuse you
+
+The files below define the checks. They are GOVERNING: you may not edit them.
+
+| File | What it does |
+|---|---|
+| `{{HOOKS_DIR}}/pre-commit` | Runs the scanner on the staged changes (every added line, including the doc-comment check). Takes seconds. |
+| `{{HOOKS_DIR}}/commit-msg` | Requires a subject line under 100 characters. A commit from an agent session must name the model that did the work: `Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>`. |
+| `{{HOOKS_DIR}}/pre-push` | Runs the checks on what the push changed (see below). |
+| `{{SESSION_HOOK}}` with `{{SETTINGS_FILE}}` | The Claude Code session hooks. They refuse edits to governing files, chained `cd` commands, infrastructure commands, `--no-verify`, force pushes, and a commit while the scan is failing. |
+| `{{STATE_DIR}}/ratchet-baseline.json` | The baselines (see below). |
+| `{{CONFIG_FILE}}` | The switches and names: which rules, pre-push checks, linters and session hooks are off, and who to ask. It belongs to a person; an agent cannot write it. The number above counts what it switches off. |
+| `{{STATE_DIR}}/platform`, `{{STATE_DIR}}/paths.json` (when present), `{{CHECKS_DIR}}/` | The platform, the project's paths, and the checks themselves. |
+
+The pre-push hook runs:
+
+- the build, with warnings treated as errors
+- the tests
+- the linter and the formatter
+- the scanner, on everything added since the remote and on the whole tree
+- the whole-tree doc-comment count (advisory only)
+- jscpd: no new duplicated code compared with `{{STATE_DIR}}/jscpd-baseline.json`
+- the protected-main ruleset check
+
+What runs depends on what the push changed:
+
+- **Documents only:** none of the code checks.
+- **Code:** the linter and formatter on the changed files, and the tests of the modules that depend on the change.
+- **The checks themselves:** everything.
+
+### Baselines
+
+A baseline is a count of existing problems that may only go down. `{{STATE_DIR}}/ratchet-baseline.json` holds:
+
+- the scanner's baselines
+- for a repository that already had problems when it adopted the standards: `build-warnings`, `lint-findings`, `format-findings`, and `tests-missing` if there is no test target yet
+
+Each baseline has a deadline. After its deadline, the check blocks.
+
+**When a count FELL,** the push is refused until the baseline is lowered. Record it yourself:
+
+1. Run `adopt.py <project> --lower-baselines` from the standards repo. It writes only the two baselines (`ratchet-baseline.json` and `jscpd-baseline.json`) and only ever lowers a count.
+2. Commit the baseline file together with your change.
+
+Do not hand this to a person. Raising a count or moving a deadline is a person's decision.
+
+### When a check is wrong
+
+- Never use `--no-verify`.
+- Never edit the files above.
+- Say in plain words that the check is wrong, then stop. Name the check (use its name from the list below) and say why.
+
+There is a way to excuse a check (a door), and it is {{OWNER}}'s to open, not yours. To excuse a check, {{OWNER}} adds an entry to this file:
 
     {{EXCEPTIONS_FILE}}
     {"exceptions": [
@@ -71,9 +82,9 @@ and it is {{OWNER}}'s to open, not yours:
        "who": "{{OWNER}}", "when": "{{TODAY}}", "until": "{{UNTIL}}"}
     ]}
 
-That skips one named seat (`build`, `tests`, `lint`, `format`, `rules-scan`,
-`doc-comments`, `jscpd`, `gh-ruleset`) until the date, prints who excused it and
-why on every push, and starts refusing again the day it expires. An entry with
-no `until` is ignored. The file is GOVERNING, so an agent cannot write it — which
-is the point: a wrong check is {{OWNER}}'s call, never a bypass.
+- An entry skips one named check until its `until` date. The seat names are `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd` and `gh-ruleset`.
+- Every push prints who excused the check and why.
+- The check starts refusing again on the day the entry expires.
+- An entry with no `until` is ignored.
+- The file is GOVERNING, so an agent cannot write it. A wrong check is {{OWNER}}'s decision, never a reason to bypass it.
 <!-- coast-standards: end -->

@@ -1,76 +1,111 @@
 # When a check stops you
 
-*Last updated: 2026-09-08*
+*Last updated: 2026-09-16*
 
-Every refusal prints a line like this:
+## Reading a refusal
+
+Every refusal prints one line:
 
 ```
 FAIL rules Sources/Home/HomeView.swift:42:ui-string-literal: bare user-facing text in a view — add it to the strings catalog [L-1]
 ```
 
-Read it left to right: which check, which file and line, the short name of the rule,
-what was wrong and where it belongs, and the rule's id in your `docs/domain-rules.md`.
+From left to right:
 
-## Usually: fix the line
+| Part | Example |
+|---|---|
+| The check | `rules` |
+| File and line | `Sources/Home/HomeView.swift:42` |
+| Short name of the problem | `ui-string-literal` |
+| What is wrong and how to fix it | `bare user-facing text in a view — add it to the strings catalog` |
+| Rule id in your `docs/domain-rules.md` | `[L-1]` |
 
-Most refusals are exactly what they say. Move the text to the strings file, take the
-colour from the theme, remove the secret. Commit again.
+Below, `.coast/` is your project's checks folder and `<standards>` is your copy of the standards.
 
-## "It says a count went up"
+## A line of code was refused
 
-You added a new instance of something your project already had (a spacing number in a
-view, a comment on a code line, a log line with personal data). The count is allowed to
-fall or stay flat, never rise. Remove the new one, or remove an old one somewhere else.
+**Means:** the check found exactly what the message says.
 
-## "It says a count went down and refuses anyway"
+1. Fix the line as the message says (move the text to the strings file, use the theme colour, remove the secret).
+2. Commit or push again.
 
-When a scanner count falls, the recorded starting line has
-to come down with it so it cannot creep back up. Run the installer again; it lowers the
-count. Commit the updated `.coast/ratchet-baseline.json` with your change.
+## "A count went up"
 
-Build warnings are different: a count below the starting line just passes with a note.
+**Means:** you added a new case of an existing problem that has a baseline (a count that may only go down). Examples: a spacing number in a view, a log line with personal data.
+
+1. Remove the new case, or fix an old one elsewhere so the total does not rise.
+2. Push again.
+
+## "A count went down" and the push is still refused
+
+**Means:** you fixed some existing problems. The recorded baseline must come down too, so the count cannot creep back up.
+
+1. Lower the baseline:
+
+   ```bash
+   python3 <standards>/enforcement/adopt.py <project> --lower-baselines
+   ```
+
+   This only rewrites `.coast/ratchet-baseline.json` and `.coast/jscpd-baseline.json`. It only lowers counts and never moves a deadline. An AI agent may run it itself.
+2. Commit the updated baseline file together with your change.
+3. Push again.
+
+Build warnings, linter findings, formatter findings and duplicate code do not refuse when they fall. The hook prints a note suggesting the same command.
+
+## "The test run passed … s with no verdict" (`tests-deadline`)
+
+**Means:** the tests did not finish within `tests_deadline_seconds` (default 900 seconds). The pre-push hook stopped the run and refused the push. This is usually a hanging test, not a slow suite.
+
+1. Find the test that hangs. Run the test suites one at a time under the same time limit.
+2. Fix it so it finishes or fails.
+3. Push again.
+
+If the suite genuinely takes longer, a person can raise `tests_deadline_seconds` in `.coast/config.json`. An agent cannot. See [Options](options.md).
 
 ## "The build failed on a warning"
 
-The build runs with warnings treated as errors. Fix the warning. If your project came
-with warnings, they were recorded at install and only a new one refuses.
+**Means:** the build treats warnings as errors.
 
-## "The push says another push is running"
+1. Fix the warning.
+2. Push again.
 
-Two pushes from the same checkout are run one at a time so their builds do not cross.
-Wait for the other to finish. If a push died and left its lock behind, the message names
-the lock folder; it is broken automatically after an hour, or you can remove it.
+If the project had warnings at install, they are in the baseline. Only new ones refuse.
+
+## "Another push is running"
+
+**Means:** pushes from the same checkout run one at a time so their builds do not collide.
+
+1. Wait. The hook waits for the other push, then continues.
+2. If it gives up after 45 minutes, check that the other push is still running, then push again.
+
+A lock left by a push that died is removed automatically once it is an hour old. The message names the lock folder if you want to remove it yourself.
 
 ## "No iOS simulator matched"
 
-The tests look for an iPhone simulator on the newest installed iOS. If Xcode cannot see
-one, they run on the Mac instead. To use the simulator, install a runtime that matches
-your app's deployment target.
+**Means:** Xcode has no iPhone simulator on the newest installed iOS. The tests run on the Mac instead.
+
+1. To test on a simulator, install an iOS runtime that matches your app's deployment target.
 
 ## "jscpd is not installed"
 
-```bash
-npm install -g jscpd@5.1.2
-```
+1. Install it:
 
-Then run the installer again so it can record your starting line for duplicate code.
+   ```bash
+   npm install -g jscpd@5.1.2
+   ```
 
-## "This check is wrong"
+2. Run the installer again so it records your duplicate-code baseline.
 
-The sanctioned path, in order:
+## "A file I need to edit is refused"
 
-1. **Set it aside with a date.** Add an entry to `.coast/rules-exceptions.json`, either for
-   one rule on one file, or for one whole check until a date. See [Options](options.md).
-   Both are signed and dated so the decision is visible.
-2. **Report it** so it gets fixed for everyone: open an issue on the standards repository
-   with the FAIL line and the code it refused.
+**Means:** the file defines the checks, and AI agents are not allowed to edit it. These files are: `.coast/` (checks, session hook, config, baselines), `.githooks/`, the rules file, the linter config, and `.claude/settings.json`.
 
-What not to do: `git push --no-verify`. It turns every check off at once and leaves no
-record. If you are using an AI agent, it is refused outright.
+1. If you are a person, edit it yourself.
+2. If you are an agent, say what change is needed and why, then stop.
 
-## "A file I need to edit is refused as governing"
+## The check is wrong
 
-The files that define the checks (`.coast/` — the checks, the session hook, the config
-and the starting lines — `.githooks/`, the rules file, the linter configuration,
-`.claude/settings.json`) are not an agent's to edit. A person can edit them. If an agent
-needs a change there, it should say so and stop.
+1. **Set it aside with an end date.** A person adds an entry to `.coast/rules-exceptions.json`. It can excuse one rule on one file, or one whole pre-push check until a date. Each entry records who and why. See [Options](options.md).
+2. **Report it.** Open an issue on the standards repository with the FAIL line and the refused code.
+
+Do not use `git push --no-verify`. It turns off every check at once and leaves no record. AI agents are blocked from using it.
