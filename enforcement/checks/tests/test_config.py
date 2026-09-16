@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 
@@ -117,6 +118,23 @@ class ConfigTests(unittest.TestCase):
         done = subprocess.run([sys.executable, ".coast/checks/check_rules.py", *args, "--platform", "ios"],
                               cwd=self.project.path, capture_output=True, text=True, env=clean_env())
         return done.returncode, done.stdout + done.stderr
+
+    def test_the_tests_deadline_is_a_whole_number_of_seconds_and_reaches_the_hook(self):
+        # The wall-clock limit the tests seat holds a run to (rule 06, long runs): shipped at 900,
+        # rendered for the hook, a project's own value taken, a nonsense one refused with a sentence.
+        self.assertEqual(cfg.defaults()["tests_deadline_seconds"], 900)
+        self.assertIn("config_tests_deadline_seconds=900\n", cfg.to_sh(cfg.defaults()))
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "config.json")
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump({"tests_deadline_seconds": 30}, handle)
+            self.assertIn("config_tests_deadline_seconds=30\n", cfg.to_sh(cfg.load(path=path)))
+            for wrong in (0, -5, 2.5, "900", True):
+                with open(path, "w", encoding="utf-8") as handle:
+                    json.dump({"tests_deadline_seconds": wrong}, handle)
+                with self.assertRaises(cfg.ConfigError) as caught:
+                    cfg.load(path=path)
+                self.assertIn("whole number of seconds", str(caught.exception))
 
     def test_yes_writes_the_default_config_byte_for_byte(self):
         written = self.project.read(".coast/config.json")

@@ -196,9 +196,17 @@ deliberately dead credential may be a spend guard; don't chase it as a bug.
   [check: process]
 - Build the test target first, then run under a **hard timeout** sized to a healthy run. A
   fired timeout means a wedge: kill it, re-run with the known-hanging suite skipped, and
-  **say in the report that you skipped it.**
+  **say in the report that you skipped it.** The push battery holds the same line by
+  machine: the tests seat runs under the config's wall-clock deadline
+  (`tests_deadline_seconds`, default 900), and a run still silent at the deadline is killed
+  with its whole process tree and refused in words — a push never waits on a wedge.
+  [check: tool:tests-deadline]
 - A suite that can wedge is a defect with a root cause. Find it; a permanent skip is not a
   fix.
+- A guard that reads a rendered bitmap reads a **fixed region or a fixed sample** of it —
+  a row, a band, a grid of points whose place the layout decides. A pattern slid pixel by
+  pixel across a whole render is pixels × pattern per screen, hours in a debug build across
+  a harness; one such search held a run silent for five hours. [check: review]
 
 ## Proving a background run is alive
 

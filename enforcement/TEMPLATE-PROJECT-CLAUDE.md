@@ -15,7 +15,7 @@ switched off {{OFF}}, still open {{OPEN}}). A rule is in one of these bins:
 
 - **machine** — a check refuses the change: the rules scanner
   (`{{CHECKS_DIR}}/check_rules.py`), the platform's linter with the shipped
-  config, a tool the pre-push battery runs (jscpd, warnings-as-errors,
+  config, a tool the pre-push battery runs (jscpd, warnings-as-errors, the tests deadline,
   gh-ruleset), or a hook (git and Claude Code).
 - **partly** — a machine check and a reviewer share the rule, or one of the
   rule's checks is switched off in the config.

@@ -393,6 +393,39 @@ with_listing() {
   listing=$1; shift
   tr '\n' '\0' < "$listing" | xargs -0 "$@"
 }
+# <pid>: the process and everything under it, so a killed test runner takes its helpers with it.
+kill_tree() {
+  for kid in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$kid"; done
+  kill "$1" 2>/dev/null
+}
+# <command…>: a test run under the config's wall-clock deadline (tests_deadline_seconds,
+# default 900; the manifest's tests-deadline tool, on the tests seat). A suite that can wedge is a defect (rules/06, long runs): a run still
+# silent at the deadline is killed — its whole process tree — and refused in words, never
+# waited on. The verdict of a run that finishes is its own exit status, carried through a
+# marker file (a background job's exit is not askable from sh without waiting on it).
+timed_tests() {
+  limit=${config_tests_deadline_seconds:-900}
+  marker=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}deadline.XXXXXX") || return 1
+  rm -f "$marker"
+  ( "$@"; status=$?; echo "$status" > "$marker.tmp"; mv "$marker.tmp" "$marker" ) &
+  child=$!
+  waited=0
+  while [ ! -f "$marker" ]; do
+    if [ "$waited" -ge "$limit" ]; then
+      kill_tree "$child"
+      wait "$child" 2>/dev/null
+      rm -f "$marker.tmp"
+      echo "FAIL pre-push tests:0:tests-deadline: the test run passed ${limit} s with no verdict — a wedge, not a slow run — and was killed. Find the test that hangs (run the suites one at a time under the same limit; rules/06, long runs). A person raises tests_deadline_seconds in $state/config.json only for a suite that is honestly that long." >&2
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  wait "$child" 2>/dev/null
+  status=$(cat "$marker")
+  rm -f "$marker"
+  return "${status:-1}"
+}
 count_lines() { wc -l < "$1" | tr -d ' '; }
 
 # <seat> <extension regex> <tool…>: a tool with no ratchet over the changed files of that
@@ -502,7 +535,7 @@ tests_seat() {
       return $?
     fi
   fi
-  "$@"
+  timed_tests "$@"
 }
 
 xcode_scheme() {  # the state dir's xcode-scheme file, else the first scheme xcodebuild lists
@@ -633,15 +666,15 @@ case "$platform" in
       # check, test and lint tasks); anything else builds the whole tree.
       if [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
         run "build + tests + lint (warnings-as-errors, affected modules: $scope_targets)" \
-          ./gradlew --quiet $(gradle_tasks build $scope_targets)
+          timed_tests ./gradlew --quiet $(gradle_tasks build $scope_targets)
       else
-        run "build + tests + lint (warnings-as-errors)" ./gradlew --quiet build test lint
+        run "build + tests + lint (warnings-as-errors)" timed_tests ./gradlew --quiet build test lint
       fi
     elif wants tests && scoped tests; then
       if [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
-        run "tests (affected modules: $scope_test_targets)" ./gradlew --quiet $(gradle_tasks test $scope_test_targets)
+        run "tests (affected modules: $scope_test_targets)" timed_tests ./gradlew --quiet $(gradle_tasks test $scope_test_targets)
       else
-        run "tests" ./gradlew --quiet test
+        run "tests" timed_tests ./gradlew --quiet test
       fi
     fi
     if wants lint && linter_on detekt && scoped lint; then
@@ -679,14 +712,14 @@ case "$platform" in
       runner=${runner##*/}
       if [ "$scope_kind" = files ] && [ "$runner" = jest ] && [ -s "$scope_files_listing" ]; then
         run "tests (jest --findRelatedTests, $scope_files changed file(s))" \
-          with_listing "$scope_files_listing" npm test --silent -- --passWithNoTests --findRelatedTests
+          timed_tests with_listing "$scope_files_listing" npm test --silent -- --passWithNoTests --findRelatedTests
       elif [ "$scope_kind" = files ] && [ "$runner" = vitest ] && [ -s "$scope_files_listing" ]; then
         run "tests (vitest related, $scope_files changed file(s))" \
-          with_listing "$scope_files_listing" npx --no-install vitest related --run --passWithNoTests
+          timed_tests with_listing "$scope_files_listing" npx --no-install vitest related --run --passWithNoTests
       elif [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
-        run "tests (npm test, affected workspaces: $scope_test_targets)" npm test --silent --if-present $(workspace_flags $scope_test_targets)
+        run "tests (npm test, affected workspaces: $scope_test_targets)" timed_tests npm test --silent --if-present $(workspace_flags $scope_test_targets)
       else
-        run "tests (npm test)" npm test --silent
+        run "tests (npm test)" timed_tests npm test --silent
       fi
     fi
     if wants lint && linter_on eslint && scoped lint; then
@@ -714,15 +747,15 @@ case "$platform" in
           # The test files whose imports reach the changed files (scope.py's Python graph).
           if python3 -c 'import pytest' 2>/dev/null; then
             run "tests (pytest, $scope_tests test file(s) reached by the change)" \
-              with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m pytest -q
+              timed_tests with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m pytest -q
           else
             run "tests (unittest, $scope_tests test file(s) reached by the change)" \
-              with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m unittest -q
+              timed_tests with_listing "$scope_tests_listing" env PYTHONWARNINGS=error python3 -m unittest -q
           fi
         elif python3 -c 'import pytest' 2>/dev/null; then
-          run "tests (pytest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m pytest -q
+          run "tests (pytest, warnings-as-errors)" timed_tests env PYTHONWARNINGS=error python3 -m pytest -q
         else
-          run "tests (unittest, warnings-as-errors)" env PYTHONWARNINGS=error python3 -m unittest discover -q
+          run "tests (unittest, warnings-as-errors)" timed_tests env PYTHONWARNINGS=error python3 -m unittest discover -q
         fi
       else
         printf 'gate: tests — no tests directory found; nothing ran (add tests/ — rules/06)\n'

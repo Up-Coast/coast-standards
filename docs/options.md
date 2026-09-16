@@ -186,6 +186,7 @@ agent action reads it; no re-install is needed.
 | `session_hooks.off` | agent guard-rails that exit without checking: `governing-edit`, `chained-cd`, `infra-command`, `no-verify`, `force-push`, `scan-at-commit`, `scan-on-edit`, `unpushed-at-stop`, `rules-at-start`, `attribution-trailer` |
 | `linters.off` | linters the seats skip and the installer does not seed: `swiftlint`, `swiftformat`, `detekt`, `ktlint`, `androidlint`, `eslint`, `tsc`, `prettier`, `ruff`, `mypy` |
 | `ratchet_days` | how far out a new starting line's deadline is written |
+| `tests_deadline_seconds` | the wall-clock limit on the push battery's test run (default 900). A run still silent at the limit is killed with its helpers and the push refused in words — a wedge, not a slow run. Raise it only for a suite that is honestly that long |
 | `layout` | where the layer's files live, for a project that must move them (`checks_dir`, `hooks_dir`, `session_hook`, `settings_file`, `rules_document`, `context_file`) |
 
 A switch is counted. A rule whose every check is off shows as **switched off** in the

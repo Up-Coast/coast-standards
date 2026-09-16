@@ -753,6 +753,7 @@ the scanner, the verifier, the session hook, the installer and the git hooks (`c
  "session_hooks": {"off": []},
  "linters": {"off": []},
  "ratchet_days": 90,
+ "tests_deadline_seconds": 900,
  "layout": {}}
 ```
 
@@ -760,8 +761,11 @@ Merge order: the shipped defaults, then the project's file (an object merges key
 a list replaces the default list), then the flags of the run (`--owner`, `--product`,
 `--org`, `--checks-dir`). Validation refuses, with a sentence: a severity above the
 table's (`rules.severity` may only lower — block → ratchet → advisory), a `layout.state_dir`
-(the anchor the hooks find the file by), a non-list `off`, a `ratchet_days` that is not a
-whole number.
+(the anchor the hooks find the file by), a non-list `off`, a `ratchet_days` or a
+`tests_deadline_seconds` that is not a whole number. `config.py --sh` also renders
+`config_tests_deadline_seconds`, the limit `pre-push`'s `timed_tests` holds every platform's
+test run to: a run still silent at the limit is killed with its process tree and refused
+(`tool:tests-deadline`, on the `tests` seat).
 
 What `off` does, and where it shows:
 

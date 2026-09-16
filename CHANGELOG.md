@@ -7,6 +7,16 @@ What a project that upgrades will notice, one entry per release. The number live
 
 ## Unreleased
 
+- **The tests seat runs under a wall-clock deadline** (`tests_deadline_seconds` in the
+  config, default 900; `tool:tests-deadline` on rule 06's long-runs line). A test run still
+  silent at the deadline is killed with its whole process tree and the push is refused in
+  words — a wedge, not a slow run — on every platform's runner. Born of a real run on
+  2026-09-16: a new guard slid a word stamp pixel by pixel over a whole-window bitmap for
+  every screen on a harness and held a test process at full CPU, silent, for five hours;
+  nothing in the layer would have ended it. Rule 06 also names the shape that caused it:
+  a render guard reads a fixed region or sample, never a search across the whole render.
+  A project picks the deadline up by re-running adopt.py; the config key is optional.
+
 - **`adopt.py --lower-baselines`**: a push refused because a ratchet count FELL no longer
   sends anyone to hand-edit the governing baseline. The new switch writes only the ratchet
   and jscpd baselines from the tree as it stands (measured by the project's own installed

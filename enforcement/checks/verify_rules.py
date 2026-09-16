@@ -543,7 +543,7 @@ class Battery:
 # ---------------------------------------------------------------- verification
 
 
-TOOL_SEATS = {"warnings-as-errors": "build"}   # a tool whose pre-push seat has another name
+TOOL_SEATS = {"warnings-as-errors": "build", "tests-deadline": "tests"}   # a tool whose pre-push seat has another name
 
 
 def ref_is_off(ref, config):

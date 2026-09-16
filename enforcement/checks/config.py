@@ -13,6 +13,7 @@ The shape is ``config.default.json`` beside this file::
      "session_hooks": {"off": [ids]},
      "linters": {"off": [names]},
      "ratchet_days": 90,
+     "tests_deadline_seconds": 900,
      "layout": {...overrides of layout.json's keys...}}
 
 ``load(root)`` merges the project's file over the defaults (a key the project
@@ -96,6 +97,9 @@ def validate(table, source="config.json"):
     days = table.get("ratchet_days", 90)
     if not isinstance(days, int) or isinstance(days, bool) or days < 1:
         raise ConfigError(f"{source}: 'ratchet_days' must be a whole number of days (the default is 90)")
+    deadline = table.get("tests_deadline_seconds", 900)
+    if not isinstance(deadline, int) or isinstance(deadline, bool) or deadline < 1:
+        raise ConfigError(f"{source}: 'tests_deadline_seconds' must be a whole number of seconds (the default is 900)")
     layout = table.get("layout")
     if layout is None:
         table["layout"] = {}
@@ -176,13 +180,15 @@ def apply_to_signatures(table, signatures):
 
 def to_sh(table):
     """The switches a ``sh`` hook honours, one line each: ``config_seats_off``, ``config_linters_off``,
-    ``config_session_hooks_off`` as space-separated word lists. A hook evaluates ``config.py --sh`` so
-    an edit to the file counts on the next run, with no re-install."""
+    ``config_session_hooks_off`` as space-separated word lists, and ``config_tests_deadline_seconds``,
+    the tests seat's wall-clock limit. A hook evaluates ``config.py --sh`` so an edit to the file
+    counts on the next run, with no re-install."""
     import shlex
     lines = []
     for group, variable in (("seats", "seats_off"), ("linters", "linters_off"), ("session_hooks", "session_hooks_off")):
         names = (table.get(group) or {}).get("off") or []
         lines.append(f"config_{variable}={shlex.quote(' '.join(names))}")
+    lines.append(f"config_tests_deadline_seconds={int(table.get('tests_deadline_seconds', 900))}")
     return "\n".join(lines) + "\n"
 
 

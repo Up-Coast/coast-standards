@@ -303,6 +303,36 @@ class AdoptTests(unittest.TestCase):
         with open(record, encoding="utf-8") as handle:
             self.assertNotIn(" test ", " " + handle.read().replace("-list -json", "") + " ", "no test action ran")
 
+    def test_a_test_run_past_the_deadline_is_killed_and_the_push_refused(self):
+        # Rule 06, long runs: the tests seat never waits on a wedge. A stub `swift` that hangs
+        # is killed with its process tree at the config's deadline and the push refused in
+        # words; the same stub answering at once passes as before.
+        self.project.adopt()
+        config = json.loads(self.project.read(".coast/config.json"))
+        config["tests_deadline_seconds"] = 2
+        self.project.write(".coast/config.json", json.dumps(config))
+        stub_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, stub_dir, True)
+        stub = os.path.join(stub_dir, "swift")
+        with open(stub, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\nif [ \"$1\" = package ]; then echo '" + json.dumps(STUB_GRAPH) + "'; exit 0; fi\n"
+                         "if [ \"${STUB_HANG:-0}\" = 1 ]; then sleep 977; fi\nexit 0\n")
+        os.chmod(stub, 0o755)
+        env = clean_env(PATH=stub_dir + os.pathsep + os.environ.get("PATH", ""), STUB_HANG="1")
+        started = time.monotonic()
+        code, out = self.project.hook("pre-push", "--seat", "tests", env=env)
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("FAIL pre-push tests:0:tests-deadline: the test run passed 2 s with no verdict", out)
+        self.assertIn("tests_deadline_seconds in .coast/config.json", out)
+        self.assertLess(time.monotonic() - started, 30, "the refusal came at the deadline, not at the hang's end")
+        leftover = subprocess.run(["pgrep", "-f", "sleep 977"], capture_output=True, text=True)
+        self.assertEqual(leftover.returncode, 1, "the hung run's whole tree is gone: " + leftover.stdout)
+        env["STUB_HANG"] = "0"
+        code, out = self.project.hook("pre-push", "--seat", "tests", env=env)
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: tests", out)
+        self.assertNotIn("deadline", out)
+
     def test_adoption_binds_an_existing_theme_file_so_it_is_not_a_second_theme(self):
         self.project.write("Sources/App/DesignSystem/Theme.swift", "import SwiftUI\nenum Theme { static let accent = Color.accentColor }\n")
         self.project.commit("a theme")

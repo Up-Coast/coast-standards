@@ -21,5 +21,6 @@
     "off": []
   },
   "ratchet_days": 90,
+  "tests_deadline_seconds": 900,
   "layout": {}
 }
