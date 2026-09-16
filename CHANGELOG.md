@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.7.0 — 2026-09-16
+
+A rule for versions and build numbers.
+
+### Added
+
+- **Rule: versions and build numbers.** A version names a release and changes only when a release is cut: patch for fixes, minor for new features, major for breaking changes. Every build gets a new, never-reused build number that records its commit. A repository installed straight from git, like this one, raises its version on every merge instead. The rule is in `rules/07-documentation-git-process.md`.
+
+### Upgrading
+
+Nothing to do. The numbered rules are read in place from the standards repo, so reviews apply the new rule from this version on.
+
 ## 1.6.3 — 2026-09-16
 
 Every merge to main is a new version, and publishing a release is a separate step.

@@ -11,6 +11,7 @@
   - **When work has to be parked mid-stream, commit it to its own branch first**, then switch branches. To resume, check that branch out again. Without a reliable way to manage the disk space worktrees use, shipped software works on one branch at a time: a paused ticket gets a commit, and the local checkout moves to a new branch.
   - Keep `main` releasable either way. [check: process]
 - **Protected main where the platform allows it:** pull request required, review required, status checks required, no force-push, no deletion. [check: tool:gh-ruleset]
+- **Versions and build numbers.** The version lives in one file and names a release. Raise it when a release is cut, never on an ordinary merge: patch for fixes, minor for new features, major for a change that breaks existing users. Each version has a dated section in the change log. Every build gets a new build number from one source, always increasing and never reused, and records the commit it was built from. A repository that other projects install straight from git (a library, a rules or tooling repository) is the exception: every merge to main is a release there, so every merge raises the version and is tagged. [check: review]
 
 ## Nothing is pushed unverified (2026-09-01)
 
