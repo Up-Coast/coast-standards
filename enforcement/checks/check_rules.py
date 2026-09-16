@@ -533,7 +533,8 @@ def files_match(signature, path, extensions):
 def builtin_hits(signature, path, text):
     """[(line, text)] of a built-in added-scope check over one file's whole text — the one dispatch
     the scanner and the plant test both use (``ui-string-literal``: literals.py; the Python
-    ``blocking-call``: async_blocking.py)."""
+    ``blocking-call``: async_blocking.py). Tree-scope built-ins (``import-matrix``,
+    ``unreached-view``) are dispatched in ``Scan.scan_tree`` instead."""
     if signature["id"] == "ui-string-literal":
         import literals  # beside this file
         return literals.hits(path, text)
@@ -803,6 +804,12 @@ class Scan:
                     self.fail("import-matrix", path, 0, "import-matrix", words, signature["rule"])
                 if not judged:
                     self.notes.append(f"PASS import-matrix — no modules found under the {layout} layout; nothing was judged")
+            elif signature["id"] == "unreached-view":
+                import unreached_views  # beside this file
+                for path, number, words in unreached_views.failures_for(self.platform, self.paths, tree_files(include_untracked)):
+                    if self.excepted(signature, path, head, []):
+                        continue
+                    self.fail("rules", path, number, "unreached-view", words, signature["rule"])
             else:
                 self.fail("rules", SIGNATURES_FILE, 0, signature["id"], f"unknown builtin check '{signature['id']}'", signature.get("rule", "-"))
 

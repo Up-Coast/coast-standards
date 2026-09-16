@@ -162,6 +162,12 @@ So a task is DONE only when both hold:
    unbreakable from that commit on.
 2. A reviewer who is not the builder confirms it from the code, never from
    the builder's report.
+3. For anything a person can see or press: the builder has USED it in the
+   built product, as a person would, and the record holds what was seen.
+   A screenshot of the pane just built is not use; the window around it,
+   its title and settings, navigation in and out, and a relaunch are part
+   of the flow (added 2026-09-15, after seven defects on one screen shipped
+   behind 4,000 green tests that never left the pane).
 
 Anything marked built without both is not built. "Verified" without a test
 name or an on-screen walk is not a word to use. [check: process]

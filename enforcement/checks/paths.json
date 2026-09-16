@@ -37,6 +37,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -114,6 +115,18 @@
           "**/Config/**",
           "**/Configuration.swift",
           "**/AppEnvironment.swift"
+        ],
+        "gallery": [
+          "**/*Entries.swift",
+          "**/*Catalog.swift",
+          "**/*Catalogue.swift",
+          "**/*Gallery.swift",
+          "**/Previews/**",
+          "**/*Previews.swift",
+          "**/*Preview.swift",
+          "**/Catalog/**",
+          "**/Catalogue/**",
+          "**/Gallery/**"
         ]
       }
     },
@@ -134,6 +147,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -211,6 +225,18 @@
           "**/Config/**",
           "**/Configuration.swift",
           "**/AppEnvironment.swift"
+        ],
+        "gallery": [
+          "**/*Entries.swift",
+          "**/*Catalog.swift",
+          "**/*Catalogue.swift",
+          "**/*Gallery.swift",
+          "**/Previews/**",
+          "**/*Previews.swift",
+          "**/*Preview.swift",
+          "**/Catalog/**",
+          "**/Catalogue/**",
+          "**/Gallery/**"
         ]
       }
     },
@@ -233,6 +259,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -309,6 +336,15 @@
         "config_home": [
           "**/config/**",
           "**/AppConfig.kt"
+        ],
+        "gallery": [
+          "**/*Preview.kt",
+          "**/*Previews.kt",
+          "**/preview/**",
+          "**/previews/**",
+          "**/catalog/**",
+          "**/gallery/**",
+          "**/showcase/**"
         ]
       }
     },
@@ -332,6 +368,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -415,6 +452,13 @@
         ],
         "config_home": [
           "src/config/**"
+        ],
+        "gallery": [
+          "**/*.stories.*",
+          "**/stories/**",
+          "**/.storybook/**",
+          "**/storybook/**",
+          "**/showcase/**"
         ]
       }
     },
@@ -441,6 +485,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -524,6 +569,13 @@
         ],
         "config_home": [
           "src/config/**"
+        ],
+        "gallery": [
+          "**/*.stories.*",
+          "**/stories/**",
+          "**/.storybook/**",
+          "**/storybook/**",
+          "**/showcase/**"
         ]
       }
     },
@@ -544,6 +596,7 @@
         "docs",
         "design_bundle",
         "tests",
+        "gallery",
         "ui",
         "config_home"
       ],
@@ -615,8 +668,10 @@
           "**/config.py",
           "**/settings.py",
           "**/config/**"
-        ]
+        ],
+        "gallery": []
       }
     }
-  }
+  },
+  "_gallery_comment": "gallery (E4.5): a component gallery, catalogue, preview or storybook \u2014 a construction site that is not a route in the product; the unreached-view check reads it, and the string-literal check does not judge it (its labels name states, not screens)."
 }

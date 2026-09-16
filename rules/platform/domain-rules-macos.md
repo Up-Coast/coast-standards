@@ -375,6 +375,21 @@ How the design's values and components reach the code.
   absent. At least the surfaces that render project data carry one case
   each. [Project rule; check: review]
 
+- **TEST-6** Every failure path gets a test. A feature that calls a model, a
+  network service, or a file ships with one test per outcome the real thing
+  can return — the answer, the refusal, the timeout, the empty reply, the
+  answer in the wrong shape — and each test asserts two things: what the
+  person sees, in the product's own words, and what they can do next. A
+  flow proven only against a stand-in that always answers has not been
+  tested. [Project rule; check: review]
+- **TEST-7** Done means used. A screen or flow task closes only after its
+  builder drives it in the built product as a person would — through the
+  screens, buttons and links, not the code — and records what was seen
+  (captures on disk, the store read after each act). A screenshot of the
+  pane just built is not that walk; the pane's window, title, settings,
+  navigation and relaunch are part of the flow. [Project rule; check:
+  process, review]
+
 ## Documentation (DOC)
 
 - **DOC-1** Every public type and function carries a doc comment saying

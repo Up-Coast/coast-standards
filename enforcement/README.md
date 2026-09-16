@@ -565,7 +565,7 @@ below, ranked, and the next session builds the first row that does not say DONE.
   wrong on one rule can be found (07 already asks for it).
 - Compose `Text("literal")` as an Android Lint custom check if the scanner's
   Kotlin precision proves insufficient.
-- **E4.5 — the unreached-view check (filed 2026-09-15, from a real miss).** A
+- **E4.5 — the unreached-view check — DONE 2026-09-15 (release 1.4.0; `unreached_views.py`, the `gallery` path class, rule 08's new section, 13 tests; proved on the adopting macOS project: 12 unreached views on its main, the 11 deliberate ones now declared in code).** Filed the same day, from a real miss: A
   screen built, tested, captured and ticked complete, drawn only by a debug
   component gallery; no route in the product ever mounted it (rules/08 case
   log). The scanner gains a per-platform check: every public view or

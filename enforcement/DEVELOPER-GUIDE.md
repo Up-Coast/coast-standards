@@ -341,6 +341,7 @@ and dispatched by id:
 | `blocking-call` (python) | `async_blocking.py` | a blocking call counted only inside `async def` |
 | `test-criterion-tag` | `test_criteria.py` | a test declaration with no `AC-<n>` or "criterion" in its name, the three lines above, or its first body line |
 | `type-size` | `type_size.py` | a type past 300 lines or a file past 400, reported once (advisory) |
+| `unreached-view` | `unreached_views.py` | tree scope: a public view or component (Swift `public struct X: View`; a public top-level `@Composable` in a `ui`/`ui_lib` file; an exported PascalCase function or const in a `ui`/`ui_lib` file) that nothing on a route in the product constructs — a file the path classes put under `gallery`, `tests`, `generated` or `plans` is not a route, nor is a Swift `#Preview` block or a Kotlin `@Preview` function; a `not-mounted-yet: <task>` line in the comment above the declaration is a named deferral and passes (rule 08) |
 | `secret-file` | `check_rules.py` | a file whose name matches the signature's globs, judged from git's status letter (new, renamed, copied); the content is never read, so a binary is caught |
 | `plaintext-http` | `check_rules.py` | a plain `http://` URL or `usesCleartextTraffic="true"` on a line, and the plist toggle `<key>NSAllowsArbitraryLoads</key>` followed by `<true/>` on the same or the next line — reported at the `<true/>` line, the one a flip adds |
 | `exported-component` (android) | `check_rules.py` | a manifest component with `android:exported="true"`, no `android:permission` on the tag and no LAUNCHER category in its body, the tag spanning any number of lines — reported at the `exported` line |
@@ -395,7 +396,11 @@ a permanent allowance nobody agreed to. Lowering the count never moves the date.
 Per platform: `extensions` (what counts as source), `order` (which class wins when several
 match), and `classes` (name → globs). The shipped classes are `git`, `governing`, `plans`,
 `generated`, `schema`, `theme`, `ui_lib`, `strings`, `manifest`, `docs`, `design_bundle`,
-`tests`, `ui`, `config_home`; a file in none of them is ordinary product source.
+`tests`, `gallery`, `ui`, `config_home`; a file in none of them is ordinary product source.
+`gallery` (1.4.0) is a component catalogue, preview or storybook — `*Entries.swift`,
+`*Catalog.swift`, `Previews/`, `*Preview.kt`, `*.stories.*`, `.storybook/` and their kin:
+a construction site that is not a route, read by `unreached-view` and left alone by the
+string-literal check (its labels name states, not screens).
 
 A project overrides bindings in `.coast/paths.json`, which is merged **over** the platform's
 defaults class by class (a class you name replaces the shipped globs for that class;

@@ -56,6 +56,18 @@ looks at the sources the page comes from and essentially rebuilds the page.
    not listed is done, either prove it with a sweep or delete the sentence.
    Replace it with what was actually checked, and when. [check: process]
 
+## Every built surface is on a route
+
+A public view or component that nothing on a route in the shipping product constructs is
+not done, whatever its tests and captures say. A route counts when the product has it — on
+by default, or behind a declared feature flag whose off state is a named deferral. A debug
+component gallery, a catalogue, a preview, a storybook or a test is a construction site and
+not a route. A view deliberately not mounted yet says so in the comment above its
+declaration, `not-mounted-yet: <the task that mounts it>`, so the deferred list lives with
+the code and never in a document nobody builds from. The scanner holds this on the whole
+tree; the acceptance criteria of any UI task name the route (and the flag, if there is one).
+[check: scan:unreached-view]
+
 ## Audit against the product's promise, not only against its specs
 
 Comparing code to specs finds things that were designed and never built. It cannot find the
@@ -108,7 +120,7 @@ all of them came back clean while these were sitting in the code.
 | A capability everyone believed the product had — **creating a project** — which no specification ever described, so no spec-versus-code audit could find it. | Every sweep compared code to specs. There was no spec to fall short of. | The product-promise method above: **audit the claims, not just the specs.** |
 | An inventory page asserting *"everything not on this page is built"* — **which was false in more than a dozen places.** | The claim was inherited and never re-verified; later sessions trusted it as a premise. | **Treat every completeness claim in a document as an unverified assertion** until this sweep proves it. Retire the ones you can't prove. |
 | A rules document still stating the **opposite of a decision made hours earlier.** | The decision was recorded in one place; the document carrying the old guidance was not updated. | **When a decision reverses guidance, update every document that carries it in the same session** — then grep for the old wording to prove none survives. |
-| A whole screen — the product's home page — **built, tested, screenshot-approved and ticked complete, and mounted only on a debug component gallery.** No route in the app ever drew it; every screen that should have sat on top of it fell back to the door the user came in through. (September 2026.) | The task's acceptance was "on the gallery, captured, matches the drawing" — every criterion was about the component, none about a caller. The gallery is a construction site, so a grep for callers looked satisfied. | **A gallery, harness, storybook, preview or test is not a consumer.** For every public view or component, find a construction site on a route the shipping product has — on by default, or behind a declared feature flag whose off state is a named deferral; a debug-only gallery, a preview or a test does not count. Anything left is either mounted now or written on an explicit not-mounted-yet list with the task that will mount it, and a check holds that list so a new view cannot join it silently. Add "reachable from a route in the product (name the route, and the flag if there is one)" to the acceptance criteria of any UI task. This check belongs in the shared scanner, not in one project's tests — filed as an enforcement task; a project-local guard is the stopgap until it lands. |
+| A whole screen — the product's home page — **built, tested, screenshot-approved and ticked complete, and mounted only on a debug component gallery.** No route in the app ever drew it; every screen that should have sat on top of it fell back to the door the user came in through. (September 2026.) | The task's acceptance was "on the gallery, captured, matches the drawing" — every criterion was about the component, none about a caller. The gallery is a construction site, so a grep for callers looked satisfied. | **A gallery, harness, storybook, preview or test is not a consumer.** For every public view or component, find a construction site on a route the shipping product has — on by default, or behind a declared feature flag whose off state is a named deferral; a debug-only gallery, a preview or a test does not count. Anything left is either mounted now or written on an explicit not-mounted-yet list with the task that will mount it, and a check holds that list so a new view cannot join it silently. Add "reachable from a route in the product (name the route, and the flag if there is one)" to the acceptance criteria of any UI task. The shared scanner holds it (`unreached-view`, E4.5, 2026-09-15); a project-local guard was the stopgap until it landed. |
 
 The pattern across almost all of these: **the code was honest and the documents were not.**
 Nearly every gap was visible in the source — an empty branch, a comment admitting deferral,

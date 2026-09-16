@@ -648,7 +648,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "baked-case", "one-catalog-per-locale", "english-key", "fixed-text-size",
             "fixed-screen-size", "test-criterion-tag", "hermetic-test", "test-weakened",
             "pii-in-log", "inline-comment", "retired-wording", "type-size", "money-float",
-            "doc-comments"],
+            "doc-comments", "unreached-view"],
         "macos": [
             "appkit-reach-through", "representable-window-reach", "window-chrome-override",
             "hidden-window-toolbar", "hand-rolled-router", "scrim-modal", "nsevent-key-monitor",
@@ -661,7 +661,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "baked-case", "one-catalog-per-locale", "english-key", "fixed-text-size",
             "fixed-screen-size", "test-criterion-tag", "hermetic-test", "test-weakened",
             "pii-in-log", "inline-comment", "retired-wording", "type-size", "money-float",
-            "doc-comments"],
+            "doc-comments", "unreached-view"],
         "android": [
             "androidview-bridge", "window-flags-override", "on-back-pressed-override",
             "scrim-modal", "hand-rolled-navigator", "custom-tab-bar", "hand-drawn-progress",
@@ -673,7 +673,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "baked-case", "one-catalog-per-locale", "english-key", "fixed-text-size",
             "fixed-screen-size", "test-criterion-tag", "hermetic-test", "test-weakened",
             "pii-in-log", "inline-comment", "retired-wording", "type-size", "money-float",
-            "doc-comments"],
+            "doc-comments", "unreached-view"],
         "web": [
             "dom-reach-through", "inner-html-write", "div-as-button", "scrim-modal",
             "history-reach", "positive-tabindex", "custom-select", "hand-drawn-progress",
@@ -683,7 +683,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "destructive-default-key", "manual-plural", "ui-string-concat", "baked-case",
             "one-catalog-per-locale", "english-key", "fixed-text-size", "fixed-screen-size",
             "test-criterion-tag", "hermetic-test", "test-weakened", "pii-in-log", "inline-comment",
-            "retired-wording", "type-size", "money-float", "doc-comments"],
+            "retired-wording", "type-size", "money-float", "doc-comments", "unreached-view"],
         "react-native": [
             "scrim-modal", "native-module-reach", "uimanager-reach", "hand-rolled-navigator",
             "custom-tab-bar", "hand-drawn-progress", "dangerous-navigation-state", "import-matrix",
@@ -693,7 +693,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "destructive-default-key", "manual-plural", "ui-string-concat", "baked-case",
             "one-catalog-per-locale", "english-key", "fixed-text-size", "fixed-screen-size",
             "test-criterion-tag", "hermetic-test", "test-weakened", "pii-in-log", "inline-comment",
-            "retired-wording", "type-size", "money-float", "doc-comments"],
+            "retired-wording", "type-size", "money-float", "doc-comments", "unreached-view"],
         "python": [
             "import-matrix", "ui-string-literal", "env-literal", "secret-literal", "secret-file",
             "plaintext-http", "raw-html", "dangerous-eval", "shell-injection",
@@ -701,7 +701,7 @@ class SignatureTableShapeTests(unittest.TestCase):
             "hand-rolled-password-hash", "hand-rolled-query-parse", "hand-rolled-arg-parse",
             "fixed-screen-size", "test-criterion-tag", "hermetic-test", "test-weakened",
             "pii-in-log", "inline-comment", "retired-wording", "type-size", "money-float",
-            "doc-comments"],
+            "doc-comments", "unreached-view"],
     }
 
     def test_every_platform_list_has_the_same_ids_in_the_same_order(self):

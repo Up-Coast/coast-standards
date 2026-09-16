@@ -3186,6 +3186,22 @@
           ]
         }
       }
+    },
+    {
+      "id": "unreached-view",
+      "rule": "08 every built surface is on a route",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "tree",
+      "words": "a public view or component that nothing on a route in the product constructs — a gallery, preview or test is not a route; mount it, or declare `not-mounted-yet: <task>` above it",
+      "platforms": {
+        "ios": {},
+        "macos": {},
+        "android": {},
+        "react-native": {},
+        "web": {},
+        "python": {}
+      }
     }
   ]
 }

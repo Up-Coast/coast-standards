@@ -1,9 +1,38 @@
 # Changelog
 
-*Last updated: 2026-09-09*
+*Last updated: 2026-09-15*
 
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
+
+## 1.4.0 — 2026-09-15
+
+A gallery is not a consumer: the scanner refuses a built view nothing mounts.
+
+- **The `unreached-view` check** (rule 08, "Every built surface is on a route"; enforcement
+  task E4.5). A public view or component that nothing on a route in the product constructs
+  refuses the push — on every platform: Swift `public struct X: View`, a public top-level
+  `@Composable` screen, an exported PascalCase component. A debug component gallery, a
+  catalogue, a preview (`#Preview`, `@Preview`), a storybook or a test is a construction
+  site and not a route; a feature flag is a route. A view deliberately not mounted yet
+  declares it in the comment above its declaration, `not-mounted-yet: <the task that
+  mounts it>`, so the deferred list lives with the code. Born of a real miss: a product's
+  home screen built, tested, captured and ticked complete, drawn only by its debug
+  gallery, with every screen that should have sat on top of it falling back to the door.
+- **A new path class, `gallery`**, ordered after `tests` and before `ui`: the catalogue,
+  preview and storybook paths per platform. The string-literal check no longer judges
+  those files (their labels name states, not screens). A project's `.coast/paths.json`
+  may rebind it like any class.
+- Rule 08 gains the rule the check holds, and its case log the miss that produced it,
+  with the wording a feature flag needs: a route the product has, on by default or behind
+  a declared flag whose off state is named.
+- **Rule 06 / TEST-6: every failure path gets a test** — one per outcome a model, network or
+  file can return, asserting what the person sees and can do next.
+- **Rule 00 clause 3, rule 06, TEST-7: done means used** — a screen task closes only after
+  the builder drives it in the built product as a person, with captures on disk; the
+  window, title, settings, navigation and relaunch are part of the flow. Both born of the
+  same day's walk of an adopting product (a review that ran and said nothing, a refused
+  key that locked a step).
 
 ## 1.3.0 — 2026-09-09
 

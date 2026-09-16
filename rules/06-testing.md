@@ -74,6 +74,39 @@ for the existing code first, then start the feature. [check: process]
 - Screenshot-vs-design comparison is a quality dial; the honest walk of the whole product
   is the gate. [check: process]
 
+## Every failure path gets a test
+
+A feature that calls a model, a network service, or a file ships with one
+test per outcome the real thing can return — the answer, the refusal, the
+timeout, the empty reply, the answer in the wrong shape. Each test asserts
+two things: what the person sees, in the product's own words, and what
+they can do next. A flow proven only against a stand-in that always
+answers has not been tested; the stand-in must be able to produce every
+outcome (see "A stand-in must fail the way production fails").
+
+Origin (2026-09-15): a review step was tested with a scripted provider that
+always answered. Against a real key that hung to its watchdog, and a real
+model that returned nothing, the step's Continue re-ran the review forever
+and offered no way on; the provider's words never reached the screen. Both
+handlers existed. Neither had a test that put a person in front of them.
+[check: review]
+
+## Done means used
+
+A screen or flow task closes only after its builder drives it in the built
+product as a person would — through the screens, buttons and links, never
+through the code or a debug route — and records what was seen: captures
+saved to disk, the store read after each act. A screenshot of the pane
+just built is not that walk. The window around the pane, its title, its
+settings, navigation in and out, discard, and a relaunch are part of the
+flow and are used too.
+
+Origin (2026-09-15): seven defects on one screen — the wrong project's
+title and settings, a relaunch onto another project, a discard that left
+the person inside the deleted project, a resume that forgot half the
+input — every one outside the pane the tests and the builder's screenshots
+looked at. [check: process, review]
+
 ## The build result is the truth — never an agent's word for it
 
 An agent does not know whether its code compiles unless something actually ran the build.
