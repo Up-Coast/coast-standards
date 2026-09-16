@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.1 — 2026-09-16
+
+A rewritten introduction in the README.
+
+### Changed
+
+- **The README's introduction is rewritten.** It explains why this project exists and how it is meant to be used.
+
+### Upgrading
+
+Nothing to do.
+
 ## 1.9.0 — 2026-09-16
 
 A rule that testing leaves no mess in anyone's inbox.
