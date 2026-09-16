@@ -4,6 +4,10 @@ What changes for a project that upgrades, one section per release. The version n
 
 ## Unreleased
 
+## 1.6.0 — 2026-09-16
+
+Writing guides for AI agents, clearer documentation, and platform rule sections written once.
+
 ### Added
 
 - **Writing guides for AI agents.** The installer adds two Claude Code skills to `.claude/skills/`: `write-developer-documentation` and `write-a-guide`. Agents follow them when they write documentation, and the `CLAUDE.md` block points to them. They are guidance, not checks. Switch either off with `writing_guides.off` in `.coast/config.json` if your project already has documentation instructions.
@@ -16,8 +20,7 @@ What changes for a project that upgrades, one section per release. The version n
 
 ### Fixed
 
-- **The installer reports the right standards version from a git worktree.** It used to treat a worktree as a downloaded release.
-- **`adopt.py --release` works from a git worktree of the standards repo.** It used to install from the worktree's own files instead of downloading the requested release, because it only recognised a checkout whose `.git` is a folder.
+- **The installer works from a git worktree of the standards repo.** It used to treat a worktree as a downloaded release, so `--release` installed the worktree's own files and the recorded version was wrong.
 
 ### Upgrading
 
