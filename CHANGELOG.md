@@ -6,6 +6,7 @@ What changes for a project that upgrades, one section per release. The version n
 
 ### Added
 
+- **Writing guides for AI agents.** The installer adds two Claude Code skills to `.claude/skills/`: `write-developer-documentation` and `write-a-guide`. Agents follow them when they write documentation, and the `CLAUDE.md` block points to them. They are guidance, not checks. Switch either off with `writing_guides.off` in `.coast/config.json` if your project already has documentation instructions.
 - **Sections shared by several platforms are written once.** They live in `rules/platform/shared/`, and `tools/build_rules.py` fills them into each platform file. A test refuses a platform file that no longer matches, and a section copied by hand into two files.
 
 ### Changed
@@ -15,7 +16,12 @@ What changes for a project that upgrades, one section per release. The version n
 
 ### Fixed
 
+- **The installer reports the right standards version from a git worktree.** It used to treat a worktree as a downloaded release.
 - **`adopt.py --release` works from a git worktree of the standards repo.** It used to install from the worktree's own files instead of downloading the requested release, because it only recognised a checkout whose `.git` is a folder.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. It replaces your `docs/domain-rules.md` with the rules version 9 wording and saves the old copy as `docs/domain-rules.v8.md`. To keep your own documentation instructions, add both writing guide names to `writing_guides.off` in `.coast/config.json` before you re-run it.
 
 ## 1.5.0 — 2026-09-16
 

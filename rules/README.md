@@ -6,7 +6,7 @@ There are 658 rules. You don't read them all. Read these three, and let the chec
 
 1. **[00-priority-rules.md](00-priority-rules.md). Read this first, always.** The non-negotiables, in priority order. DRY is the rule above all other rules.
 2. **[PROJECT-TYPES.md](PROJECT-TYPES.md). Read this second.** Which rules apply to your kind of project: app, backend service, data/ML pipeline, or library/CLI. A project with a frontend and an API counts as two types, one for each part.
-3. **Your platform's document**, from [the table below](#the-checkable-layer--pick-one). It holds the checkable rules, and it is the file copied into your project.
+3. **Your platform's document**, from [the table below](#the-checkable-layer-pick-one). It holds the checkable rules, and it is the file copied into your project.
 
 ## Two layers, and which is which
 
@@ -41,7 +41,7 @@ For example, `04-localization.md` explains why an app is localizable from day on
 | [types/backend-service.md](types/backend-service.md) | Services with no screen: layering without a UI, API contracts, async work and workers, operations, data safety |
 | [types/data-and-ml.md](types/data-and-ml.md) | Pipelines, scoring engines and models: reproducibility, data-quality checks, model versioning, drift, presenting numbers honestly |
 
-## The checkable layer — pick one
+## The checkable layer: pick one
 
 Copy one of these into your project when you adopt. "Enforced by a check" counts the rules a machine enforces today; a reviewer holds the rest. That number may only go up.
 

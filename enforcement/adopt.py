@@ -161,6 +161,14 @@ SESSION_HOOKS = (
     ("rules-at-start", "print the rules and the number at the start of a session"),
     ("attribution-trailer", "a commit from an agent session names the model that did the work"),
 )
+# The writing guides: Claude Code skills an agent follows when it writes documentation. They are
+# guidance, not checks (nothing can judge prose deterministically), so they are installed as seeds
+# the owner may edit, and a project with its own documentation instructions switches them off.
+WRITING_GUIDES = (
+    ("write-developer-documentation", "how to write READMEs, settings references, troubleshooting pages and release notes"),
+    ("write-a-guide", "how to write a short guide to a tool, dashboard or process"),
+)
+SKILLS_SOURCE = os.path.join(STANDARDS_ROOT, "skills")
 SEATS = (
     ("build", "build with warnings as errors"), ("tests", "the platform's test runner"),
     ("lint", "the platform's linter with the shipped config"), ("format", "the formatter in check mode"),
@@ -295,7 +303,7 @@ def standards_version():
     (a tarball, or a clone checked out at the tag ``v1.2.0``), ``1.2.0+<commit>`` from
     a clone that is not at a release tag."""
     version = checks_version()
-    if not os.path.isdir(os.path.join(STANDARDS_ROOT, ".git")):
+    if not os.path.exists(os.path.join(STANDARDS_ROOT, ".git")):
         return version
     tagged = subprocess.run(["git", "tag", "--points-at", "HEAD"], cwd=STANDARDS_ROOT, capture_output=True, text=True)
     if tagged.returncode == 0 and f"v{version}" in tagged.stdout.split():
@@ -679,6 +687,38 @@ class Adoption:
                              f"'{BLOCK_BEGIN} … -->' … '{BLOCK_END}' pair (or none) and run again; nothing was written")
         return begins[-1], ends[0][1]
 
+    def writing_guides_on(self):
+        return [name for name, _ in WRITING_GUIDES if not config_table.is_off(self.config, "writing_guides", name)]
+
+    def install_writing_guides(self):
+        """Each writing guide that is on goes into the project's skills folder as a seed. One that is
+        switched off is removed while it still matches what was installed, and kept (with a note) once edited."""
+        on = self.writing_guides_on()
+        for name, _ in WRITING_GUIDES:
+            relative = f"{self.layout['skills_dir']}/{name}/SKILL.md"
+            if name in on:
+                source = os.path.join(SKILLS_SOURCE, name, "SKILL.md")
+                if not os.path.isfile(source):
+                    self.say("note", relative, f"the standards repo does not ship the {name} guide")
+                    continue
+                self.put_seed(relative, read_bytes(source))
+                continue
+            full = self.path(relative)
+            recorded = self.seeds.get(relative, {}).get("sha256")
+            if not os.path.isfile(full):
+                self.seeds.pop(relative, None)
+                continue
+            if recorded and sha256(read_bytes(full)) == recorded:
+                self.say("would remove" if self.dry_run else "removed", relative, "OFF in the config (writing_guides.off)")
+                if not self.dry_run:
+                    os.remove(full)
+                    folder = os.path.dirname(full)
+                    if not os.listdir(folder):
+                        os.rmdir(folder)
+                self.seeds.pop(relative, None)
+            else:
+                self.say("kept (founder-edited)", relative, "OFF in the config, but edited here, so it was not removed")
+
     def install_claude_md(self):
         counts = self.rules_number()
         template = read_bytes(TEMPLATE).decode("utf-8")
@@ -695,6 +735,7 @@ class Adoption:
                            "STATE_DIR": self.layout["state_dir"], "SESSION_HOOK": self.layout["session_hook"],
                            "SETTINGS_FILE": self.layout["settings_file"], "CONFIG_FILE": self.state(config_table.FILE_NAME),
                            "EXCEPTIONS_FILE": self.state("rules-exceptions.json"),
+                           "WRITING_GUIDES": self.writing_guides_sentence(),
                            "TODAY": self.today.isoformat(), "UNTIL": (self.today + _dt.timedelta(days=14)).isoformat()}.items():
             filled = filled.replace("{{" + key + "}}", str(value))
         block = filled.strip("\n")
@@ -712,6 +753,14 @@ class Adoption:
             new = f"# {os.path.basename(self.project)} — Agent Context\n\n{block}\n"
         self.put(context, new.encode("utf-8"), governed=False)
         self.say("note", context, f"rules {number_label()} {counts['machine']} of {counts['total']}")
+
+    def writing_guides_sentence(self):
+        on = self.writing_guides_on()
+        if not on:
+            return "This project uses its own documentation instructions; the standards install no writing guide."
+        names = ", ".join(f"`{self.layout['skills_dir']}/{name}/SKILL.md`" for name in on)
+        return (f"When you write or change documentation, follow the writing guides in {names}. "
+                "They are guidance, not checks: no machine refuses a sentence, and a reviewer reads the result.")
 
     def bind_theme(self):
         """An existing app already has a theme file, almost never at the platform's default
@@ -963,6 +1012,7 @@ class Adoption:
         self.install_hooks()
         self.remove_stale_governed()
         self.install_seeds()
+        self.install_writing_guides()
         self.install_claude_md()
         self.bind_theme()
         self.write_ratchet_baseline()
@@ -986,7 +1036,10 @@ def ask_off(group, entries, ask=input, out=print):
     for name, sentence in entries:
         out(f"  {name:<24} {sentence}")
     while True:
-        answer = ask(f"{group} to switch OFF (names separated by spaces; Enter keeps every one on): ").strip()
+        try:
+            answer = ask(f"{group} to switch OFF (names separated by spaces; Enter keeps every one on): ").strip()
+        except EOFError:
+            answer = ""   # no more answers (a script's input ran out): keep every default on
         names = answer.replace(",", " ").split()
         unknown = [name for name in names if name not in known]
         if not unknown:
@@ -1002,6 +1055,7 @@ def ask_once(config, ask=input, out=print):
     config["rules"]["off"] = ask_off("rules", [(row["id"], row.get("words", "")) for row in signatures], ask, out)
     config["seats"]["off"] = ask_off("seats", SEATS, ask, out)
     config["session_hooks"]["off"] = ask_off("session hooks", SESSION_HOOKS, ask, out)
+    config["writing_guides"]["off"] = ask_off("writing guides", WRITING_GUIDES, ask, out)
     return config
 
 

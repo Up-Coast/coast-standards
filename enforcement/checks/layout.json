@@ -8,6 +8,7 @@
   "rules_document": "docs/domain-rules.md",
   "ai_rules_document": "docs/ai-features-rules.md",
   "context_file": "CLAUDE.md",
+  "skills_dir": ".claude/skills",
   "lock_name": "coast-push.lock",
   "temp_prefix": "coast-",
   "env_prefix": "COAST_",

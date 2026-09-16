@@ -12,6 +12,7 @@ The shape is ``config.default.json`` beside this file::
      "seats": {"off": [names]},
      "session_hooks": {"off": [ids]},
      "linters": {"off": [names]},
+     "writing_guides": {"off": [names]},
      "ratchet_days": 90,
      "tests_deadline_seconds": 900,
      "layout": {...overrides of layout.json's keys...}}
@@ -38,7 +39,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS_FILE = os.path.join(HERE, "config.default.json")
 FILE_NAME = "config.json"
-GROUPS = ("rules", "seats", "session_hooks", "linters")
+GROUPS = ("rules", "seats", "session_hooks", "linters", "writing_guides")
 SEVERITY_RANK = {"block": 2, "ratchet": 1, "advisory": 0}
 SEATS = ("build", "tests", "lint", "format", "rules-scan", "doc-comments", "jscpd", "gh-ruleset")
 RETIRED_WORDING_ID = "retired-wording"
@@ -135,7 +136,7 @@ def load(root=None, path=None):
 
 
 def is_off(table, group, name):
-    """True when the config switches ``name`` off in ``group`` (rules, seats, linters, session_hooks)."""
+    """True when the config switches ``name`` off in ``group`` (rules, seats, linters, session_hooks, writing_guides)."""
     return name in ((table.get(group) or {}).get("off") or [])
 
 

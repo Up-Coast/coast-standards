@@ -12,12 +12,12 @@ For installing the standards into a product, start with the public docs in [docs
 2. [Concepts](#2-concepts)
 3. [Quick start](#3-quick-start)
 4. [The rule documents and the check tag](#4-the-rule-documents-and-the-check-tag)
-5. [The scanner — `check_rules.py`](#5-the-scanner--check_rulespy)
-6. [The doc-comment check — `check_doc_comments.py`](#6-the-doc-comment-check--check_doc_commentspy)
-7. [The verifier — `verify_rules.py`](#7-the-verifier--verify_rulespy)
+5. [The scanner — `check_rules.py`](#5-the-scanner-check_rulespy)
+6. [The doc-comment check — `check_doc_comments.py`](#6-the-doc-comment-check-check_doc_commentspy)
+7. [The verifier — `verify_rules.py`](#7-the-verifier-verify_rulespy)
 8. [The git hooks](#8-the-git-hooks)
 9. [The Claude Code session hooks](#9-the-claude-code-session-hooks)
-10. [The installer — `adopt.py`](#10-the-installer--adoptpy)
+10. [The installer — `adopt.py`](#10-the-installer-adoptpy)
 11. [The linter configs](#11-the-linter-configs)
 12. [Versioning](#12-versioning)
 13. [Troubleshooting](#13-troubleshooting)
@@ -196,7 +196,7 @@ A signature that no rule names is also a gap.
 
 ---
 
-## 5. The scanner — `check_rules.py`
+## 5. The scanner: `check_rules.py`
 
 ### 5.1 Modes
 
@@ -240,7 +240,7 @@ PASS rules
 
 Exit 0 on pass, 1 on any `FAIL`. The last line is a JSON summary. Hooks, CI and Coast parse the `FAIL` line, so keep its format stable.
 
-### 5.3 The signature table — `rules_signatures.json`
+### 5.3 The signature table: `rules_signatures.json`
 
 Shared fields sit on the row. Each platform the signature runs on has an entry under `platforms` with its own globs, regex and any overrides.
 
@@ -341,7 +341,7 @@ Added-scope built-ins read the whole file but report only added lines.
 - Only a person moves a deadline, recorded under `moves`.
 - Nothing raises a count.
 
-### 5.6 Path classes — `paths.json` and `.coast/paths.json`
+### 5.6 Path classes: `paths.json` and `.coast/paths.json`
 
 Each platform has `extensions` (source file types), `order` (which class wins) and `classes` (name → globs). A file belongs to the first matching class in `order`.
 
@@ -386,7 +386,7 @@ The file is governing, so agents cannot write it. It also holds seat exceptions 
 
 ---
 
-## 6. The doc-comment check — `check_doc_comments.py`
+## 6. The doc-comment check: `check_doc_comments.py`
 
 ```
 check_doc_comments.py --files a b c --platform <p>   named files
@@ -406,7 +406,7 @@ A Python file that does not parse reports nothing. The scanner also runs this as
 
 ---
 
-## 7. The verifier — `verify_rules.py`
+## 7. The verifier: `verify_rules.py`
 
 ```
 verify_rules.py                                   the whole corpus, from the standards repo root
@@ -444,7 +444,7 @@ Refuses:
 
 Git's own merge and revert messages are exempt, and the hook prints a `gate:` line saying so.
 
-### 8.3 `pre-push` — the battery
+### 8.3 `pre-push`: the battery
 
 First, `scope.py` decides the scope from the pushed ranges and prints `gate: scope <kind> — <reason>`:
 
@@ -536,7 +536,7 @@ Bash hooks split a command on `&&`, `||`, `;`, pipes and newlines, and look insi
 
 ---
 
-## 10. The installer — `adopt.py`
+## 10. The installer: `adopt.py`
 
 ### 10.1 Usage
 
@@ -589,6 +589,7 @@ Without `--platform`, the installer reads `.coast/platform`, or else:
 | `.coast/rules-exceptions.json`, `.coast/module-kinds.json` | governing; written by a person | Exceptions, and module layers. |
 | `.coast/xcode-scheme` | optional; written by a person | The Xcode scheme to build. |
 | Linter configs | seed | Written when missing; updated while unedited; kept once edited. |
+| `.claude/skills/<guide>/SKILL.md` | seed | The writing guides in `skills/` that are not in `writing_guides.off`. A guide switched off is removed while unedited and kept once edited. |
 | `docs/domain-rules.md` | seed | Upgraded from an older rules version, keeping the old copy as `docs/domain-rules.v<N>.md`. |
 | `CLAUDE.md` | the marked block only | Rewritten from `TEMPLATE-PROJECT-CLAUDE.md` between `<!-- coast-standards: begin -->` and `end -->`. Broken markers stop the run before anything is written. |
 
@@ -596,7 +597,7 @@ Without `--platform`, the installer reads `.coast/platform`, or else:
 
 A second run changes nothing. The tests check this, along with: `--dry-run` writes nothing, text outside the `CLAUDE.md` block survives, and edited seeds are kept.
 
-### 10.5 Configuration — `.coast/config.json`
+### 10.5 Configuration: `.coast/config.json`
 
 Every key, default and layout path is listed in [docs/options.md](../docs/options.md). What a maintainer needs:
 
@@ -604,7 +605,8 @@ Every key, default and layout path is listed in [docs/options.md](../docs/option
 - Defaults are in `config.default.json`. The project file merges over them (objects by key; lists replace), then the run's flags.
 - The loader refuses a raised severity, a `layout.state_dir`, a non-list `off`, and a non-integer `ratchet_days` or `tests_deadline_seconds`.
 - An `off` switch also counts in the number. `verify_rules.py --config` shows it, for example `enforced by a check 21 of 74 (3 switched off)`.
-- `--init` asks one screen of on/off questions per group. `--yes` writes `config.default.json` byte for byte.
+- `writing_guides.off` names guides from `WRITING_GUIDES` in `adopt.py`. The `CLAUDE.md` block lists only the guides that are on, through the `{{WRITING_GUIDES}}` placeholder.
+- `--init` asks one screen of on/off questions per group. An answer that is missing (input ended) keeps that group's defaults. `--yes` writes `config.default.json` byte for byte.
 - `layout.json` is the only place that names the layer's paths. Values may refer to other keys as `{key}`. `test_config.py` fails if any shipped file hard-codes an old path.
 
 ---

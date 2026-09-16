@@ -34,6 +34,8 @@ not_in_nav: |
   LICENSE.md
   enforcement/TOOLCHAIN.md
   skills/adopt-coast-standards/SKILL.md
+  skills/write-developer-documentation/SKILL.md
+  skills/write-a-guide/SKILL.md
 
 theme:
   name: material

@@ -96,6 +96,7 @@ The numbered files in [`rules/`](rules/README.md) are meant to be read in place.
 | `.coast/standards-version` | The release your project carries. |
 | `docs/domain-rules.md` | Your project's copy of the rules for its platform. Only added when the file does not exist. |
 | Linter and formatter configs | For example `.swiftlint.yml` or `eslint.config.mjs`. Only added when you do not have one. |
+| `.claude/skills/` | Two writing guides that AI agents follow when they write documentation. You can switch them off. |
 | `CLAUDE.md` | A block that tells AI agents the rules and how many are enforced by a check. |
 
 On a first install the installer also builds the project once and scans every tracked file for secrets. It stops if it finds a secret.
@@ -148,7 +149,8 @@ Add its name to the matching `off` list in `.coast/config.json`:
   "rules": {"off": ["scrim-modal"]},
   "seats": {"off": ["gh-ruleset"]},
   "session_hooks": {"off": ["chained-cd"]},
-  "linters": {"off": ["mypy"]}
+  "linters": {"off": ["mypy"]},
+  "writing_guides": {"off": ["write-a-guide"]}
 }
 ```
 
@@ -158,6 +160,7 @@ Add its name to the matching `off` list in `.coast/config.json`:
 | `seats.off` | A step of the pre-push hook. | `build`, `tests`, `lint`, `format`, `rules-scan`, `doc-comments`, `jscpd`, `gh-ruleset` |
 | `session_hooks.off` | A guard-rail for AI agents. | Listed in [Options](docs/options.md#settings-file). |
 | `linters.off` | One linter or formatter. | Listed in [Options](docs/options.md#settings-file). |
+| `writing_guides.off` | A writing guide for AI agents. Switch these off if you already have documentation instructions. | `write-developer-documentation`, `write-a-guide` |
 
 A rule you switch off is counted as "switched off", never as enforced. Use a switch for something that does not apply to your project at all.
 
@@ -235,6 +238,7 @@ Never skip the hooks with `--no-verify`. More cases are in [When a check stops y
 | [`enforcement/`](enforcement/README.md) | The checks: the rules scanner, the doc-comment check, the rule verifier, linter configs, git hooks, Claude Code hooks, and the installer `adopt.py`. |
 | [`docs/`](docs/README.md) | The user documentation. |
 | [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md) | A skill that lets an AI agent run the install. |
+| [`skills/write-developer-documentation/`](skills/write-developer-documentation/SKILL.md), [`skills/write-a-guide/`](skills/write-a-guide/SKILL.md) | The writing guides the installer adds to a project, unless switched off. You can also install them as personal Claude Code skills. |
 | [`TEMPLATE-CLAUDE.md`](TEMPLATE-CLAUDE.md) | A starter block for a project's `CLAUDE.md`. |
 | `CHECKS-VERSION` | The release number. Each release is also the git tag `v<number>` and an entry in [CHANGELOG.md](CHANGELOG.md). |
 | `.githooks/` | This repo's own pre-commit hook. Install it once per clone with `git config core.hooksPath .githooks`. |

@@ -852,6 +852,40 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("Sources/App/Keys.swift", out)
 
 
+    def test_writing_guides_install_as_editable_skills_and_can_be_switched_off(self):
+        developer = ".claude/skills/write-developer-documentation/SKILL.md"
+        guide = ".claude/skills/write-a-guide/SKILL.md"
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        with open(os.path.join(REPO_ROOT, "skills", "write-developer-documentation", "SKILL.md"), encoding="utf-8") as handle:
+            self.assertEqual(self.project.read(developer), handle.read())
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, guide)))
+        block = self.project.read("CLAUDE.md")
+        self.assertIn("follow the writing guides in `.claude/skills/write-developer-documentation/SKILL.md`", block)
+        self.assertIn("They are guidance, not checks", block)
+        # An edited guide is the owner's: a re-adopt keeps it, and so does switching it off.
+        self.project.write(guide, self.project.read(guide) + "\nOur own house rule.\n")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertIn("Our own house rule.", self.project.read(guide))
+        self.project.write(".coast/config.json", json.dumps(dict(json.loads(self.project.read(".coast/config.json")),
+                                                             writing_guides={"off": ["write-developer-documentation", "write-a-guide"]})))
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, developer)), "an unedited guide switched off is removed")
+        self.assertFalse(os.path.exists(os.path.dirname(os.path.join(self.project.path, developer))))
+        self.assertIn("Our own house rule.", self.project.read(guide), "an edited guide switched off is kept")
+        self.assertIn("OFF in the config, but edited here", out)
+        block = self.project.read("CLAUDE.md")
+        self.assertIn("uses its own documentation instructions", block)
+        self.assertNotIn("write-developer-documentation", block)
+        # Switched back on, the removed guide returns.
+        self.project.write(".coast/config.json", json.dumps(dict(json.loads(self.project.read(".coast/config.json")),
+                                                             writing_guides={"off": []})))
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertTrue(os.path.isfile(os.path.join(self.project.path, developer)))
+
     def test_lower_baselines_writes_only_the_baselines_and_only_downwards(self):
         # A push refused for a count that FELL is answered by the agent, not by a hand edit to a
         # governing file: the switch measures the tree with the project's own installed scanner,

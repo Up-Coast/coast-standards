@@ -54,6 +54,7 @@ Everything is on by default. The defaults look like this:
   "seats": {"off": []},
   "session_hooks": {"off": []},
   "linters": {"off": []},
+  "writing_guides": {"off": []},
   "ratchet_days": 90,
   "tests_deadline_seconds": 900,
   "layout": {}
@@ -90,6 +91,7 @@ An example with some changes:
 | `seats.off` | list of names | `[]` | Steps of the pre-push hook that do not run. The push prints `gate: <name> OFF (config)`. Names are in the table below. |
 | `session_hooks.off` | list of names | `[]` | AI agent guard-rails that do not run. Names are in the table below. |
 | `linters.off` | list of names | `[]` | Linters and formatters the pre-push hook skips. The installer adds no config file for them. Names are in the table below. |
+| `writing_guides.off` | list of names | `[]` | Writing guides the installer does not add to `.claude/skills/`. Names are in the table below. Switch them off if your project already has its own documentation instructions. |
 | `ratchet_days` | whole number, 1 or more | `90` | Days from today to the deadline the installer writes on a new baseline. |
 | `tests_deadline_seconds` | whole number, 1 or more | `900` | The time limit on the pre-push test run. If the tests have not finished in that time, the hook stops the run and refuses the push. A run that long usually means a test hangs. Raise the limit only for a suite that really takes that long. |
 | `layout` | object | `{}` | Moves the installed files (see [Layout keys](#layout-keys)). |
@@ -133,6 +135,17 @@ A rule whose every check is switched off is counted as **switched off**, never a
 | React Native, web | `eslint`, `tsc`, `prettier` |
 | Python | `ruff`, `mypy` |
 
+### Writing guides (`writing_guides.off`)
+
+Writing guides are Claude Code skills that an AI agent follows when it writes documentation. The installer adds each one that is on to `.claude/skills/<name>/SKILL.md`, and the `CLAUDE.md` block tells agents to use them. They are guidance, not checks: nothing refuses a commit because of them.
+
+| Name | What it covers |
+|---|---|
+| `write-developer-documentation` | READMEs, quickstarts, settings and CLI references, troubleshooting pages, design documents, rule documents, changelogs and release notes. |
+| `write-a-guide` | Short guides to a tool, dashboard or process, for the people who use or look after it. |
+
+A guide is yours to edit once installed. The installer updates it only while it still matches the shipped version. When you switch a guide off, the installer removes it on its next run, unless you have edited it.
+
 ### Layout keys
 
 Set these under `layout` only when your project must move the installed files.
@@ -146,6 +159,7 @@ Set these under `layout` only when your project must move the installed files.
 | `rules_document` | `docs/domain-rules.md` |
 | `ai_rules_document` | `docs/ai-features-rules.md` |
 | `context_file` | `CLAUDE.md` |
+| `skills_dir` | `.claude/skills` |
 
 The `.coast` folder itself cannot move. The hooks find the settings file through it, so `layout.state_dir` is refused.
 
@@ -231,6 +245,7 @@ The classes you will set most often:
 | `.coast/xcode-scheme` | For an Xcode project: the scheme name to build and test. Without it, the first scheme Xcode lists is used. |
 | `.coast/module-kinds.json` | For Swift packages: which targets are apps, feature modules and shared layers. The import check uses it to refuse one feature importing another. Example: `{"app": ["MyApp"], "feature": ["Onboarding", "Journal"], "shared": ["Core", "DesignKit"]}` |
 | Linter and formatter configs | `.swiftlint.yml`, `eslint.config.mjs`, `detekt.yml`, `ruff.toml` and so on. The installer adds one only if you have none. They are yours to edit. The installer does not touch a file you changed. |
+| `.claude/skills/write-developer-documentation/`, `.claude/skills/write-a-guide/` | The writing guides. Yours to edit. See [Writing guides](#writing-guides-writing_guidesoff). |
 | `docs/domain-rules.md` | Your project's copy of the rules. It is yours to edit. The installer never replaces it at the same version. When a newer version is published, the installer upgrades it and keeps your old copy as `docs/domain-rules.v<N>.md`. |
 
 ## Baselines

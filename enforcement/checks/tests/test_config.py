@@ -272,18 +272,32 @@ class ConfigTests(unittest.TestCase):
 
 class AskOnceTests(unittest.TestCase):
     def test_a_scripted_answer_file_drives_the_prompt(self):
-        answers = iter(["ui-string-literal nonsense", "ui-string-literal spacing-literal", "jscpd", "chained-cd"])
+        answers = iter(["ui-string-literal nonsense", "ui-string-literal spacing-literal", "jscpd", "chained-cd", "write-a-guide"])
         shown = []
         table = adopt.ask_once(cfg.defaults(), ask=lambda prompt: next(answers), out=shown.append)
         self.assertEqual(table["rules"]["off"], ["ui-string-literal", "spacing-literal"])
         self.assertEqual(table["seats"]["off"], ["jscpd"])
         self.assertEqual(table["session_hooks"]["off"], ["chained-cd"])
+        self.assertEqual(table["writing_guides"]["off"], ["write-a-guide"])
         text = "\n".join(shown)
         self.assertIn("not in the list: nonsense", text)
         self.assertIn("ui-string-literal", text)
         self.assertIn("gh-ruleset", text)
         self.assertIn("attribution-trailer", text)
-        self.assertEqual(text.count("everything is ON unless"), 3, "one screen per group")
+        self.assertIn("write-developer-documentation", text)
+        self.assertEqual(text.count("everything is ON unless"), 4, "one screen per group")
+
+    def test_answers_that_run_out_keep_the_remaining_defaults_on(self):
+        answers = iter(["", "jscpd"])
+
+        def ask(prompt):
+            try:
+                return next(answers)
+            except StopIteration:
+                raise EOFError
+        table = adopt.ask_once(cfg.defaults(), ask=ask, out=lambda line: None)
+        self.assertEqual(table["seats"]["off"], ["jscpd"])
+        self.assertEqual((table["session_hooks"]["off"], table["writing_guides"]["off"]), ([], []))
 
     def test_init_reads_the_answers_from_stdin_and_a_later_run_never_asks(self):
         project = Project()

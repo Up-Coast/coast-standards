@@ -9,6 +9,8 @@
 
 This project's checkable rules are in `{{RULES_DOCUMENT}}`. Reviews judge every change against exactly that file.
 
+{{WRITING_GUIDES}}
+
 **Rules enforced by a check: {{ENFORCED}} of {{TOTAL}}** in that document{{SWITCHED_OFF}} (partly {{PARTLY}}, advisory {{ADVISORY}}, reviewer {{REVIEW}}, process {{PROCESS}}, switched off {{OFF}}, still open {{OPEN}}).
 
 Each rule is in one of these groups:

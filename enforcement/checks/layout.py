@@ -31,7 +31,7 @@ DEFAULTS_FILE = os.path.join(HERE, "layout.json")
 CONFIG_FILE = "config.json"    # the project's config, in its state dir; its "layout" key overrides this table
 SCRIPT_FILE = "layout.sh"      # the rendered table the sh hooks source, in its state dir
 KEYS = ("checks_dir", "hooks_dir", "session_hook", "settings_file", "state_dir", "rules_document",
-        "ai_rules_document", "context_file", "lock_name", "temp_prefix", "env_prefix")
+        "ai_rules_document", "context_file", "skills_dir", "lock_name", "temp_prefix", "env_prefix")
 DERIVED = ("session_hook_dir", "settings_local_file", "state_dir_regex")
 PLACEHOLDER = re.compile(r"\{(" + "|".join(KEYS + DERIVED) + r")\}")
 
