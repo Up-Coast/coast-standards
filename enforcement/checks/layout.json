@@ -14,7 +14,7 @@
   "jscpd_ignore": [
     "**/node_modules/**", "**/.build/**", "**/build/**", "**/Pods/**", "**/DerivedData/**", "**/dist/**",
     "**/.venv/**", "**/__pycache__/**", "**/{state_dir}/**", "**/{checks_dir}/**", "**/{hooks_dir}/**",
-    "**/*.min.js", "**/*.lock", "**/Package.resolved",
+    "**/*.min.js", "**/*.lock", "**/Package.resolved", "**/*.log",
     "**/*.md", "**/*.markdown", "**/*.txt", "**/*.json", "**/*.jsonl", "**/*.yml", "**/*.yaml", "**/*.toml",
     "**/*.html", "**/*.svg", "**/*.xml", "**/*.plist", "**/*.strings", "**/*.xcstrings", "**/*.stringsdict"
   ]

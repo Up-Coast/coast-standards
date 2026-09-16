@@ -5,6 +5,13 @@
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
 
+## Unreleased
+
+- **`**/*.log` joins the jscpd ignore list** (enforcement/checks/layout.json). A build
+  log saved as walk evidence is a record, not code; two such logs in one project
+  matched each other and refused a documentation push as a "new clone" (2026-09-15).
+  A project picks it up by re-running adopt.py.
+
 ## 1.4.0 — 2026-09-15
 
 A gallery is not a consumer: the scanner refuses a built view nothing mounts.
