@@ -141,6 +141,19 @@ Why: handling code that exists but that no stand-in can reach ships broken, incl
 
 In practice: when writing a stand-in, first list the real service's documented failure responses, and make the double able to return each one. When a live defect is traced to a handler no test reached, teach the stand-in that failure in the same fix. [check: review]
 
+## Testing leaves no mess in anyone's inbox
+
+Work that sends email or triggers notifications cleans up after itself. This covers manual test passes, automated tests, CI jobs and one-off send checks. The owner's inbox is not a test sink, and every test message that lands there is a cost the owner pays.
+
+- Send test mail only to addresses set aside for testing, which a mail filter removes on arrival (for example, fixed plus-addresses that are trashed automatically). The project's instructions list those addresses. Never send to the owner's real address, even once.
+- To read a test message, such as a sign-in link, search the place where the filter puts it. Do not change the filter so the message stays visible.
+- When a test pass ends, trash anything it sent that got past the filter.
+- A test that needs a new address adds that address to the filter first.
+- A scheduled job that fails on every run is a defect: fix it, or switch it off with the owner's agreement. Hiding its failure notices is not a fix.
+- Before calling an alert or message a live problem, check the project's own records (deploy state, test results) to see whether testing produced it.
+
+Why: a test message looks the same as a real one. A steady stream of them buries the messages that matter and costs the owner attention every time. [check: process]
+
 ---
 
 [← All rules](README.md) · [Priority rules](00-priority-rules.md) · [Project types](PROJECT-TYPES.md) · [Documentation](../docs/README.md)

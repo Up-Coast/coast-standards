@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.0 — 2026-09-16
+
+A rule that testing leaves no mess in anyone's inbox.
+
+### Added
+
+- **Rule: testing leaves no mess in anyone's inbox.** Work that sends email or notifications uses test-only addresses that a filter removes on arrival, and trashes anything that got past the filter when it ends. A scheduled job that fails on every run is a defect to fix or switch off, not noise to filter. The rule is in `rules/06-testing.md`.
+
+### Upgrading
+
+Nothing to do. The numbered rules are read in place from the standards repo, so reviews apply the new rule from this version on.
+
 ## 1.8.0 — 2026-09-16
 
 Rules for keeping documentation current, and a test that holds the settings reference to the code.
