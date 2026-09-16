@@ -8,33 +8,39 @@ Supported platforms: iOS, macOS, Android, React Native, web (TypeScript) and Pyt
 
 ## How this repo came to be
 
-Scroll down if you don't care.... :)
+[Scroll past this section for installation info...]
 
 Hi there, I'm Abbey. I am an iOS engineer (Intel/Mastercard) turned psuedo-short-lived system architect (Rivian) turned product manager (Rivian). I'm now teaching product strategy to both technical and non-technical folks, for FREE through my social venture [Up Coast Leaders](https://www.upcoastleaders.ca).
 
-This project started in July 2026 when I first started using AI to code. I was a late bloomer because for the previous 18 months I had been building the free product strategy course and the companion workbook and doing it right took time! Because I was late, I didn't START until Fable. On the coding side I had played around a little bit with Replit, and I had plenty of experience using it as a non-technical user for research, projections, and drafting reports, so I knew going into it that it was going to piss me off big time when it broke what to me seem like simple rules. 
+This project started in July 2026 when I first started using AI to code. I was a late bloomer because for the previous 18 months I had been building that free product strategy course and it's 200 page companion workbook and doing those things right took time! 
 
-Y'know...like having one source of truth or not hard-coding things.
+Because I was late, I didn't START until Fable. On the coding side I had played around a little bit with Replit, and had used Co-pilot in the very early days when it was essentially auto complete. But mostly, I had plenty of experience using it as a non-technical user for research, projections, and drafting reports. I knew from that experiende that what AI considers best practice and common sense is quite a bit different than I do. With research and writing I don't care because I use it for first drafts and edit extensively anyway. 
 
-Before I even started coding, because I didn't want to be influenced by my experience with the AI, I documented everything that I felt makes a code base a good code base. I spent hours upon hours having a meeting with my Granola transcriber listing out everything I thought was important and how I would design a system of controls. It was kind of a dream come true, FINALLY all coding rules were up to me and no negotiating anything with my team! Muwahahahah!!!
+But for coding it's different. I don't want to edit the code, I don't want to see the code. 
+
+The code is not my thinking. The features, the way they work, the architecture of the product, and the way the product and the product's code works...that is where I want my thinking time spent. I don't want to have to think about all the engineering rules I need to put into place each time I request work be done by AI but if I don't, the AI always does the dumbest fucking shit. 
+
+So, this project is the result of solving my own problem: I get really frustrated when AI doesn't follow basic simple best practices in coding. (Y'know...like having one source of truth or not hard-coding things) And I have absolutely zero interest in prompt engineering. I want the AI to be my engineering team. I don't mind acting as the architect, I have the skills to do so, but I don't want to be it's tech lead and have to remember each time to treat it like a baby junior engineer who has to be reminded of the basics each and everytime.
+
+So, I thought to myself, 
+
+>"how can I use AI for coding, as my engineer, while I maintain full product control (aka not vibecoding), and never have to look at the code?"
+
+Before I even started coding, because I didn't want to be influenced by my experience with the AI, I documented everything that I felt makes a code base a good code base. I spent hours upon hours having a meeting with my Granola transcriber and later chatting with Claude, listing out everything I thought was important and how I would design a system of controls. It was kind of a dream come true. I'm a super nerd about information organization, it was a lot of fun to document an entire system like this.
 
 I then had Claude add all OWASP recommendations and after that I had it search the developer communities for the platforms these standards cover in order to surface up platform specific community recommended coding rules and guidelines.
 
-Everything in this repo is written by Claude, so yes the language is sometimes flowery or without purpose but it's AI talking to AI. This repo isn't for you, it's for your AI, so I decided to do an experiment and see if I could be completely hands off the actual code. 
+Everything in this repo is written by Claude (except this single section of the README), so you will sometimes see language that is flowery or without purpose but it's AI talking to AI. This repo isn't for you, it's for your AI, so I decided to do an experiment and see if I could be completely hands off the actual code with this also. 
 
-So far that experiment has paid off!
+NOTE: I have not read or edited any of the documentation. I have had many different sessions do reviews but that isn't foolproof. Expect a small margin of error in the documentation. If you find anything please submit an issue!
 
-Using these coding standards, since Fable was released (2 months ago), I have built:
-- 3 iOS apps,
-- a learning and course platform,
-- a webapp,
-- a mac app,
-- a feedback system that takes reports from beta testers and fixes them in Claude automatically, and
-- this development tool
+I don't know if using these saves time, or tokens. I do however think they save a lot of headaches. One thing that is neat to see is that even though the AI should be following these rules, sometimes it doesn't. And we expect that. In addition to rules, the system also has checks built in. Often at the end of work I will see the push blocked by one of the checks because a rule was not followed. 
 
-I do believe that completing a feature most likely takes more tokens now. Often at the end of work the push will be blocked because a rule was not followed so there is rework done. But it is automatic, I don't manage it, and I suspect that in the long run less credits are used because there are less regressions, less bugs, less skipped work. In either case, even if it is still more credits, I am happier with the experience and the speed than I am when I try to use Claude without it.
+Then the AI will fix it and try again. So this might take more tokens and more time initially. But it comes back with bugs less. In either case, these checks are automatic, I don't manage them, so they don't necessarily take more of my time. I think working with these standards means less human time overall because there are less regressions, less bugs, less skipped work. Plus honestly, I enjoy the experience of working with AI and am just happier using them than the experience I have had building without them.
 
-I assume this can be used with other AI coding systems however I have only used Claude so it hasn't been tested.
+I assume this can be used with other AI coding systems however I have only used Claude so it hasn't been tested anywhere else and some files such as CLAUDE.md would need to be renamed and likely restructured. 
+
+Abbey
 
 ## Install it into a project
 
