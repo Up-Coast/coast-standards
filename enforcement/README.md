@@ -565,6 +565,21 @@ below, ranked, and the next session builds the first row that does not say DONE.
   wrong on one rule can be found (07 already asks for it).
 - Compose `Text("literal")` as an Android Lint custom check if the scanner's
   Kotlin precision proves insufficient.
+- **E4.5 — the unreached-view check (filed 2026-09-15, from a real miss).** A
+  screen built, tested, captured and ticked complete, drawn only by a debug
+  component gallery; no route in the product ever mounted it (rules/08 case
+  log). The scanner gains a per-platform check: every public view or
+  component type (SwiftUI `View`, Compose `@Composable` screens, React
+  components) needs a construction site on a route the shipping product has
+  — a debug-only gallery, preview or test file does not count (the gallery,
+  preview and test path classes come from paths.json). A view deliberately
+  not mounted yet is declared in code, next to its declaration, with the task
+  that mounts it (one doc-comment tag, e.g. `/// not-mounted-yet: <task>`), so
+  the deferral list lives with the code and never in a governing file an
+  agent cannot write. A feature flag counts as a route when the flag is
+  declared and its off state is named. The adopting project's own stopgap
+  guard test retires when this check reproduces every finding on its tree —
+  the same path the ui-string-literal check took.
 
 ### Phase E5 — the config: every rule, seat and hook behind a switch, and the names out of the code (2026-09-07)
 
