@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per release. The version n
 
 ## Unreleased
 
+## 1.6.1 — 2026-09-16
+
+A wording fix in the `CLAUDE.md` block.
+
+### Fixed
+
+- **The `CLAUDE.md` block starts with a capital letter when no product name is set.** It used to open with "this project follows".
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
+
 ## 1.6.0 — 2026-09-16
 
 Writing guides for AI agents, clearer documentation, and platform rule sections written once.

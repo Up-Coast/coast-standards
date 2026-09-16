@@ -261,7 +261,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_without_names_the_sentences_use_general_words(self):
         block = self.project.read("CLAUDE.md")
-        self.assertIn("this project follows the Coast Standards repo", block)
+        self.assertIn("This project follows the Coast Standards repo", block)
         self.assertIn("it is the owner's to open", block)
         event = json.dumps({"session_id": "t", "cwd": self.project.path, "hook_event_name": "PreToolUse", "tool_name": "Bash",
                             "tool_input": {"command": "fly deploy"}, "tool_use_id": "x"})

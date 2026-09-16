@@ -731,6 +731,7 @@ class Adoption:
                            "OFF": counts["off"], "OPEN": counts["open"],
                            "SWITCHED_OFF": f" ({counts['off']} switched off in the config)" if counts["off"] else "",
                            "OWNER": owner.get("name") or "the owner", "PRODUCT": owner.get("product") or "this project",
+                           "PRODUCT_AT_START": owner.get("product") or "This project",
                            "CHECKS_DIR": self.layout["checks_dir"], "HOOKS_DIR": self.layout["hooks_dir"],
                            "STATE_DIR": self.layout["state_dir"], "SESSION_HOOK": self.layout["session_hook"],
                            "SETTINGS_FILE": self.layout["settings_file"], "CONFIG_FILE": self.state(config_table.FILE_NAME),

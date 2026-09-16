@@ -1,7 +1,7 @@
 <!-- coast-standards: begin (this block is written by enforcement/adopt.py; edit outside it) -->
 ## Coast Standards — the standing rules, and the checks that enforce them
 
-{{PRODUCT}} follows the Coast Standards repo, `{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards). It was adopted for the **{{PLATFORM}}** platform from standards release `{{STANDARDS_COMMIT}}`.
+{{PRODUCT_AT_START}} follows the Coast Standards repo, `{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards). It was adopted for the **{{PLATFORM}}** platform from standards release `{{STANDARDS_COMMIT}}`.
 
 1. Read `rules/00-priority-rules.md` in that repo first. DRY is the rule above all other rules.
 2. Then read `rules/01-working-style.md`.
