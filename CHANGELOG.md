@@ -1,11 +1,15 @@
 # Changelog
 
-*Last updated: 2026-09-15*
+*Last updated: 2026-09-16*
 
 What a project that upgrades will notice, one entry per release. The number lives in
 `CHECKS-VERSION`; the release is the git tag `v<number>`.
 
 ## Unreleased
+
+## 1.5.0 — 2026-09-16
+
+A wedged test run is killed and refused, and a count that fell is lowered by a command, never a hand edit.
 
 - **The tests seat runs under a wall-clock deadline** (`tests_deadline_seconds` in the
   config, default 900; `tool:tests-deadline` on rule 06's long-runs line). A test run still
@@ -16,7 +20,6 @@ What a project that upgrades will notice, one entry per release. The number live
   nothing in the layer would have ended it. Rule 06 also names the shape that caused it:
   a render guard reads a fixed region or sample, never a search across the whole render.
   A project picks the deadline up by re-running adopt.py; the config key is optional.
-
 - **`adopt.py --lower-baselines`**: a push refused because a ratchet count FELL no longer
   sends anyone to hand-edit the governing baseline. The new switch writes only the ratchet
   and jscpd baselines from the tree as it stands (measured by the project's own installed
