@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 9 -->
+<!-- coast-standards-release: 1.6.0 -->
 # Rules for AI features
 
 This file is a starting set of rules, installed when you tell Coast your app has AI features. Like the project rules, **it belongs to you.** Edit any rule, delete rules that don't apply, and add your own.

@@ -50,6 +50,11 @@ STUB_GRAPH = {"targets": [
 ]}
 
 
+def shipped_ios_rules():
+    with open(os.path.join(REPO_ROOT, "rules", "platform", "domain-rules-ios.md"), encoding="utf-8") as handle:
+        return handle.read()
+
+
 def clean_env(**overrides):
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.pop("CLAUDECODE", None)
@@ -885,6 +890,56 @@ class AdoptTests(unittest.TestCase):
         code, out = self.project.adopt()
         self.assertEqual(code, 0, out)
         self.assertTrue(os.path.isfile(os.path.join(self.project.path, developer)))
+
+    def test_the_rules_document_upgrades_by_release_stamp(self):
+        rules = "docs/domain-rules.md"
+        shipped = shipped_ios_rules()
+        body = shipped.split("\n", 1)[1]
+        self.assertTrue(shipped.startswith("<!-- coast-standards-release: "), "the shipped file carries a release stamp")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), shipped)
+        # An old number stamp with the same text: replaced, no backup kept.
+        self.project.write(rules, "<!-- coast-rules-version: 8 -->\n" + body)
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), shipped)
+        self.assertIn("no backup was kept", out)
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, "docs", "domain-rules.v8.md")))
+        # An old stamp with the owner's edits: replaced, and the edited copy kept beside it.
+        self.project.write(rules, "<!-- coast-rules-version: 8 -->\n" + body + "\n- **MINE-1** Our own rule. [check: review]\n")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), shipped)
+        self.assertIn("MINE-1", self.project.read("docs/domain-rules.v8.md"))
+        # The same release, edited: the owner's file, left alone.
+        edited = shipped + "\n- **MINE-2** Another rule. [check: review]\n"
+        self.project.write(rules, edited)
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), edited)
+        self.assertIn("kept (founder-edited)  docs/domain-rules.md", out)
+        # No stamp at all: a file the owner wrote themselves is never replaced.
+        self.project.write(rules, "# Our rules\n")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), "# Our rules\n")
+
+    def test_an_unstamped_rules_document_the_installer_wrote_is_upgraded(self):
+        rules = "docs/domain-rules.md"
+        shipped = shipped_ios_rules()
+        old = "# Project rules\n\nAn older unstamped copy.\n"
+        self.project.write(rules, old)
+        seeds_path = ".coast/seeds.json"
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), old, "a file the installer did not write is kept")
+        seeds = json.loads(self.project.read(seeds_path))
+        seeds[rules] = {"sha256": hashlib.sha256(old.encode("utf-8")).hexdigest(), "written": "2026-09-01"}
+        self.project.write(seeds_path, json.dumps(seeds))
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.project.read(rules), shipped, "an unedited copy the installer wrote is upgraded")
 
     def test_lower_baselines_writes_only_the_baselines_and_only_downwards(self):
         # A push refused for a count that FELL is answered by the agent, not by a hand edit to a

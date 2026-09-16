@@ -109,6 +109,8 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STANDARDS_ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(STANDARDS_ROOT, "tools"))
+import build_rules as release_stamps  # noqa: E402  (the one reader of the rules' release stamps)
 CHECKS_DIR = os.path.join(HERE, "checks")
 HOOKS_DIR = os.path.join(HERE, "hooks")
 LINT_DIR = os.path.join(HERE, "lint")
@@ -609,19 +611,14 @@ class Adoption:
         else:
             self.say("note", self.layout["rules_document"], f"no rules document for {self.platform} in the standards repo")
 
-    @staticmethod
-    def corpus_version(data):
-        """The `<!-- coast-rules-version: N -->` stamp on the document's first line, or None."""
-        found = re.search(rb"coast-rules-version:\s*(\d+)", data[:400])
-        return int(found.group(1)) if found else None
-
     def put_rules_document(self, shipped):
-        """docs/domain-rules.md is founder-owned, and it is also VERSIONED. A copy carrying an
-        older corpus version is not a founder's edit to preserve — it is last year's rule book,
-        and leaving it means the project's rules name checks that do not exist yet (one adopting web project
-        sat at version 7 with three check tags, so its number read 0 of 54). An older stamp is
-        upgraded and the copy it replaces is written beside it, so nothing a founder wrote is lost.
-        A copy at the current version that differs is a founder's edit, and is left alone."""
+        """docs/domain-rules.md belongs to the owner, and it is also versioned. Its first line names the
+        release in which its text last changed (tools/build_rules.py keeps that stamp; the old
+        `coast-rules-version: N` stamps count as older than any release). A copy from an older release is
+        replaced, and the copy it replaces is written beside it so nothing the owner wrote is lost. A copy
+        whose only difference is the stamp is replaced with no backup. A copy with no stamp is upgraded only
+        when it is still the unedited file this installer wrote. A copy at the current release that differs
+        is the owner's edit, and is left alone."""
         relative = self.layout["rules_document"]
         full = self.path(relative)
         shipped_path = os.path.join(STANDARDS_ROOT, "rules", "platform", f"domain-rules-{self.platform}.md")
@@ -633,18 +630,27 @@ class Adoption:
         if current == shipped:
             self.say("unchanged", relative, "seed")
             return
-        have, want = self.corpus_version(current), self.corpus_version(shipped)
-        if have is not None and want is not None and have < want:
-            base, extension = os.path.splitext(relative)
-            kept = f"{base}.v{have}{extension}"
-            self.put(kept, current, governed=False)
-            self.put(relative, shipped, governed=False)
-            self.say("note", relative, f"corpus version {have} → {want}; the copy it replaced is {kept}, "
-                                       "so anything you wrote in it is still there")
-            # count from the document that will be there, so a --dry-run reports the real number
-            self.rules_document = shipped_path
+        current_text, shipped_text = current.decode("utf-8"), shipped.decode("utf-8")
+        have_label = release_stamps.stamp_label(current_text)
+        want_label = release_stamps.stamp_label(shipped_text)
+        unedited_seed = self.seeds.get(relative, {}).get("sha256") == sha256(current)
+        older = (release_stamps.release_key(have_label) < release_stamps.release_key(want_label)
+                 if have_label is not None else unedited_seed)
+        if not older:
+            self.say("kept (founder-edited)", relative, "differs from the shipped rules at the same release; not touched")
             return
-        self.say("kept (founder-edited)", relative, "differs from the shipped seed at the same corpus version; not touched")
+        if release_stamps.without_stamp(current_text) != release_stamps.without_stamp(shipped_text) and not unedited_seed:
+            base, extension = os.path.splitext(relative)
+            kept = f"{base}.v{have_label or 'unstamped'}{extension}"
+            self.put(kept, current, governed=False)
+            note = f"the copy it replaced is {kept}, so anything you wrote in it is still there"
+        else:
+            note = "only the stamp or unedited text changed, so no backup was kept"
+        self.put(relative, shipped, governed=False)
+        self.seeds[relative] = {"sha256": sha256(shipped), "written": self.today.isoformat()}
+        self.say("note", relative, f"rules from release {have_label or 'unstamped'} → {want_label}; {note}")
+        # count from the document that will be there, so a --dry-run reports the real number
+        self.rules_document = shipped_path
 
     def rules_number(self):
         """verify_rules.py on the project's rules document (the corpus document when it has none)."""

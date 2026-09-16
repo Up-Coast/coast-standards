@@ -34,7 +34,7 @@ Everything is standard-library Python 3. There is nothing to install.
 - **A rule a machine can check** gets a scanner signature in `enforcement/checks/rules_signatures.json`. Add two test files under `enforcement/checks/tests/plants/<platform>/`: a `.fail` file the check must refuse and a `.pass` file it must accept.
 - **A rule only a person can judge** is tagged `check: review`.
 - **Rule ids are stable** (`DRY-3`, `L-7`, `SEC-12`). Never renumber. To replace a rule, retire its id and add a new one.
-- **Platform files carry a version stamp.** Each file under `rules/platform/` has one on its first line. Bump it in every platform file you change. A project only receives a new copy of its rules document when this number goes up.
+- **Platform files carry a release stamp.** The first line of each file under `rules/platform/` names the release in which its text last changed. After editing a platform file, run `python3 tools/build_rules.py`: it marks the file `unreleased`, and the release step replaces that with the release number. A project only receives a new copy of its rules document when the stamp is newer than its copy's. A test refuses a stale stamp.
 - **Shared sections are edited in one place.** A section used by more than one platform lives in `rules/platform/shared/`. Edit it there, then run `python3 tools/build_rules.py` to update the platform files. Never paste the same section into two platform files; a test refuses it.
 - **Write plainly.** State the rule, then the reason. No marketing, and no summary at the end of a section.
 

@@ -62,7 +62,7 @@ Copy one of these into your project when you adopt. "Enforced by a check" counts
 A section that is the same on more than one platform is written once, in [`platform/shared/`](https://github.com/Up-Coast/coast-standards/tree/main/rules/platform/shared). Each platform file marks where it goes with a `<!-- shared-section: … -->` comment, so every platform file is still complete on its own. To change a shared section:
 
 1. Edit its file in `rules/platform/shared/`.
-2. Run `python3 tools/build_rules.py` to update the platform files.
+2. Run `python3 tools/build_rules.py` to update the platform files. It also marks each changed file `unreleased`, so the next release stamps it.
 3. Commit both. A test refuses a platform file that does not match its shared section, and a section copied by hand into two platform files.
 
 ## Finding a rule by its id

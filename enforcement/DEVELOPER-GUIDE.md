@@ -590,7 +590,7 @@ Without `--platform`, the installer reads `.coast/platform`, or else:
 | `.coast/xcode-scheme` | optional; written by a person | The Xcode scheme to build. |
 | Linter configs | seed | Written when missing; updated while unedited; kept once edited. |
 | `.claude/skills/<guide>/SKILL.md` | seed | The writing guides in `skills/` that are not in `writing_guides.off`. A guide switched off is removed while unedited and kept once edited. |
-| `docs/domain-rules.md` | seed | Upgraded from an older rules version, keeping the old copy as `docs/domain-rules.v<N>.md`. |
+| `docs/domain-rules.md` | seed | Replaced when the shipped copy has a newer release stamp. An edited copy is kept as `docs/domain-rules.v<release>.md`. An unstamped copy is replaced only while it is still the one the installer wrote. |
 | `CLAUDE.md` | the marked block only | Rewritten from `TEMPLATE-PROJECT-CLAUDE.md` between `<!-- coast-standards: begin -->` and `end -->`. Broken markers stop the run before anything is written. |
 
 ### 10.4 Idempotency
@@ -639,9 +639,9 @@ The configs in `lint/` switch on the rules the documents cite. The verifier fail
 | Notes | `CHANGELOG.md`, one `## <number> — <date>` section per release |
 | Publishing | `.github/workflows/release.yml` checks the tag and publishes the GitHub release. |
 | A project's release | `.coast/standards-version`: `1.0.0` from a tarball or tagged clone, `1.0.0+<commit>` otherwise |
-| Rules version | First line of `docs/domain-rules.md`: `<!-- coast-rules-version: N -->`. The rules are at version 9. |
+| Rules release | First line of each platform rules file: `<!-- coast-standards-release: X.Y.Z -->`, the release in which its text last changed. Old `coast-rules-version: N` stamps count as older than any release. |
 
-Each project has its own copy of the checks and upgrades on its own schedule with `--release`. An older rules document is upgraded at adoption. A current-version copy that differs is the owner's edit, and is left alone.
+Each project has its own copy of the checks and upgrades on its own schedule with `--release`. A rules document from an older release is upgraded at adoption. A copy from the current release that differs is the owner's edit, and is left alone.
 
 ### 12.1 Cutting a release
 
@@ -654,8 +654,14 @@ Each project has its own copy of the checks and upgrades on its own schedule wit
    | A change that makes an adopted project's setup stop working | major |
 
 2. In `CHANGELOG.md`, move the entries under `## Unreleased` into a new `## <version> — <YYYY-MM-DD>` section. Put it directly under `## Unreleased`, which stays, empty.
-3. Commit both files.
-4. Tag and push the tag:
+3. Stamp the platform rule files that changed since the last release:
+
+   ```bash
+   python3 tools/build_rules.py --release <version>
+   ```
+
+4. Commit the changed files.
+5. Tag and push the tag:
 
    ```bash
    git tag v<version>
@@ -664,7 +670,7 @@ Each project has its own copy of the checks and upgrades on its own schedule wit
 
    The release workflow checks the tag against `CHECKS-VERSION` and the changelog. It then publishes the GitHub release, with that changelog section as its notes.
 
-5. Do not re-adopt the owner's projects as part of a release. Each project takes the new release when its owner asks, with `adopt.py <project> --release <version>`.
+6. Do not re-adopt the owner's projects as part of a release. Each project takes the new release when its owner asks, with `adopt.py <project> --release <version>`.
 
 #### How to write release notes
 

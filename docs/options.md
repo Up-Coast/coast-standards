@@ -246,7 +246,7 @@ The classes you will set most often:
 | `.coast/module-kinds.json` | For Swift packages: which targets are apps, feature modules and shared layers. The import check uses it to refuse one feature importing another. Example: `{"app": ["MyApp"], "feature": ["Onboarding", "Journal"], "shared": ["Core", "DesignKit"]}` |
 | Linter and formatter configs | `.swiftlint.yml`, `eslint.config.mjs`, `detekt.yml`, `ruff.toml` and so on. The installer adds one only if you have none. They are yours to edit. The installer does not touch a file you changed. |
 | `.claude/skills/write-developer-documentation/`, `.claude/skills/write-a-guide/` | The writing guides. Yours to edit. See [Writing guides](#writing-guides-writing_guidesoff). |
-| `docs/domain-rules.md` | Your project's copy of the rules. It is yours to edit. The installer never replaces it at the same version. When a newer version is published, the installer upgrades it and keeps your old copy as `docs/domain-rules.v<N>.md`. |
+| `docs/domain-rules.md` | Your project's copy of the rules. It is yours to edit. Its first line names the release its text comes from. The installer never replaces a copy from the same release. When a newer release changes the rules, the installer replaces your copy, and keeps it as `docs/domain-rules.v<release>.md` if you had edited it. |
 
 ## Baselines
 

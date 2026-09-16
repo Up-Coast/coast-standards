@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 9 -->
+<!-- coast-standards-release: 1.6.0 -->
 # Project rules
 
 These are your project's rules. They are a starting set drawn from widely used engineering and safety guides, listed under Sources at the bottom.

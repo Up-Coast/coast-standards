@@ -118,7 +118,7 @@ What an update does:
 - It replaces its own files and keeps files you edited.
 - It keeps your settings in `.coast/config.json`.
 - It lowers any baseline count that fell.
-- When the platform rules have a newer version, it keeps your old copy as `docs/domain-rules.v<N>.md`.
+- When the release has newer platform rules, it replaces `docs/domain-rules.md`. If you had edited it, your copy is kept as `docs/domain-rules.v<release>.md`.
 - It changes nothing when nothing changed.
 
 Each project holds its own copy of the rules and checks, like a dependency. Every release is listed in [CHANGELOG.md](CHANGELOG.md).

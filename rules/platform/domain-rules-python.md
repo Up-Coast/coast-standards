@@ -1,3 +1,4 @@
+<!-- coast-standards-release: 1.6.0 -->
 # Project rules
 
 This file is a starting set of rules for your project. They come from well-known engineering and security guides, listed under Sources at the bottom.

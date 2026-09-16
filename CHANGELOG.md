@@ -4,6 +4,22 @@ What changes for a project that upgrades, one section per release. The version n
 
 ## Unreleased
 
+## 1.6.2 — 2026-09-16
+
+One version number for everything: the rules files carry the release number.
+
+### Changed
+
+- **The rules files carry the release number instead of a separate rules version.** The first line of each platform rules file now names the release in which its text last changed, for example `<!-- coast-standards-release: 1.6.0 -->`. The installer compares these as release numbers and treats the old `coast-rules-version: 9` stamps as older, so an unchanged project copy is updated without a backup.
+
+### Fixed
+
+- **Python projects now receive rule updates.** The Python rules file had no version stamp, so the installer never upgraded a Python project's copy. An unstamped copy is upgraded while it is still the one the installer wrote.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. Your `docs/domain-rules.md` gets the new first line. If you had edited it, your copy is kept as `docs/domain-rules.v<old stamp>.md`.
+
 ## 1.6.1 — 2026-09-16
 
 A wording fix in the `CLAUDE.md` block.

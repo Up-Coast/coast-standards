@@ -1,4 +1,4 @@
-<!-- coast-rules-version: 9 -->
+<!-- coast-standards-release: 1.6.0 -->
 # Project rules
 
 This file is your project's rule set. It starts as a default drawn from widely used engineering and safety guides, listed under Sources at the end.
