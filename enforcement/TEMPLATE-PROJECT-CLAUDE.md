@@ -51,6 +51,11 @@ yours to edit:
   with warnings, linter or formatter findings, `build-warnings`,
   `lint-findings`, `format-findings` and, with no test target yet,
   `tests-missing`); each carries a deadline after which the check blocks.
+  A count that FELL is recorded by running `adopt.py <project>
+  --lower-baselines` from the standards repo and committing the file with
+  the change — that command writes only the two baselines and only ever
+  lowers, so an agent runs it itself; it never hands the edit to a person.
+  Raising a count or moving a deadline stays a person's.
 - `{{CONFIG_FILE}}` — the switches and names: which rules, seats, linters and
   session hooks are off, and who to ask. A person's file; an agent cannot
   write it, and the number above counts what it switches off.

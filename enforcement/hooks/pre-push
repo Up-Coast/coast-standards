@@ -858,7 +858,7 @@ import json, sys
 report = json.load(open(sys.argv[1]))["statistics"]["total"]["clones"]
 base = json.load(open(sys.argv[2])).get("clones")
 if isinstance(base, int) and report < base:
-    print(f"jscpd: {report} clones in the tree, below the baseline of {base} — lower it by re-running adopt.py (the deadline does not move)")
+    print(f"jscpd: {report} clones in the tree, below the baseline of {base} — lower it: adopt.py <project> --lower-baselines (the deadline does not move; an agent may run it)")
 else:
     print(f"jscpd: {report} clones in the tree, none new against the baseline of {base}")
 ' "$scratch/jscpd-report.json" "$baseline"

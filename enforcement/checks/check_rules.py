@@ -375,7 +375,9 @@ def ratchet_verdict(signature_id, count, baselines, today):
     if count > baseline:
         return False, f"{count} in the tree, above the baseline of {baseline} — a change added one; the count may only fall"
     if count < baseline:
-        return False, f"{count} in the tree, below the baseline of {baseline} — lower the baseline to {count} in the same commit ({BASELINE_FILE})"
+        return False, (f"{count} in the tree, below the baseline of {baseline} — lower the baseline to {count} in the same commit: "
+                       f"run adopt.py <project> --lower-baselines (it writes only {BASELINE_FILE} and the jscpd baseline, and only "
+                       f"ever lowers — an agent may run it) and commit the file with the change")
     return True, f"{count} in the tree, equal to the baseline" + (f"; deadline {deadline}" if deadline else "")
 
 

@@ -7,6 +7,14 @@ What a project that upgrades will notice, one entry per release. The number live
 
 ## Unreleased
 
+- **`adopt.py --lower-baselines`**: a push refused because a ratchet count FELL no longer
+  sends anyone to hand-edit the governing baseline. The new switch writes only the ratchet
+  and jscpd baselines from the tree as it stands (measured by the project's own installed
+  scanner), lowers a count that fell, leaves and reports one that rose, and installs
+  nothing — so an agent runs it itself. The scanner's and the jscpd seat's refusal lines
+  now name that command. Born of a real push on 2026-09-15: a fix removed one trailing
+  comment, the scanner refused the push until the baseline read the fallen count, and the
+  agent handed the owner a one-line edit to a file it is told never to touch.
 - **`**/*.log` joins the jscpd ignore list** (enforcement/checks/layout.json). A build
   log saved as walk evidence is a record, not code; two such logs in one project
   matched each other and refused a documentation push as a "new clone" (2026-09-15).

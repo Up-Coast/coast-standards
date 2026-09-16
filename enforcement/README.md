@@ -234,7 +234,7 @@ the one home; this is the shape:
   committed before the checks existed are legacy too — found on Coast, where
   the other lane's commits landed between the measurement and the push); scans the whole tree for
   `ratchet` signatures and compares the count to `.coast/ratchet-baseline.json`
-  (GOVERNING; the baseline may be lowered by a human, never raised); prints
+  (GOVERNING; the baseline is lowered by `adopt.py --lower-baselines`, which any session may run because it can only tighten, and is never raised); prints
   `advisory` counts without failing. The whole-tree pass belongs to the push
   (`--tree` and the diff modes): a commit-time (`--staged`) or editor-time
   (`--files`) scan runs the tree-scope block signatures over the touched

@@ -123,6 +123,10 @@ release is downloaded into the cache and its own installer runs. Governed files 
 note, a baseline whose count fell is lowered (the deadline does not move), and nothing
 changes when nothing changed. `--measure-tools` forces the tool baselines to be
 re-measured; `--measure-tools format,lint` re-measures without a build.
+`--lower-baselines` writes only the ratchet and jscpd baselines from the tree as it stands,
+measured by the project's own installed scanner, and installs nothing: a count that fell is
+lowered, one that rose is left and reported. It is the answer to a push refused for a fall,
+and an agent may run it — under it a baseline can only tighten.
 
 ### 3.4 Run the checks by hand
 
@@ -856,9 +860,13 @@ signature is genuinely wrong, fix it in the standards repo with a plant that pro
 directions, then re-adopt.
 
 **The push was refused for a ratchet that fell.** A scanner ratchet below its baseline
-asks you to lower the baseline in the same commit: re-run `adopt.py`, which lowers counts
-that fell, and commit the baseline with the change. A tool ratchet below its baseline just
-passes with a note.
+asks for the baseline lowered in the same commit: run `adopt.py <project> --lower-baselines`
+from the standards repo, which writes only the two baselines and only ever lowers, and commit
+the baseline with the change. The baseline file is governing, but this is not an edit an
+agent needs a person for — the command cannot loosen anything, so the agent runs it itself.
+(A full re-run of `adopt.py` lowers the count too, but also reinstalls the checks from
+whatever standards checkout is on disk, which is a different decision.) A tool ratchet below
+its baseline just passes with a note.
 
 **The build's warning count read zero, then refused as a rise.** Warning counts are only
 comparable on a full build. The ratcheted build seat rebuilds the project's own targets

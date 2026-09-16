@@ -128,6 +128,12 @@ class Project:
         files["<core.hooksPath>"] = hooks_path.stdout.strip()  # exit 1 when unset is not an error here
         return files
 
+    def scan(self, *args):
+        """The project's own installed scanner, as the push runs it."""
+        done = subprocess.run([sys.executable, os.path.join(self.path, ".coast/checks/check_rules.py"), *args,
+                               "--platform", "ios", "--today", "2026-09-04"], cwd=self.path, capture_output=True, text=True, env=clean_env())
+        return done.returncode, done.stdout + done.stderr
+
     def hook(self, name, *args, stdin="", env=None):
         done = subprocess.run(["sh", os.path.join(self.path, ".githooks", name), *args], cwd=self.path,
                               capture_output=True, text=True, input=stdin, env=env or clean_env())
@@ -814,6 +820,51 @@ class AdoptTests(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("secret-literal", out)
         self.assertIn("Sources/App/Keys.swift", out)
+
+
+    def test_lower_baselines_writes_only_the_baselines_and_only_downwards(self):
+        # A push refused for a count that FELL is answered by the agent, not by a hand edit to a
+        # governing file: the switch measures the tree with the project's own installed scanner,
+        # lowers what fell, never raises, and installs nothing else.
+        self.project.write("Sources/App/Two.swift", "import Foundation\nlet two = 2 // why two\nlet three = 3 // why three\n")
+        self.project.commit("two trailing comments")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self._baseline_entries()["inline-comment"]["count"], 2)
+        self.project.write("Sources/App/Two.swift", "import Foundation\nlet two = 2\nlet three = 3 // why three\n")
+        self.project.commit("one comment gone")
+        code, out = self.project.scan("--tree")
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL ratchet inline-comment: 1 in the tree, below the baseline of 2", out)
+        self.assertIn("run adopt.py <project> --lower-baselines", out)
+        before = self.project.snapshot()
+        code, out = self.project.adopt("--lower-baselines")
+        self.assertEqual(code, 0, out)
+        self.assertIn("inline-comment fell 2 → 1; lowered (its deadline 2026-12-03 stays)", out)
+        self.assertIn("Only the baselines were written", out)
+        after = self.project.snapshot()
+        changed = {path for path in set(before) | set(after) if before.get(path) != after.get(path)}
+        self.assertEqual(changed, {".coast/ratchet-baseline.json"}, "nothing but the fallen baseline moved")
+        entry = self._baseline_entries()["inline-comment"]
+        self.assertEqual((entry["count"], entry["deadline"]), (1, "2026-12-03"))
+        code, out = self.project.scan("--tree")
+        self.assertEqual(code, 0, out)
+        # A rise is reported and left where it was: the switch can only tighten.
+        self.project.write("Sources/App/Two.swift", "import Foundation\nlet two = 2 // a\nlet three = 3 // b\nlet four = 4 // c\n")
+        self.project.commit("three comments")
+        code, out = self.project.adopt("--lower-baselines")
+        self.assertEqual(code, 0, out)
+        self.assertIn("inline-comment is 3 in the tree, above its baseline of 1 — NOT raised", out)
+        self.assertEqual(self._baseline_entries()["inline-comment"]["count"], 1)
+        # It takes no other switch, and a project that never adopted is told to adopt first.
+        code, out = self.project.adopt("--lower-baselines", "--measure-tools")
+        self.assertEqual(code, 2, out)
+        self.assertIn("takes no other switch", out)
+        fresh = Project()
+        self.addCleanup(fresh.cleanup)
+        code, out = fresh.adopt("--lower-baselines")
+        self.assertEqual(code, 2, out)
+        self.assertIn("adopt first", out)
 
 
 class HookTests(unittest.TestCase):

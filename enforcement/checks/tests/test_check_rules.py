@@ -286,7 +286,7 @@ class TreeRatchetAndAdvisoryTests(unittest.TestCase):
         self.repo.commit("stale baseline")
         code, out = self.repo.run("--tree", "--platform", "ios", "--today", "2026-09-04")
         self.assertEqual(code, 1)
-        self.assertIn("below the baseline of 5 — lower the baseline to 3", out)
+        self.assertIn("below the baseline of 5 — lower the baseline to 3 in the same commit: run adopt.py <project> --lower-baselines", out)
         self.baseline(3)
         self.repo.commit("baseline 3")
         code, out = self.repo.run("--tree", "--platform", "ios", "--today", "2026-12-04")

@@ -66,7 +66,12 @@ the founder's decision, recorded.
   own ``--update-baseline`` fingerprints plus the clone count — or
   ``"clones": null`` with a note when jscpd is not installed. On a re-run a
   count that fell is lowered (dates kept); a count that rose is left as it
-  is and reported — nothing here raises a baseline.
+  is and reported — nothing here raises a baseline. ``--lower-baselines``
+  writes ONLY these two files from the tree as it stands (the project's own
+  installed checks measure it) and installs nothing: it is the answer to a
+  push refused for a count that fell, and an agent may run it, because a
+  baseline can only tighten under it — the deadline and every other governing
+  file stay a person's.
 * The Claude Code session layer (E2.1, E2.8): ``.coast/hooks/claude-hook.py``
   (GOVERNED) and ``.claude/settings.json`` — its ``hooks`` and
   ``disableAllHooks`` keys are governed and rewritten from
@@ -789,8 +794,18 @@ class Adoption:
             score += 5
         return score
 
-    def write_ratchet_baseline(self):
-        done = subprocess.run([sys.executable, os.path.join(CHECKS_DIR, "check_rules.py"), "--tree", "--platform", self.platform,
+    def lower_baselines(self):
+        """Only the two baselines, from the tree as it stands: a count that fell is lowered, one that rose is
+        left and reported, and nothing is installed. The project's own installed scanner does the measuring, so the
+        number written is the number the next push judges — not a newer standards checkout's."""
+        clean_git_env()
+        self.write_ratchet_baseline(scanner=self.path(os.path.join(self.layout["checks_dir"], "check_rules.py")))
+        self.write_jscpd_baseline()
+
+    def write_ratchet_baseline(self, scanner=None):
+        if scanner is None or not os.path.isfile(scanner):
+            scanner = os.path.join(CHECKS_DIR, "check_rules.py")
+        done = subprocess.run([sys.executable, scanner, "--tree", "--platform", self.platform,
                                "--today", self.today.isoformat()], cwd=self.project, capture_output=True, text=True)
         counts = {}
         for match in re.finditer(r"^(?:OK|FAIL) ratchet (\S+): (\d+) in the tree", done.stdout, re.M):
@@ -1037,6 +1052,10 @@ def main(argv=None):
     parser.add_argument("--release", metavar="VERSION",
                         help="install from a published release of the standards (e.g. 1.2.0, or 'latest') fetched into "
                              f"{CACHE_DIR} instead of from this copy; the way to adopt or upgrade without a clone")
+    parser.add_argument("--lower-baselines", action="store_true",
+                        help="write only the ratchet and jscpd baselines from the tree as it stands: a count that fell is "
+                             "lowered, one that rose is left and reported, nothing is installed. The answer to a push refused "
+                             "for a count that fell; an agent may run it (it can only tighten)")
     parser.add_argument("--measure-tools", nargs="?", const="build,format,lint,tests", metavar="SEATS",
                         help="re-measure the tool baselines (build-warnings, format-findings, lint-findings, tests-missing). "
                              "A FIRST adoption measures them anyway; this forces it on a later run. SEATS narrows the work, "
@@ -1087,13 +1106,26 @@ def main(argv=None):
     today = _dt.date.fromisoformat(args.today) if args.today else _dt.date.today()
     first_adoption = not os.path.isfile(platform_file)
     config = build_config(project, args, first_adoption)
-    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan, args.measure_tools,
-                        layout, config)
-    secrets = adoption.run()
+    if args.lower_baselines and (args.init or args.measure_tools or args.secret_scan):
+        print("adopt.py: --lower-baselines writes the two baselines and nothing else — it takes no other switch")
+        return 2
+    adoption = Adoption(project, platform, args.dry_run, by, today, args.jscpd_bin, args.secret_scan,
+                        "" if args.lower_baselines else args.measure_tools, layout, config)
+    if args.lower_baselines:
+        if adoption.first_adoption:
+            print(f"adopt.py: {project} has not adopted the standards yet — adopt first, then --lower-baselines")
+            return 2
+        adoption.lower_baselines()
+    else:
+        secrets = adoption.run()
 
     print(f"adopt.py — {project} ({platform}){' — DRY RUN, nothing written' if args.dry_run else ''}")
     for line in adoption.lines:
         print("  " + line)
+    if args.lower_baselines:
+        print(f"{adoption.changed} file(s) {'would change' if args.dry_run else 'changed'}. "
+              f"Only the baselines were written; the version this project carries did not move.")
+        return 0
     print(f"{adoption.changed} file(s) {'would change' if args.dry_run else 'changed'}. "
           f"Coast Standards {adoption.standards_commit} — the version this project now carries ({layout.state_file('standards-version')}).")
     if secrets:
