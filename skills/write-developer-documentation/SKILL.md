@@ -97,6 +97,16 @@ Keep the why as one sentence that names the problem the thing prevents:
 - **Fix contradictions you find.** When an old doc disagrees with the code, the code wins. Correct the doc and note the correction in your report.
 - **One home per fact.** A detail lives on one page. Other pages link to it. A settings table that appears in three pages will be wrong in two of them within a month.
 
+## When the code changes
+
+Documentation goes stale one change at a time. Every change that alters what a reader sees or does updates the documents that describe it, in the same change.
+
+1. List what the change alters: behaviour, commands, flags, settings and their defaults, file locations, messages, screens.
+2. Search every document for each item, by its literal name and by the words a reader would use for it.
+3. Update each match: the README, guides, the settings reference, troubleshooting pages, templates, diagrams and the changelog.
+4. Remove text that describes the old behaviour. Do not keep it under a "previously" note.
+5. Where a machine can check it, add a test: for example, one that fails when a flag or setting is missing from the reference page.
+
 ## Page shapes
 
 Use the shape that matches the page. Use only the sections the project needs, in this order.
@@ -266,3 +276,4 @@ Check each item:
 8. Every link resolves. Release notes use absolute URLs.
 9. Everything code reads (ids, tags, headings, placeholders) is unchanged, and the tests pass.
 10. Each fact lives on one page, and other pages link to it.
+11. Every document that describes something this change altered is updated.

@@ -4,6 +4,24 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.8.0 — 2026-09-16
+
+Rules for keeping documentation current, and a test that holds the settings reference to the code.
+
+### Added
+
+- **Rule: every change updates the documents that describe it.** A change to a behaviour, command, flag, setting, file location or message updates the README, guides, settings references, troubleshooting pages, diagrams and changelog in the same change. The rule is in `rules/07-documentation-git-process.md`.
+- **Rule: documents follow the project's writing instructions.** Agents write and update documents by the installed writing guides, or by the project's own instructions when the guides are switched off.
+- **The settings reference is checked against the code.** A test fails when an installer flag, a setting, a layout key or a switchable name is missing from `docs/options.md`.
+
+### Fixed
+
+- **The settings reference lists every layout key and the writing-guides question.** `lock_name`, `temp_prefix` and `env_prefix` were missing, and the `--init` description left out the writing guides.
+
+### Upgrading
+
+Nothing to do. The numbered rules are read in place from the standards repo, so reviews apply the new rules from this version on.
+
 ## 1.7.0 — 2026-09-16
 
 A rule for versions and build numbers.

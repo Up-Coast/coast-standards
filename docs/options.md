@@ -24,7 +24,7 @@ Run the installer as `python3 <release>/enforcement/adopt.py <project> [flags]`.
 |---|---|
 | `--platform NAME` | Sets the platform: `ios`, `macos`, `android`, `react-native`, `web` or `python`. Default: the platform recorded in `.coast/platform`, or detected from your project files. |
 | `--dry-run` | Prints what would change. Writes nothing. |
-| `--init` | Asks the on/off questions again (scanner rules, pre-push steps, session hooks) and writes the answers to `.coast/config.json`. A first install at a terminal asks them anyway, once. |
+| `--init` | Asks the on/off questions again (scanner rules, pre-push steps, session hooks, writing guides) and writes the answers to `.coast/config.json`. A first install at a terminal asks them anyway, once. |
 | `--yes` | Takes every default without asking. Everything is on. |
 | `--owner NAME` | The owner's name, used in refusal messages ("ask NAME first"). Saved as `owner.name`. |
 | `--product NAME` | The product's name. Saved as `owner.product`. |
@@ -160,6 +160,9 @@ Set these under `layout` only when your project must move the installed files.
 | `ai_rules_document` | `docs/ai-features-rules.md` |
 | `context_file` | `CLAUDE.md` |
 | `skills_dir` | `.claude/skills` |
+| `lock_name` | `coast-push.lock` |
+| `temp_prefix` | `coast-` |
+| `env_prefix` | `COAST_` |
 
 The `.coast` folder itself cannot move. The hooks find the settings file through it, so `layout.state_dir` is refused.
 

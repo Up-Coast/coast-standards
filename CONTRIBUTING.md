@@ -43,6 +43,8 @@ Everything is standard-library Python 3. There is nothing to install.
 - Read the relevant section first. `enforcement/DEVELOPER-GUIDE.md` describes every mode, flag, file and output format. `enforcement/README.md` explains the design and the reasons behind it.
 - Keep the output format exactly: `FAIL <check> <path>:<id>: <words>`. Hooks, CI and the reference implementation parse it.
 - Every behaviour change ships with a test in `enforcement/checks/tests/`.
+- Every change updates the pages that describe it, in the same commit. Check at least `README.md`, `docs/options.md`, the other pages in `docs/`, `enforcement/DEVELOPER-GUIDE.md`, `enforcement/TEMPLATE-PROJECT-CLAUDE.md` and `CHANGELOG.md`. A test fails when an installer flag, a setting or a layout key is missing from `docs/options.md`.
+- Write documentation by [`skills/write-developer-documentation/SKILL.md`](skills/write-developer-documentation/SKILL.md).
 
 ## Pull requests
 
