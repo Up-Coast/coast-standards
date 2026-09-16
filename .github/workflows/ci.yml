@@ -32,3 +32,31 @@ jobs:
         run: python3 enforcement/checks/verify_rules.py --baseline enforcement/checks/verify-baseline.json --summary
       - name: The enforcement layer's own tests
         run: python3 -m unittest discover -s enforcement/checks/tests -p 'test_*.py'
+
+  tag-version:
+    # Every merge to main is a version. Once the checks pass, tag it v<CHECKS-VERSION>.
+    # Publishing a GitHub release is separate: run the release workflow by hand.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag this version
+        run: |
+          version="$(tr -d '[:space:]' < CHECKS-VERSION)"
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            if [ "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA" ]; then
+              echo "$tag already marks this commit"
+              exit 0
+            fi
+            echo "FAIL version: $tag already marks another commit, so this merge did not raise CHECKS-VERSION" >&2
+            exit 1
+          fi
+          python3 tools/version.py check "" "$GITHUB_SHA"
+          git tag "$tag" "$GITHUB_SHA"
+          git push origin "$tag"

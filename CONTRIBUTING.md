@@ -14,7 +14,7 @@ Coast Standards is source-available under [LICENSE.md](LICENSE.md). When you sub
 ## Before you start
 
 1. Read `rules/00-priority-rules.md`. It is short, and it applies to this repository too.
-2. Turn on the repository's git hooks (once per clone). The pre-commit hook runs the verifier and the tests.
+2. Turn on the repository's git hooks (once per clone). The pre-commit hook runs the verifier and the tests. The pre-push hook refuses a push to `main` that does not raise the version.
 
    ```bash
    git config core.hooksPath .githooks
@@ -50,7 +50,8 @@ Everything is standard-library Python 3. There is nothing to install.
 - The commit subject line is under 100 characters and says what changed.
 - CI runs the verifier and the tests on Linux and macOS. Both must pass.
 - Every documentation page has a `*Last updated: YYYY-MM-DD*` line under its title. Update the date when you change the page.
-- Add a changelog entry under **Unreleased** in `CHANGELOG.md`, grouped under Added, Changed, Fixed or Removed. Write each entry as one line: what changed and the problem it solves. No dates, incident stories, rule numbers or task ids. Full instructions: [Cutting a release](enforcement/DEVELOPER-GUIDE.md#121-cutting-a-release).
+- Every merge to `main` raises the version. Run `python3 tools/version.py bump patch|minor|major "<summary>"` before you merge; the pre-push hook refuses a push to `main` without it.
+- Add a changelog entry under **Unreleased** in `CHANGELOG.md`, grouped under Added, Changed, Fixed or Removed. Write each entry as one line: what changed and the problem it solves. No dates, incident stories, rule numbers or task ids. Full instructions: [Every merge raises the version](enforcement/DEVELOPER-GUIDE.md#121-every-merge-raises-the-version).
 - The BuilderOS skills that the rules name are not copied here. Send fixes to them to [BuildGreatProducts/builder-os](https://github.com/BuildGreatProducts/builder-os).
 
 ## Reporting a false positive

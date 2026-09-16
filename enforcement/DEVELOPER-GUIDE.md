@@ -632,45 +632,59 @@ The configs in `lint/` switch on the rules the documents cite. The verifier fail
 
 ## 12. Versioning
 
+Every merge to `main` is a new version. Publishing a GitHub release is a separate step.
+
 | What | Where |
 |---|---|
-| Release number | `CHECKS-VERSION` (semantic version) |
-| Tag | `v<number>` |
-| Notes | `CHANGELOG.md`, one `## <number> — <date>` section per release |
-| Publishing | `.github/workflows/release.yml` checks the tag and publishes the GitHub release. |
-| A project's release | `.coast/standards-version`: `1.0.0` from a tarball or tagged clone, `1.0.0+<commit>` otherwise |
-| Rules release | First line of each platform rules file: `<!-- coast-standards-release: X.Y.Z -->`, the release in which its text last changed. Old `coast-rules-version: N` stamps count as older than any release. |
+| Version | `CHECKS-VERSION` (semantic version, no `v`) |
+| Tag | `v<version>`, added by CI to every version on `main` |
+| Notes | `CHANGELOG.md`, one `## <version> — <date>` section per version |
+| Published releases | GitHub releases, created only by running the release workflow by hand |
+| A project's version | `.coast/standards-version`: `1.0.0` from a tarball or tagged clone, `1.0.0+<commit>` otherwise |
+| Rules release | First line of each platform rules file: `<!-- coast-standards-release: X.Y.Z -->`, the version in which its text last changed. Old `coast-rules-version: N` stamps count as older than any version. |
 
-Each project has its own copy of the checks and upgrades on its own schedule with `--release`. A rules document from an older release is upgraded at adoption. A copy from the current release that differs is the owner's edit, and is left alone.
+A project can install any tagged version with `adopt.py <project> --release <version>`. `--release latest` installs the newest published release. A rules document from an older version is upgraded at adoption. A copy from the current version that differs is the owner's edit, and is left alone.
 
-### 12.1 Cutting a release
+### 12.1 Every merge raises the version
 
-1. Bump `CHECKS-VERSION`. Use a semantic version with no `v`.
+While you work, add changelog entries under `## Unreleased`. Before you merge to `main`:
 
-   | Change | Release type |
+1. Decide which part of the version the change raises.
+
+   | Change | Raise |
    |---|---|
-   | A new check, switch or refusal | minor |
-   | Fixes only | patch |
+   | Fixes, wording, docs, internal changes | patch |
+   | A new check, rule, switch, option or refusal | minor |
    | A change that makes an adopted project's setup stop working | major |
 
-2. In `CHANGELOG.md`, move the entries under `## Unreleased` into a new `## <version> — <YYYY-MM-DD>` section. Put it directly under `## Unreleased`, which stays, empty.
-3. Stamp the platform rule files that changed since the last release:
+2. Raise it. The tool updates `CHECKS-VERSION`, moves the `## Unreleased` entries into a new `## <version> — <YYYY-MM-DD>` section with your summary sentence, and stamps the platform rule files that changed:
 
    ```bash
-   python3 tools/build_rules.py --release <version>
+   python3 tools/version.py bump patch "One sentence summarising the change."
    ```
 
-4. Commit the changed files.
-5. Tag and push the tag:
+3. Commit the changed files and push to `main`.
 
-   ```bash
-   git tag v<version>
-   git push origin v<version>
-   ```
+What holds this:
 
-   The release workflow checks the tag against `CHECKS-VERSION` and the changelog. It then publishes the GitHub release, with that changelog section as its notes.
+- The pre-push hook (`.githooks/pre-push`) refuses a push to `main` whose version is not higher than the one on `main`, or whose changelog has no section for it.
+- The pre-commit hook's tests refuse a rules file still marked `unreleased` once the version has moved.
+- After the checks pass on `main`, CI tags the commit `v<version>`. It fails if that tag already marks another commit.
 
-6. Do not re-adopt the owner's projects as part of a release. Each project takes the new release when its owner asks, with `adopt.py <project> --release <version>`.
+Do not re-adopt the owner's projects as part of a merge. Each project takes a new version when its owner asks.
+
+### 12.2 Publishing a release
+
+Publish when a version should appear on the releases page and become what `--release latest` installs.
+
+1. Open **Actions**, choose **release**, and click **Run workflow**.
+2. Enter the version, for example `1.6.3`. Its tag must already exist.
+
+The workflow checks the tag against `CHECKS-VERSION` and the changelog, then publishes the GitHub release with that changelog section as its notes. From a terminal:
+
+```bash
+gh workflow run release.yml -R Up-Coast/coast-standards -f version=<version>
+```
 
 #### How to write release notes
 

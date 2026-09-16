@@ -1,8 +1,21 @@
 # Changelog
 
-What changes for a project that upgrades, one section per release. The version number is in `CHECKS-VERSION`, and each release is the git tag `v<version>`. How to write an entry: [Cutting a release](enforcement/DEVELOPER-GUIDE.md#121-cutting-a-release).
+What changes for a project that upgrades, one section per version. Every merge to `main` is a new version: the number is in `CHECKS-VERSION`, and each version is the git tag `v<version>`. Published releases are the ones on the GitHub releases page. How to write an entry: [Every merge raises the version](enforcement/DEVELOPER-GUIDE.md#121-every-merge-raises-the-version).
 
 ## Unreleased
+
+## 1.6.3 — 2026-09-16
+
+Every merge to main is a new version, and publishing a release is a separate step.
+
+### Changed
+
+- **Every merge to main is a new version.** `python3 tools/version.py bump patch|minor|major "<summary>"` raises `CHECKS-VERSION`, writes the version's changelog section and stamps the rule files. The pre-push hook refuses a push to main that does not raise the version, and CI tags every version `v<version>` once the checks pass.
+- **Publishing a GitHub release is a separate, manual step.** A tag no longer publishes a release. Run the release workflow by hand and name the version. `adopt.py --release <version>` installs any tagged version, and `--release latest` installs the newest published release.
+
+### Upgrading
+
+Nothing to do. Adopted projects are not affected.
 
 ## 1.6.2 — 2026-09-16
 

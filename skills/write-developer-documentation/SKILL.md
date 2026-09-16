@@ -158,7 +158,7 @@ Setup steps, how to change each kind of thing, what every change must include (t
 
 ### Changelog and release notes
 
-Each release is one section. The same text is published as the release notes.
+Each version is one section. The same text is published as the release notes when that version is released.
 
 ```markdown
 ## 1.5.0 — 2026-09-16
@@ -185,7 +185,7 @@ What an adopting project must do, or "Re-run `<install command>`. No other chang
 - Each bullet starts with a bold phrase in plain words, then one or two sentences: the problem it solves, and what the reader needs to do or set.
 - No incident stories, no dates other than the heading, no rule numbers, task ids or internal terms.
 - Links are absolute URLs, because release pages do not resolve relative links.
-- Add entries under `## Unreleased` in this format as each change lands. A release then only moves them under a new heading.
+- Add entries under `## Unreleased` in this format as each change lands. When the change merges, the version is raised and the entries move under the new version's heading. A project that versions every merge gets one section per merge.
 
 Good bullet:
 

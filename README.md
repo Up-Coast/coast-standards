@@ -105,7 +105,7 @@ An existing project does not have to fix everything first. The installer counts 
 
 ## Update to a newer release
 
-1. Run the installer from any installed release, naming the release you want (`latest`, or a version such as `1.2.0`).
+1. Run the installer from any installed release, naming the version you want: `latest` for the newest published release, or any version such as `1.6.3`.
 
    ```bash
    python3 ~/.cache/coast-standards/$v/enforcement/adopt.py /path/to/your/project --release latest
@@ -121,7 +121,7 @@ What an update does:
 - When the release has newer platform rules, it replaces `docs/domain-rules.md`. If you had edited it, your copy is kept as `docs/domain-rules.v<release>.md`.
 - It changes nothing when nothing changed.
 
-Each project holds its own copy of the rules and checks, like a dependency. Every release is listed in [CHANGELOG.md](CHANGELOG.md).
+Each project holds its own copy of the rules and checks, like a dependency. Every version is listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Customize
 
@@ -240,7 +240,7 @@ Never skip the hooks with `--no-verify`. More cases are in [When a check stops y
 | [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md) | A skill that lets an AI agent run the install. |
 | [`skills/write-developer-documentation/`](skills/write-developer-documentation/SKILL.md), [`skills/write-a-guide/`](skills/write-a-guide/SKILL.md) | The writing guides the installer adds to a project, unless switched off. You can also install them as personal Claude Code skills. |
 | [`TEMPLATE-CLAUDE.md`](TEMPLATE-CLAUDE.md) | A starter block for a project's `CLAUDE.md`. |
-| `CHECKS-VERSION` | The release number. Each release is also the git tag `v<number>` and an entry in [CHANGELOG.md](CHANGELOG.md). |
+| `CHECKS-VERSION` | The version. Every merge to `main` raises it, and every version is a git tag `v<number>` with a section in [CHANGELOG.md](CHANGELOG.md). Published releases are listed on the GitHub releases page. |
 | `.githooks/` | This repo's own pre-commit hook. Install it once per clone with `git config core.hooksPath .githooks`. |
 
 ## License

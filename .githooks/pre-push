@@ -1,0 +1,20 @@
+#!/bin/sh
+# Coast Standards — pre-push. Every merge to main raises the version (CHECKS-VERSION) and
+# gives it a dated CHANGELOG.md section. CI tags each version once the checks pass.
+# Installed per clone with:  git config core.hooksPath .githooks
+set -e
+root=$(git rev-parse --show-toplevel)
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
+zero=0000000000000000000000000000000000000000
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$remote_ref" = "refs/heads/main" ] || continue
+    [ "$local_sha" = "$zero" ] && continue
+    old=$remote_sha
+    [ "$old" = "$zero" ] && old=""
+    python3 "$root/tools/version.py" check "$old" "$local_sha" || status=1
+done
+if [ $status -ne 0 ]; then
+    echo "pre-push: the push to main was refused. Raise the version, then push again." >&2
+fi
+exit $status
