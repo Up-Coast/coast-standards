@@ -7,6 +7,18 @@ description: House style for guides, the documentation that tells a reader what 
 
 A guide tells someone who has to use or look after a thing what it is, how it works, how to use it and how to change it. It is short, plain and exact. Someone should be able to read it once, then do the thing.
 
+## The model this skill is tuned for
+
+This skill is tuned for Opus 5 at medium effort. On another model or effort level it may be followed less closely.
+
+Each time you load this skill, tell the person you are working for, in one line, before you start writing:
+
+- the model you are running on, as your system prompt names it
+- the effort level, if your context states it; if it does not, say the effort level is not visible to you
+- whether that matches Opus 5 at medium effort
+
+Example: "Loaded write-a-guide, which is tuned for Opus 5 at medium effort. This session runs Opus 5; the effort level is not visible to me."
+
 ## Before writing
 
 1. **Read one existing doc where this one will live.** Match its length, heading style, list punctuation and how it names people. A guide should read like the rest of that team's docs.

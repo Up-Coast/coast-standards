@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.3 — 2026-09-17
+
+The writing guides name the model they are tuned for.
+
+### Changed
+
+- **The writing guides name the model they are tuned for.** `write-a-guide` and `write-developer-documentation` are tuned for Opus 5 at medium effort. An agent that loads either one now tells the person it works for which model and effort level it is running on, so they can switch models when it differs.
+
+### Upgrading
+
+Re-run the installer with `--release latest` to take the updated guides. Nothing else changes.
+
 ## 1.9.2 — 2026-09-16
 
 Every version is published as a GitHub release.

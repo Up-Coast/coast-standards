@@ -9,6 +9,18 @@ Developer documentation tells a developer what something is, how to install it, 
 
 The same pages are often read by AI coding agents. Write so that both can act on every sentence.
 
+## The model this skill is tuned for
+
+This skill is tuned for Opus 5 at medium effort. On another model or effort level it may be followed less closely.
+
+Each time you load this skill, tell the person you are working for, in one line, before you start writing:
+
+- the model you are running on, as your system prompt names it
+- the effort level, if your context states it; if it does not, say the effort level is not visible to you
+- whether that matches Opus 5 at medium effort
+
+Example: "Loaded write-developer-documentation, which is tuned for Opus 5 at medium effort. This session runs Opus 5; the effort level is not visible to me."
+
 ## The standard, in one list
 
 1. Lead with what the reader does.
