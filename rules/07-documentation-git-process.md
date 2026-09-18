@@ -23,6 +23,8 @@
 - **CI confirms; it never discovers.** A CI failure on a pushed commit is a process defect, not a normal event. Pushing and waiting for CI to report a problem is slow and costly, because each push can cost a paid agent turn to learn what a local run would show in seconds. [check: process]
 - **One implementation of each check, run in both places.** The script CI runs is the check, and the local pre-push hook calls that same script. Do not rewrite a CI check in another language (a "mirror"). A mirror is a second source of truth, and it lets a local check pass while CI refuses the same code. [check: process]
 - The same checks are installed as the repository's commit hook, so a human contributor is refused in the same way an agent is.
+- **Hosted CI is optional, and it is never the only place a check runs.** The local hook is the gate; hosted CI repeats it for confirmation. A project may run no hosted CI at all, and that is a complete answer as long as the hook runs the same checks. [check: process]
+- **Know what a hosted run costs before scheduling one.** Hosted minutes are usually a single allowance shared across every private repository an owner has, and a macOS runner spends it about ten times faster than a Linux one. When the allowance runs out, every workflow in every private repository stops starting, with a billing message rather than a useful one — so one project's untrimmed CI takes every other project's checks down with it. Before adding a workflow or a schedule: run it on the smallest runner that works, cancel superseded runs, skip runs for changes that cannot break the build, and prefer the local hook. A tool that ships workflows does not install them without being asked. [check: process]
 
 ## Pull requests
 

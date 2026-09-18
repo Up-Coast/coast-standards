@@ -4,6 +4,19 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.4 — 2026-09-18
+
+Hosted CI is optional, and its cost is part of the decision.
+
+### Added
+
+- **Hosted CI is optional, and never the only place a check runs.** The local pre-push hook is the gate; hosted CI repeats it for confirmation. A project that runs no hosted CI at all is compliant, as long as the hook runs the same checks.
+- **Know what a hosted run costs before scheduling one.** Hosted minutes are usually one allowance shared across every private repository an owner has, and a macOS runner spends it about ten times faster than a Linux one. When the allowance runs out, every workflow in every private repository stops starting — so one project's untrimmed CI takes every other project's checks down with it. Run on the smallest runner that works, cancel superseded runs, skip runs for changes that cannot break the build, and prefer the local hook. A tool that ships workflows does not install them without being asked.
+
+### Upgrading
+
+Nothing to install. If a project runs hosted CI on a shared allowance, check its triggers: a full suite on every push, and any schedule measured in minutes, are the two that empty an allowance without anyone noticing.
+
 ## 1.9.3 — 2026-09-17
 
 The writing guides name the model they are tuned for.
