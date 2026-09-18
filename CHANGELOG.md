@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.6 — 2026-09-17
+
+The test time limit's kill reaches every helper on a shell without job control.
+
+### Fixed
+
+- **The test time limit's kill now reaches every helper on a shell without job control too.** On a `sh` that cannot give the run its own process group (dash, as on Debian and Ubuntu), the kill listed the processes under the runner wrongly and a helper could survive the push's refusal, holding its output open. The list is now taken once, correctly, and the same list gets TERM and then KILL.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
+
 ## 1.9.5 — 2026-09-17
 
 The test time limit holds under load, and parallel work streams share their pieces first.

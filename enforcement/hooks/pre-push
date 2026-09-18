@@ -402,24 +402,33 @@ with_listing() {
 }
 # <pid>: every process under it, deepest first — so a killed test runner's helpers go before
 # the runner that would respawn or wait on them. The pid itself is not listed: it is the
-# hook's own subshell, which ends by itself once what it waits on is gone.
-tree_pids() {
-  for kid in $(pgrep -P "$1" 2>/dev/null); do tree_pids "$kid"; echo "$kid"; done
+# hook's own subshell, which ends by itself once what it waits on is gone. (Two functions,
+# each naming its process only through $1: a loop variable is global in sh, and a recursive
+# call overwrites it before the caller has echoed it.)
+under_pid() {
+  for kid in $(pgrep -P "$1" 2>/dev/null); do tree_pids "$kid"; done
 }
-# <signal> <pid> [<pgid>]: the signal to the whole tree under pid (children first), then to the
+tree_pids() {  # <pid>: everything under it, deepest first, then the pid itself
+  under_pid "$1"
+  echo "$1"
+}
+# <signal> <pids> [<pgid>]: the signal to each listed pid (children first), then to the
 # process group when the run has one of its own — the group catches anything the pid walk
 # missed (a helper that reparented itself away from the runner).
 signal_tree() {
-  for each in $(tree_pids "$2"); do kill "-$1" "$each" 2>/dev/null; done
+  for each in $2; do kill "-$1" "$each" 2>/dev/null; done
   [ -n "${3:-}" ] && kill "-$1" -- "-$3" 2>/dev/null
   return 0
 }
 # <pid> [<pgid>]: TERM to the tree under pid and to the group, a short grace, then KILL to
-# whatever is still there — a test helper that ignores TERM does not get to outlive the deadline.
+# whatever is still there — a test helper that ignores TERM does not get to outlive the
+# deadline. The tree is listed ONCE, before TERM: after it, the runner is gone and its
+# survivors have reparented, so a second walk from the same root would find nothing.
 kill_tree() {
-  signal_tree TERM "$1" "${2:-}"
+  doomed=$(under_pid "$1")
+  signal_tree TERM "$doomed" "${2:-}"
   sleep 1
-  signal_tree KILL "$1" "${2:-}"
+  signal_tree KILL "$doomed" "${2:-}"
 }
 # <command…>: a test run under the config's wall-clock deadline (tests_deadline_seconds,
 # default 900; the manifest's tests-deadline tool, on the tests seat). A suite that can wedge is a defect (rules/06, long runs): a run still
