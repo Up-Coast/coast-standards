@@ -182,6 +182,13 @@ wants() {
 lock="$(git rev-parse --git-common-dir)/$layout_lock_name"
 
 release_push_lock() { rm -rf "$lock"; }
+# A signal to the hook (a person's Ctrl-C) releases the lock, kills a test run still under
+# its deadline (timed_tests sets these two while one runs) and stops the gate.
+timed_run_child=; timed_run_pgid_file=
+stop_on_signal() {
+  [ -n "$timed_run_child" ] && kill_tree "$timed_run_child" "$(own_group "$timed_run_pgid_file")"
+  release_push_lock; trap - EXIT; exit 130
+}
 
 lock_age() {  # seconds since the lock directory was made — its own mtime, which exists the
               # instant mkdir succeeds (a start-time file left a window in which a second
@@ -211,7 +218,7 @@ take_push_lock() {
     fi
   done
   trap 'release_push_lock' EXIT
-  trap 'release_push_lock; trap - EXIT; exit 130' INT TERM   # a signal releases the lock AND stops the gate
+  trap stop_on_signal INT TERM
   [ "$waited" -gt 0 ] && printf 'gate: the other push finished after %ss; starting this one\n' "$waited"
   return 0
 }
@@ -393,38 +400,73 @@ with_listing() {
   listing=$1; shift
   tr '\n' '\0' < "$listing" | xargs -0 "$@"
 }
-# <pid>: the process and everything under it, so a killed test runner takes its helpers with it.
+# <pid>: every process under it, deepest first — so a killed test runner's helpers go before
+# the runner that would respawn or wait on them. The pid itself is not listed: it is the
+# hook's own subshell, which ends by itself once what it waits on is gone.
+tree_pids() {
+  for kid in $(pgrep -P "$1" 2>/dev/null); do tree_pids "$kid"; echo "$kid"; done
+}
+# <signal> <pid> [<pgid>]: the signal to the whole tree under pid (children first), then to the
+# process group when the run has one of its own — the group catches anything the pid walk
+# missed (a helper that reparented itself away from the runner).
+signal_tree() {
+  for each in $(tree_pids "$2"); do kill "-$1" "$each" 2>/dev/null; done
+  [ -n "${3:-}" ] && kill "-$1" -- "-$3" 2>/dev/null
+  return 0
+}
+# <pid> [<pgid>]: TERM to the tree under pid and to the group, a short grace, then KILL to
+# whatever is still there — a test helper that ignores TERM does not get to outlive the deadline.
 kill_tree() {
-  for kid in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$kid"; done
-  kill "$1" 2>/dev/null
+  signal_tree TERM "$1" "${2:-}"
+  sleep 1
+  signal_tree KILL "$1" "${2:-}"
 }
 # <command…>: a test run under the config's wall-clock deadline (tests_deadline_seconds,
 # default 900; the manifest's tests-deadline tool, on the tests seat). A suite that can wedge is a defect (rules/06, long runs): a run still
 # silent at the deadline is killed — its whole process tree — and refused in words, never
 # waited on. The verdict of a run that finishes is its own exit status, carried through a
 # marker file (a background job's exit is not askable from sh without waiting on it).
+# The deadline is read from the clock, not counted in sleeps: a shell starved by a loaded
+# machine sleeps longer than it asks and would otherwise count the deadline short. The run
+# is started under job control (set -m, in a subshell so the hook's own shell is untouched),
+# which gives it a process group of its own that the kill reaches whole; a sh whose job
+# control needs a terminal (dash) leaves it in the hook's group, and the pid walk alone
+# does the killing there. A signal to the hook itself kills the run too (stop_on_signal).
 timed_tests() {
   limit=${config_tests_deadline_seconds:-900}
   marker=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}deadline.XXXXXX") || return 1
   rm -f "$marker"
-  ( "$@"; status=$?; echo "$status" > "$marker.tmp"; mv "$marker.tmp" "$marker" ) &
+  pgid_file="$marker.pgid"
+  ( set -m 2>/dev/null
+    ( "$@"; status=$?; echo "$status" > "$marker.tmp"; mv "$marker.tmp" "$marker" ) &
+    echo "$!" > "$pgid_file"
+    exec 2>/dev/null   # the run keeps the real stderr; only this shell's own job notice ("Terminated") is dropped
+    wait "$!" ) &
   child=$!
-  waited=0
+  timed_run_child=$child; timed_run_pgid_file=$pgid_file
+  started=$(date +%s)
   while [ ! -f "$marker" ]; do
-    if [ "$waited" -ge "$limit" ]; then
-      kill_tree "$child"
+    if [ $(( $(date +%s) - started )) -ge "$limit" ]; then
+      kill_tree "$child" "$(own_group "$pgid_file")"
       wait "$child" 2>/dev/null
-      rm -f "$marker.tmp"
+      rm -f "$marker.tmp" "$pgid_file"
+      timed_run_child=
       echo "FAIL pre-push tests:0:tests-deadline: the test run passed ${limit} s with no verdict — a wedge, not a slow run — and was killed. Find the test that hangs (run the suites one at a time under the same limit; rules/06, long runs). A person raises tests_deadline_seconds in $state/config.json only for a suite that is honestly that long." >&2
       return 1
     fi
     sleep 1
-    waited=$((waited + 1))
   done
   wait "$child" 2>/dev/null
+  timed_run_child=
   status=$(cat "$marker")
-  rm -f "$marker"
+  rm -f "$marker" "$pgid_file"
   return "${status:-1}"
+}
+# <pgid file>: the run's process group id when job control gave it one of its own, else nothing.
+own_group() {
+  leader=$(cat "$1" 2>/dev/null) || return 0
+  [ -n "$leader" ] && [ "$(ps -o pgid= -p "$leader" 2>/dev/null | tr -d ' ')" = "$leader" ] && echo "$leader"
+  return 0
 }
 count_lines() { wc -l < "$1" | tr -d ' '; }
 

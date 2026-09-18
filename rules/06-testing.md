@@ -96,6 +96,7 @@ When tests fail on the main branch, nobody *starts* new work. Fixing main is the
 Quality never drops. The goal is to stop paying for runs that prove nothing.
 
 - Parallel work streams run their own test target while working, and the **full suite once** before their final commit. A serial merge step re-runs the full suite after each merge.
+- **Parallel work streams that build the same kind of thing do not run at once.** Either one lands on main before the next is cut, or the pieces both would need are agreed and committed first, in one small serial commit both streams cut from, and each stream's brief names them as the pieces to use. Otherwise each stream writes its own copy, and the duplicate-code check cannot see it: it measures one branch against the baseline, so a copy that exists only on the other branch is invisible until the merge. So the merge of parallel streams is measured before it reaches main — the duplicate-code check runs over the merged tree, not over either branch — and any plan that fans out into parallel streams carries a named "shared pieces first" step. [check: process]
 - Sessions working on shared files keep the full suite passing before every commit.
 - **One review pass per task, at the end** — not per file, not per commit. [check: process]
 - Batch verification: run the full suite once over a batch, not once per merge. Never re-run a suite when nothing has changed since its last run.

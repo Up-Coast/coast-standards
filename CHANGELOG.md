@@ -4,6 +4,22 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.5 — 2026-09-17
+
+The test time limit holds under load, and parallel work streams share their pieces first.
+
+### Added
+
+- **Parallel work streams that build the same kind of thing do not run at once.** One lands on main before the next is cut, or the shared pieces are committed first in a small serial commit both streams cut from and each stream's brief names them. The duplicate-code check measures one branch, so copies made on two branches only show at the merge: the merge of parallel streams is measured over the merged tree before it reaches main, and a plan that fans out carries a named "shared pieces first" step. Rule 06, Cadence.
+
+### Fixed
+
+- **The pre-push hook's test time limit now holds under load and kills every helper.** The limit is read from the clock, not counted in one-second sleeps, so a machine busy enough to starve the hook no longer stretches it. The test run is its own process group and is stopped children first, TERM then KILL, so a helper that ignores the first signal or outlives its runner cannot keep the push open. Ctrl-C on the hook stops the run too.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
+
 ## 1.9.4 — 2026-09-18
 
 Hosted CI is optional, and its cost is part of the decision.

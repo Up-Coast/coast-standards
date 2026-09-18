@@ -10,7 +10,7 @@ The checkable rules are **DRY-1 to DRY-7 in every platform rules document** (`ru
 
 In short: create a component once and reuse it (DRY-1). Keep styling in one theme file and never inline it (DRY-2). Keep strings in one catalog per locale (DRY-3; see rule 2). Define error messages in one place (DRY-4). Define cross-cutting behaviour in one place (DRY-5). Compute every derived value in one place (DRY-6, PAY-3 generalized). Use one name per thing (DRY-7).
 
-These rules live in the platform document, not here, so a project has one rules document to read and one place where rules are counted.
+These rules live in the platform document, not here, so a project has one rules document to read and one place where rules are counted. The one case the duplicate-code check cannot see is parallel work streams; how they are sequenced and merged is in `06-testing.md`, under Cadence.
 [check: context]
 
 ## 2. User-facing text is never hardcoded — always, from day one
