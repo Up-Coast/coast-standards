@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.7 — 2026-09-18
+
+The guide-writing skill loads for guides only.
+
+### Changed
+
+- **`write-a-guide` no longer loads for every request that says "document".** Its description now says to judge by what the document is for. Requirements, specs and briefs written for another agent, plans, task lists, decision records, findings and audits are named as not guides, and "when in doubt, load it" is gone. A brief for an agent is written in the form that agent works from.
+
+### Upgrading
+
+Re-run `adopt.py <project>` to take the updated skill. Nothing else changes.
+
 ## 1.9.6 — 2026-09-17
 
 The test time limit's kill reaches every helper on a shell without job control.
