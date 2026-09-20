@@ -4,6 +4,16 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.8 — 2026-09-20
+
+README says who makes this and links the free course
+
+### Changed
+
+- **The README says who makes Coast Standards and links the free course.** A short "About Up Coast"
+  section at the foot, next to the licence: what the free six-week app strategy course is and who it
+  is for. Nothing about the rules or the checks changed, so a project on any version is unaffected.
+
 ## 1.9.7 — 2026-09-18
 
 The guide-writing skill loads for guides only.
