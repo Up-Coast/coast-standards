@@ -249,6 +249,12 @@ Never skip the hooks with `--no-verify`. More cases are in [When a check stops y
 | `CHECKS-VERSION` | The version. Every merge to `main` raises it, and every version is a git tag `v<number>`, a GitHub release, and a section in [CHANGELOG.md](CHANGELOG.md). |
 | `.githooks/` | This repo's own pre-commit hook. Install it once per clone with `git config core.hooksPath .githooks`. |
 
+## About Up Coast
+
+Coast Standards comes out of [Up Coast](https://www.upcoastbuilders.ca), my social venture. Its main work is From Passion to Product, a free six-week live course on app strategy: how to work out what to build before anyone writes code, and how to lead an app's development if the writing is being done by a person you hired or by an AI. It is for people who are not in tech and building on their own, and for engineers who want the product skills that sit in front of the code.
+
+The course is free. There are no dates for the next cohort yet, and the waitlist is at [upcoastbuilders.ca](https://www.upcoastbuilders.ca).
+
 ## License
 
 Coast Standards is source-available under its own license, [LICENSE.md](LICENSE.md). It is not open source.
