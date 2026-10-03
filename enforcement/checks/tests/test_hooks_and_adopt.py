@@ -407,6 +407,33 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("gate: scope all — everything", out)
         self.assertIn("gate: build (warnings-as-errors)", out)
 
+    def test_a_push_of_work_branches_only_holds_the_heavy_seats_for_main(self):
+        self.project.adopt()
+        self.project.commit("adopt")
+        base = sh(self.project.path, "git", "rev-parse", "HEAD")
+        self.project.write("Sources/App/Feature.swift", "/// A feature.\npublic struct Feature {}\n")
+        self.project.commit("a feature")
+        tip = sh(self.project.path, "git", "rev-parse", "HEAD")
+        overrides, record = self._stub_tools()
+        work = f"refs/heads/lane/one {tip} refs/heads/lane/one {base}\n"
+        code, out = self.project.hook("pre-push", "--seat", "build,tests,jscpd,doc-comments",
+                                      stdin=work, env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn("gate: work branches only", out)
+        for seat in ("build", "tests", "jscpd", "doc-comments"):
+            self.assertIn(f"gate: {seat} HELD for the push to main", out)
+        calls = []
+        if os.path.exists(record):
+            with open(record, encoding="utf-8") as handle:
+                calls = handle.read().splitlines()
+        heavy = [c for c in calls if not c.startswith("swift package")]
+        self.assertEqual(heavy, [], "no build or test tool ran; only the scope read the package graph")
+        # A push that names main alongside the work branch runs the full battery.
+        both = work + self._push_refs(base, tip)
+        code, out = self.project.hook("pre-push", "--seat", "build", stdin=both, env=clean_env(**overrides))
+        self.assertNotIn("HELD", out)
+        self.assertIn("gate: build", out)
+
     def test_a_scoped_push_rebuilds_the_affected_targets_and_runs_their_tests(self):
         overrides, record = self._stub_tools()
         self.project.write("Sources/Other/Two.swift", "import Foundation\nlet two = 2\n")

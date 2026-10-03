@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.10.0 — 2026-10-02
+
+A push of work branches runs only the fast checks; the full battery waits for the push to main.
+
+### Changed
+
+- **A push of work branches runs only the fast checks.** When a push names no default branch and no tag, the build, the tests, jscpd and the doc-comment count print `HELD for the push to main` and do not run. The rules scan, lint, format and gh-ruleset still run. A push that includes the default branch runs everything and checks every commit it brings in, so nothing reaches it untested. Work can now be pushed every time it is committed, and sessions sharing one checkout no longer queue behind each other's full test runs.
+
+### Upgrading
+
+Re-run `adopt.py <project>` to take the new pre-push hook and the updated project CLAUDE.md section.
+
 ## 1.9.9 — 2026-10-02
 
 After a failure, re-run only what failed.
