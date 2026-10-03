@@ -4,6 +4,19 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.9.9 — 2026-10-02
+
+After a failure, re-run only what failed.
+
+### Changed
+
+- **Testing cadence: re-run only what failed.** When a run has passed everything except some tests, the next run is those tests plus the tests for code changed since, never the whole set again. A push or merge gate records which tests passed and failed on which commit and runs only the fast checks, last time's failures and the tests touched since the last passing run; it may never skip a test that failed last time. The full suite runs once per integration, not per feature or per push (`rules/06-testing.md`, Cadence).
+- **Parallel sessions do not share one mutable test database without coordination.** A migration applied to a shared test database before its branch merges breaks other sessions' tests; give each stream its own test data or schema where practical, or sequence full runs and record which unmerged migrations are on it.
+
+### Upgrading
+
+Nothing to re-run. A project whose push gate re-runs whole test sets on every push should change the gate to match.
+
 ## 1.9.8 — 2026-09-20
 
 README says who makes this and links the free course
