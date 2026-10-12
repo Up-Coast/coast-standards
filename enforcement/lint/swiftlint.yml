@@ -20,6 +20,15 @@ line_length:
 # own templates write them — so the two checks never ask for opposite fixes.
 trailing_comma:
   mandatory_comma: true
+# A multi-line condition, signature or type header puts its opening brace on
+# its own line in the formatter beside this file (swift-format), where
+# SwiftLint's default asks for it on the line above. The formatter owns
+# line layout, so these three are set to follow it — otherwise the two
+# checks ask for opposite fixes and no edit satisfies both.
+opening_brace:
+  ignore_multiline_statement_conditions: true
+  ignore_multiline_function_signatures: true
+  ignore_multiline_type_headers: true
 excluded:
   - .build
   - DerivedData

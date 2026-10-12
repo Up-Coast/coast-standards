@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.10.1 — 2026-10-12
+
+The shipped SwiftLint configuration no longer asks for the opposite of the formatter.
+
+### Changed
+
+- **The brace of a multi-line condition, signature or type header follows the formatter.** swift-format writes that opening brace on its own line; SwiftLint's default `opening_brace` rule refuses exactly that, so no edit satisfied both checks and an agent used all its tries. `enforcement/lint/swiftlint.yml` now sets `ignore_multiline_statement_conditions`, `ignore_multiline_function_signatures` and `ignore_multiline_type_headers`, so the formatter owns line layout.
+
+### Upgrading
+
+Copy the `opening_brace:` block from `enforcement/lint/swiftlint.yml` into your project's `.swiftlint.yml`; the file is yours to edit, so `adopt.py` does not overwrite it.
+
 ## 1.10.0 — 2026-10-02
 
 A push of work branches runs only the fast checks; the full battery waits for the push to main.
