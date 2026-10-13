@@ -192,19 +192,13 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("gate: swiftformat OFF (config)", out)
 
     def test_an_off_session_hook_exits_zero_with_a_note(self):
-        self.write_config(session_hooks__off=["chained-cd", "attribution-trailer"])
+        self.write_config(session_hooks__off=["chained-cd"])
         event = json.dumps({"session_id": "t", "cwd": self.project.path, "hook_event_name": "PreToolUse", "tool_name": "Bash",
                             "tool_input": {"command": "cd /tmp && ls"}, "tool_use_id": "x"})
         done = subprocess.run([sys.executable, ".coast/hooks/claude-hook.py", "chained-cd"], input=event,
                               cwd=self.project.path, capture_output=True, text=True, env=clean_env())
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(done.stderr.strip(), "chained-cd: OFF in the project's config (session_hooks.off) — nothing was checked.")
-        message = os.path.join(self.project.path, "MSG")
-        with open(message, "w") as handle:
-            handle.write("a commit from an agent with no trailer\n")
-        code, out = self.project.hook("commit-msg", message, env=clean_env(CLAUDECODE="1"))
-        self.assertEqual(code, 0, out)
-        self.assertIn("gate: attribution-trailer OFF (config)", out)
 
     def test_the_verifier_counts_off_rules_and_the_number_falls_by_exactly_that(self):
         document = os.path.join(self.project.path, "docs", "domain-rules.md")
@@ -283,7 +277,7 @@ class AskOnceTests(unittest.TestCase):
         self.assertIn("not in the list: nonsense", text)
         self.assertIn("ui-string-literal", text)
         self.assertIn("gh-ruleset", text)
-        self.assertIn("attribution-trailer", text)
+        self.assertIn("rules-at-start", text)
         self.assertIn("write-developer-documentation", text)
         self.assertEqual(text.count("everything is ON unless"), 4, "one screen per group")
 

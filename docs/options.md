@@ -124,7 +124,6 @@ A rule whose every check is switched off is counted as **switched off**, never a
 | `scan-on-edit` | Scans a file after an agent edits it. |
 | `unpushed-at-stop` | Refuses to end an agent's turn with unpushed commits. |
 | `rules-at-start` | Prints the rules and the enforced count when a session starts. |
-| `attribution-trailer` | Requires a commit from an agent session to name the model that did the work. This one runs in the `commit-msg` git hook. |
 
 ### Linters (`linters.off`)
 

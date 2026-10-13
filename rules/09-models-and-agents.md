@@ -1,6 +1,6 @@
 # Working with models and agents in a codebase
 
-These rules apply to every project where AI agents write, review or plan code. They are engineering rules, not conversation rules. They cover spending, correctness, and the integrity of the git history.
+These rules apply to every project where AI agents write, review or plan code. They are engineering rules, not conversation rules. They cover spending and correctness.
 
 ## Model effort is set deliberately, and frugally
 
@@ -13,7 +13,6 @@ Never use the provider's default effort setting. Provider defaults are tuned to 
 ## Know which model is running before you start
 
 - **Read the actual model identity before beginning a task that was assigned to a specific model.** If it is not the assigned model, stop and say so *before* building. Cleaning up work done by the wrong model costs more than not starting, and is never as good as building it right the first time. [check: process]
-- **Commit trailers name the model that actually did the work.** A wrong attribution makes the history useless for tracing which model caused a problem. This is a git-integrity rule, not a courtesy. [check: session:attribution-trailer]
 
 ## Don't dictate diffs into code you don't own
 

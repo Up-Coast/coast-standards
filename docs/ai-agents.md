@@ -46,13 +46,3 @@ Each release includes one skill folder, `skills/adopt-coast-standards/`. It tell
 2. Ask the agent to adopt or upgrade Coast Standards.
 
 The skill contains nothing else. The rules, checks and hooks live in your project, where the agent reads them.
-
-## Commit attribution
-
-A commit from an agent session must name the model in a trailer:
-
-```
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-```
-
-A bare "Claude" or "Claude Code" is refused, because it does not say which model did the work.

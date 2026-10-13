@@ -28,9 +28,6 @@ sys.path.insert(0, CHECKS_DIR)
 
 import verify_rules as vr  # noqa: E402
 
-# The ids verify_rules demands that belong to the commit-msg git hook (E2.2, another owner), not to this file.
-COMMIT_MSG_HOOK_IDS = {"attribution-trailer"}
-
 LITERAL_VIEW = 'import SwiftUI\nstruct HomeView: View { var body: some View { Text("Save your changes now") } }\n'
 CLEAN_VIEW = 'import SwiftUI\nstruct HomeView: View { var body: some View { Text("home.title") } }\n'
 
@@ -538,14 +535,10 @@ class SettingsFile(unittest.TestCase):
         demanded = {check.split(":", 1)[1] for doc in report["documents"] for rule in doc["rules"]
                     for check in rule["checks"] if check.startswith("session:")}
         self.assertTrue(demanded, "the corpus names no session hook — the test would prove nothing")
-        for hook_id in demanded - COMMIT_MSG_HOOK_IDS:
+        for hook_id in demanded:
             with self.subTest(hook_id=hook_id):
                 self.assertIn(hook_id, wired)
                 self.assertIn(f'"{hook_id}"', hook_text)
-        with open(SETTINGS, encoding="utf-8") as handle:
-            settings_text = handle.read()
-        for hook_id in COMMIT_MSG_HOOK_IDS:
-            self.assertNotIn(hook_id, settings_text, "a commit-msg id must not resolve against this file")
         usage = subprocess.run([sys.executable, HOOK], capture_output=True, text=True).stderr
         implemented = set(usage.split("one of: ")[1].strip().split(", "))
         self.assertEqual(implemented, {"governing-edit", "chained-cd", "infra-command", "no-verify", "force-push",

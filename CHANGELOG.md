@@ -4,6 +4,18 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.11.0 — 2026-10-13
+
+The commit-msg hook no longer asks for a model trailer.
+
+### Removed
+
+- **The commit-msg hook no longer asks for a model trailer.** A commit from an agent session used to be refused unless it ended with a `Co-Authored-By: Claude <model>` line; the rule and its check are gone, and no attribution line is asked of any commit. The hook still refuses a missing subject or one over 100 characters. An `attribution-trailer` entry left in `session_hooks.off` does nothing and can be deleted.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
+
 ## 1.10.1 — 2026-10-12
 
 The shipped SwiftLint configuration no longer asks for the opposite of the formatter.

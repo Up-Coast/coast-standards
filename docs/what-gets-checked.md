@@ -59,7 +59,6 @@ A summary of what the checks look for. The exact rules for your platform are in 
 ## Process
 
 - A commit message must have a subject line under 100 characters.
-- A commit made by an AI agent must name the model that did the work.
 - Your main branch must be protected on GitHub: pull requests required, no deletion, no force-push, no bypass.
 
 ## What a machine does not check

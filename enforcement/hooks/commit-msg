@@ -1,20 +1,12 @@
 #!/bin/sh
 # Coast Standards — the project's commit-msg hook (enforcement task E2.2).
 #
-# Small on purpose. It holds the commit-message rules a machine can hold:
-#   - a subject line that exists and fits in 100 characters
-#     (rules/07: a commit message is a sentence a person can read in a log);
-#   - session:attribution-trailer (rules/09 "Commit trailers name the model
-#     that actually did the work"): a commit made from an agent session
-#     (Claude Code sets CLAUDECODE in the shell it runs) must carry a
-#     Co-Authored-By trailer naming the SPECIFIC Claude model, e.g.
-#       Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-#     and any Claude trailer, from any session, must name a model — a bare
-#     "Claude" or "Claude Code" is the mis-attribution the rule forbids.
-# It cannot know who typed a human's commit; it refuses only what is
-# provably wrong. Refusals print as FAIL lines. GOVERNING file.
+# Small on purpose. It holds the commit-message rule a machine can hold:
+#   a subject line that exists and fits in 100 characters
+#   (rules/07: a commit message is a sentence a person can read in a log).
+# It refuses only what is provably wrong. Refusals print as FAIL lines. GOVERNING file.
 set -u
-export PYTHONDONTWRITEBYTECODE=1   # the config reader leaves no __pycache__ in the project
+export PYTHONDONTWRITEBYTECODE=1
 file=$1
 # The layout (the state dir's name is the one the hook carries; the rest is the table adopt.py rendered).
 state=${COAST_STATE_DIR:-.coast}
@@ -23,11 +15,6 @@ if [ ! -f "$state/layout.sh" ]; then
   exit 1
 fi
 . "./$state/layout.sh"
-# The config's switches (seats, linters, session hooks off), read fresh from config.json each run.
-if [ -f "$layout_checks_dir/config.py" ]; then
-  switches=$(python3 "$layout_checks_dir/config.py" --sh) || { echo "FAIL commit-msg $state/config.json:0:config: the config refuses to load — see the line above" >&2; exit 1; }
-  eval "$switches"
-fi
 if [ ! -f "$file" ]; then
   echo "FAIL commit-msg $file:0:missing: no commit message file was given" >&2
   exit 1
@@ -48,7 +35,7 @@ fi
 # The messages git writes itself: `git merge` ("Merge branch 'x'", "Merge remote-tracking
 # branch 'origin/x' into y", "Merge pull request #1 from a/b", "Merge tag 'v1'") and
 # `git revert` ("Revert \"…\"" over "This reverts commit <sha>."). Their words are git's,
-# not the committer's, so the length and attribution rules do not apply to them.
+# not the committer's, so the length rule does not apply to them.
 gits_own=0
 case "$subject" in
   "Merge branch "*|"Merge remote-tracking branch "*|"Merge tag "*|"Merge commit "*|"Merge pull request "*|"Merge branches "*)
@@ -66,24 +53,6 @@ if [ "$gits_own" = 0 ] && [ "$length" -gt 100 ]; then
   exit 1
 fi
 
-# session:attribution-trailer — the model that did the work is named. A project whose config
-# switches the hook off (session_hooks.off, rendered into layout.sh) says so and skips it.
-attribution=on
-case " ${config_session_hooks_off:-} " in
-  *" attribution-trailer "*) printf 'gate: attribution-trailer OFF (config)\n'; attribution=off ;;
-esac
-model_trailer='^Co-Authored-By: Claude [A-Z][A-Za-z]+ [0-9][0-9.]* <[^>]+>[[:space:]]*$'
-if [ "$attribution" = off ]; then
-  :
-elif message | grep -q -i '^Co-Authored-By:[[:space:]]*Claude'; then
-  if ! message | grep -E -q "$model_trailer"; then
-    echo "FAIL commit-msg $file:0:attribution-trailer: a Claude trailer must name the model that did the work, like 'Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' — 'Claude' or 'Claude Code' alone mis-attributes the commit" >&2
-    exit 1
-  fi
-elif [ -n "${CLAUDECODE:-}" ] && [ "$gits_own" = 0 ]; then
-  echo "FAIL commit-msg $file:0:attribution-trailer: this commit comes from an agent session but names no model — end the message with 'Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>' (rules/09)" >&2
-  exit 1
-fi
 # A project that had its own hooks keeps them: ours ran, now its own does.
 if [ -f "$state/previous-hooks-path" ]; then
   previous=$(tr -d '[:space:]' < "$state/previous-hooks-path")

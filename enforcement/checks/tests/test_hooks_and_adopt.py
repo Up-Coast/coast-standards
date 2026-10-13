@@ -5,8 +5,7 @@ project: adopting twice changes nothing the second time; a seed the
 founder edited survives a re-adopt while an unedited one takes the new
 shipped version; the installed pre-commit hook refuses a staged
 ui-string-literal and passes a clean file; commit-msg refuses an empty
-subject, a bare "Claude Code" trailer, and an agent-session commit with no
-model named; and the pre-push jscpd seat refuses a copied block that is not
+subject and a long one; and the pre-push jscpd seat refuses a copied block that is not
 in the baseline. The jscpd plant needs the pinned jscpd (enforcement/
 TOOLCHAIN.md): JSCPD_BIN, PATH, or `npx --no-install`; when none of those
 has it the test FAILS out loud — it never skips.
@@ -1106,15 +1105,8 @@ class HookTests(unittest.TestCase):
         self.assertIn(":subject-length:", out)
         code, out = self.commit_msg("Fix the settings row's missing label\n")
         self.assertEqual(code, 0, out)
-
-    def test_commit_msg_holds_the_attribution_trailer(self):
-        code, out = self.commit_msg("Fix the row\n\nCo-Authored-By: Claude Code <noreply@anthropic.com>\n")
-        self.assertEqual(code, 1, out)
-        self.assertIn(":attribution-trailer:", out)
-        code, out = self.commit_msg("Fix the row\n", agent=True)
-        self.assertEqual(code, 1, out)
-        self.assertIn(":attribution-trailer:", out)
-        code, out = self.commit_msg("Fix the row\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n", agent=True)
+        # No trailer is asked of anyone, an agent session included.
+        code, out = self.commit_msg("Fix the settings row's missing label\n", agent=True)
         self.assertEqual(code, 0, out)
 
     def test_commit_msg_keeps_an_issue_number_subject_and_accepts_gits_own_messages(self):
@@ -1124,7 +1116,7 @@ class HookTests(unittest.TestCase):
         code, out = self.commit_msg("# On branch main\n#\n# Changes to be committed:\n")
         self.assertEqual(code, 1, out)
         self.assertIn(":empty-subject:", out)
-        # git's own merge and revert messages carry no trailer and may run long; they are git's words.
+        # git's own merge and revert messages may run long; they are git's words.
         long_branch = "feature/" + "x" * 90
         for text in (f"Merge branch '{long_branch}'\n",
                      "Merge remote-tracking branch 'origin/main' into feature\n",
@@ -1132,10 +1124,10 @@ class HookTests(unittest.TestCase):
                      'Revert "Add the row"\n\nThis reverts commit 4b19181c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c.\n'):
             code, out = self.commit_msg(text, agent=True)
             self.assertEqual(code, 0, text + out)
-        # A hand-written message that only starts like one is not git's.
-        code, out = self.commit_msg('Revert "Add the row"\n\nbecause it broke the build\n', agent=True)
+        # A hand-written message that only starts like one is not git's: its subject length counts.
+        code, out = self.commit_msg('Revert "' + "x" * 100 + '"\n\nbecause it broke the build\n')
         self.assertEqual(code, 1, out)
-        self.assertIn(":attribution-trailer:", out)
+        self.assertIn(":subject-length:", out)
 
     def test_pre_push_scans_the_pushed_sha_from_stdin_not_head(self):
         # `git push origin feature` from main: the ref line names feature's sha, and that is what

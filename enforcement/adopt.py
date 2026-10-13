@@ -161,7 +161,6 @@ SESSION_HOOKS = (
     ("scan-on-edit", "scan a file after an agent edits it"),
     ("unpushed-at-stop", "refuse to end a turn with unpushed commits"),
     ("rules-at-start", "print the rules and the number at the start of a session"),
-    ("attribution-trailer", "a commit from an agent session names the model that did the work"),
 )
 # The writing guides: Claude Code skills an agent follows when it writes documentation. They are
 # guidance, not checks (nothing can judge prose deterministically), so they are installed as seeds

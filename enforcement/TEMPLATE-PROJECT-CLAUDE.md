@@ -31,7 +31,7 @@ The files below define the checks. They are GOVERNING: you may not edit them.
 | File | What it does |
 |---|---|
 | `{{HOOKS_DIR}}/pre-commit` | Runs the scanner on the staged changes (every added line, including the doc-comment check). Takes seconds. |
-| `{{HOOKS_DIR}}/commit-msg` | Requires a subject line under 100 characters. A commit from an agent session must name the model that did the work: `Co-Authored-By: Claude <model> <version> <noreply@anthropic.com>`. |
+| `{{HOOKS_DIR}}/commit-msg` | Requires a subject line under 100 characters. |
 | `{{HOOKS_DIR}}/pre-push` | Runs the checks on what the push changed (see below). |
 | `{{SESSION_HOOK}}` with `{{SETTINGS_FILE}}` | The Claude Code session hooks. They refuse edits to governing files, chained `cd` commands, infrastructure commands, `--no-verify`, force pushes, and a commit while the scan is failing. |
 | `{{STATE_DIR}}/ratchet-baseline.json` | The baselines (see below). |

@@ -1,8 +1,8 @@
 # The rules
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-10-13*
 
-There are 658 rules. You don't read them all. Read these three, and let the checks enforce the rest:
+There are 666 rules. You don't read them all. Read these three, and let the checks enforce the rest:
 
 1. **[00-priority-rules.md](00-priority-rules.md). Read this first, always.** The non-negotiables, in priority order. DRY is the rule above all other rules.
 2. **[PROJECT-TYPES.md](PROJECT-TYPES.md). Read this second.** Which rules apply to your kind of project: app, backend service, data/ML pipeline, or library/CLI. A project with a frontend and an API counts as two types, one for each part.
@@ -30,7 +30,7 @@ For example, `04-localization.md` explains why an app is localizable from day on
 | [06-testing.md](06-testing.md) | Test types, TDD, tests that pass when they shouldn't, what "coverage" means | every project |
 | [07-documentation-git-process.md](07-documentation-git-process.md) | Docs, diagrams, decision logs, git and pull-request practice | every project |
 | [08-auditing-and-completeness.md](08-auditing-and-completeness.md) | How to audit: rebuild the list from the code, never review the list. Includes a log of real audit misses | every project |
-| [09-models-and-agents.md](09-models-and-agents.md) | Default model effort, checking which model is running, commit attribution | every project |
+| [09-models-and-agents.md](09-models-and-agents.md) | Default model effort, checking which model is running | every project |
 | [10-development-environment.md](10-development-environment.md) | Single commands and permission prompts, disk space, the cost of switching branches | every project |
 
 ### By project type

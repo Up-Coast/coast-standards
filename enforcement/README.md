@@ -103,7 +103,7 @@ coast-standards (this repo): the one home
 │   ├── lint/                     the shipped linter configs
 │   └── hooks/
 │       ├── pre-commit            scanner on the staged diff (seconds)
-│       ├── commit-msg            subject length and the model attribution trailer
+│       ├── commit-msg            subject length
 │       ├── pre-push              every check for the platform, on what the push changed
 │       ├── claude-settings.json  the Claude Code hooks and deny rules
 │       └── claude-hook.py        the one script every Claude Code hook calls
@@ -317,7 +317,7 @@ The settings file uses only documented fields (`matcher`, `if`, `type`, `command
 **Git hooks beside them** (`core.hooksPath` set by `adopt.py`):
 
 - `.githooks/pre-commit`: the scanner on the staged diff.
-- `.githooks/commit-msg`: the subject must exist and be at most 100 characters. A commit from an agent session (Claude Code sets `CLAUDECODE` in its shell) must name the model in its `Co-Authored-By` trailer; any Claude trailer must name a model, never a bare "Claude Code". Git's own merge and revert messages, and subjects starting `#123`, are accepted. This is `session:attribution-trailer`.
+- `.githooks/commit-msg`: the subject must exist and be at most 100 characters. Git's own merge and revert messages, and subjects starting `#123`, are accepted.
 - `.githooks/pre-push`: build, tests, lint, format, the scanner, jscpd new clones and the other shipped checks, each on what the push changed (section 6, phase E8).
 
 A person and an agent get the same refusal, in the checks' own output lines.
@@ -461,7 +461,7 @@ Per-platform patterns live in `rules_signatures.json`. This table summarises the
 
 ### 5.4 Session (`session:<id>`) — the Claude Code hooks and git hooks in §4.4
 
-`governing-edit`, `chained-cd`, `infra-command`, `no-verify`, `force-push`, `scan-at-commit`, `scan-on-edit`, `unpushed-at-stop`, `rules-at-start`, and `attribution-trailer` (the `commit-msg` hook's model trailer, required by rules/09).
+`governing-edit`, `chained-cd`, `infra-command`, `no-verify`, `force-push`, `scan-at-commit`, `scan-on-edit`, `unpushed-at-stop` and `rules-at-start`.
 
 ### 5.5 Review (`review`) — per-rule rows with evidence, nothing else
 

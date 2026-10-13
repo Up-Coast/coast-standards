@@ -437,10 +437,7 @@ Runs the scanner on the staged changes, including the doc-comment check. Takes s
 
 ### 8.2 `commit-msg`
 
-Refuses:
-
-- a missing subject, or one over 100 characters;
-- `session:attribution-trailer`: an agent commit (`CLAUDECODE` is set) without `Co-Authored-By: Claude <Model> <version> <email>`. Any Claude trailer must name a model.
+Refuses a missing subject, or one over 100 characters.
 
 Git's own merge and revert messages are exempt, and the hook prints a `gate:` line saying so.
 
