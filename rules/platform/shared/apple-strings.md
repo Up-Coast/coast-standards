@@ -1,16 +1,14 @@
 ## Strings and localization (L)
 
-Build the product localizable from the first commit, even if no second language is planned. Moving strings out of the code later is expensive; doing it from day one costs nothing.
-
-- **L-1** No hardcoded user-facing text anywhere. Every string a user can see lives in the string catalog under a named key: labels, error messages, empty states, loading text, tooltips, accessibility labels, titles, notification text and units. A check fails the build on any bare user-facing literal in view code. [Coast standard; check: scan:ui-string-literal]
-- **L-2** Each locale has one catalog (`Localizable.xcstrings`), and it is the only source of strings. All new strings go there. Reuse comes first: if an existing key already has the text you need, use that key instead of adding a near-duplicate. [Coast standard; check: scan:one-catalog-per-locale]
-- **L-3** Keys describe meaning, not English wording: `vehicle.status.doNotDispatch`, not `do_not_dispatch_text`. This lets a translation differ from the English phrasing. [Coast standard; check: scan:english-key]
-- **L-4** Never build sentences by joining strings. Text that contains values uses `String(localized:)` with `\(…)` placeholders. Word order differs between languages, and the template with its placeholders is itself a catalog entry. [Coast standard; check: scan:ui-string-concat]
-- **L-5** Plurals use the platform's plural system, the string catalog's plural variants (CLDR one/other…). Never write `if count == 1` in code. [Coast standard; check: scan:manual-plural]
-- **L-6** Dates, numbers and currency are formatted with locale-aware formatters (`FormatStyle`, such as `.formatted(.currency…)` and `Date.FormatStyle`), never with string templates. [Coast standard; check: review]
-- **L-7** Layouts handle text about 30% longer than English. No fixed-width text container clips. Test with a long-string locale (German), with pseudo-localization and, when in scope, with right-to-left. [Coast standard; check: review]
-- **L-8** Tooling (Xcode String Catalogs) generates and manages the localization plumbing. Write the text by hand; never hand-write the plumbing. [Coast standard; check: review]
-- **L-9** Domain terms need approved translations. Safety-critical or client-owned terms (status tiers, legal words) use approved translations, word for word, listed in a per-project glossary file. An agent never translates them on its own. [Coast standard; check: review]
-- **L-10** Text that reaches the UI from a database or an API (descriptions, reference data) must be localized too. Either the source provides a field per locale, or the UI maps stable codes to catalog keys. Never assume backend strings are exempt. [Coast standard; check: review]
-- **L-11** The user can see and change the language. The change applies instantly and is saved. Switching language never discards anything the user typed. The choice is saved in the profile, local storage or URL, as the product requires. [Coast standard; check: review]
-- **L-12** Apply all-caps and letter-spacing when rendering (`.textCase(.uppercase)`), never in the stored string. Casing rules differ by language, and some scripts have no case at all. [Coast standard; check: scan:baked-case]
+- **L-1** From the first commit, every user-visible string is a catalog key: labels, errors, empty states, loading text, tooltips, accessibility labels, titles, notifications, units. [check: scan:ui-string-literal]
+- **L-2** `Localizable.xcstrings` is each locale's only string source (see DRY-3). [check: scan:one-catalog-per-locale]
+- **L-3** Keys name the meaning, not the English (`status.doNotDispatch`, not `do_not_dispatch_text`). [check: scan:english-key]
+- **L-4** Never join strings into sentences; use `String(localized:)` with `\(…)` placeholders. [check: scan:ui-string-concat]
+- **L-5** Plurals use catalog plural variants, never `if count == 1`. [check: scan:manual-plural]
+- **L-6** Format dates, numbers and currency with `FormatStyle`, never templates. [check: review]
+- **L-7** Layouts fit text 30% longer than English without clipping; test German, pseudo-locale and, in scope, right-to-left. [check: review]
+- **L-8** Xcode String Catalogs manage the plumbing; write only the text by hand. [check: review]
+- **L-9** Safety-critical and client-owned terms use the glossary file's approved translations word for word; never translate them yourself. [check: review]
+- **L-10** Database and API text is localized too: per-locale fields, or codes mapped to catalog keys. [check: review]
+- **L-11** Users can see and change the language; it applies at once, is saved and never discards typed input. [check: review]
+- **L-12** Apply all-caps and letter-spacing at render time (`.textCase(.uppercase)`), never in stored strings. [check: scan:baked-case]

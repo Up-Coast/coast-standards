@@ -1,11 +1,11 @@
-## Keep it DRY (DRY) — the rule above every other rule
+## Keep it DRY (DRY)
 
-Every piece of knowledge lives in exactly one place, and everything else uses that place.
+DRY comes before every other rule: each piece of knowledge lives in one place.
 
-- **DRY-1** Design components are built once and reused. Before creating a view, component or helper, check for an existing one, or a combination of existing ones. A near-duplicate of an existing component fails review. Every new component states why nothing existing fit. [Coast standard; check: review]
-- **DRY-2** All styling lives in one theme file (`Theme.swift`). Every colour, font, size, weight and spacing value is a token there. Never create a second theme file, and never write a styling literal in a feature file. [Coast standard; check: scan:styling-literal, ratchet:spacing-literal, scan:second-theme-file]
-- **DRY-3** Strings live in one catalog per locale (`Localizable.xcstrings`). All new strings go there. Reuse an existing key before adding a near-duplicate. [Coast standard; check: scan:one-catalog-per-locale]
-- **DRY-4** Error messages live in one place, like other strings. Never assemble error text where the error is thrown or shown. [Coast standard; check: scan:ui-string-literal]
-- **DRY-5** Shared behaviour (routing and navigation, gestures, animations, formatting, validation, error and after-save paths) lives in one place and is called from there. Never reimplement it locally. Routing in particular: one module decides where a screen, overlay or action goes next, including Back, Close, Cancel and the error path; a screen never names its own destinations. Calling the platform's navigation API from each screen is not native navigation, it is hand-written routing. [Coast standard; check: tool:jscpd, review]
-- **DRY-6** Every derived value (a total, a score, a status, a rounding) is computed in one place and reused. Never compute it again, slightly differently, somewhere else. [Coast standard; check: tool:jscpd, review]
-- **DRY-7** Each thing has one name everywhere. Choose the vocabulary once, and never introduce a synonym for something that already has a name. [Coast standard; check: review]
+- **DRY-1** Reuse an existing component or combination before creating one, and state why none fit; a near-duplicate fails review. [check: review]
+- **DRY-2** Every colour, font, size, weight and spacing is a token in the one theme file, `Theme.swift`; no second theme file, no styling literal elsewhere. [check: scan:styling-literal, ratchet:spacing-literal, scan:second-theme-file]
+- **DRY-3** Strings live in one catalog per locale, `Localizable.xcstrings`; reuse a key before adding a near-duplicate. [check: scan:one-catalog-per-locale]
+- **DRY-4** Error messages live in the catalog; never assemble error text where it is thrown or shown. [check: scan:ui-string-literal]
+- **DRY-5** Shared behaviour (routing, gestures, animations, formatting, validation, error and after-save paths) lives in one place; one module decides where every screen, overlay and action goes next, Back, Close, Cancel and errors included. [check: tool:jscpd, review]
+- **DRY-6** Compute each derived value (total, score, status, rounding) in one place. [check: tool:jscpd, review]
+- **DRY-7** One name per thing everywhere; never add a synonym. [check: review]

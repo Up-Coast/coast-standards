@@ -88,7 +88,7 @@ You need macOS or Linux, `git`, and Python 3.10 or newer. The [quickstart](docs/
 
 To have an AI agent do the install, give it the skill in [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md). Copy that folder into `~/.claude/skills/` or the project's `.claude/skills/`.
 
-The numbered files in [`rules/`](rules/README.md) are meant to be read in place. Reference them from the project's `CLAUDE.md` instead of copying them.
+An agent holds two short files on every task: [`00-priority-rules.md`](rules/00-priority-rules.md) and the project's `docs/domain-rules.md`. The other numbered files in [`rules/`](rules/README.md) are reference, each opening with the task that calls for it. Read them in place from the project's `CLAUDE.md`; do not copy them.
 
 ### What the installer adds
 
@@ -240,7 +240,7 @@ Never skip the hooks with `--no-verify`. More cases are in [When a check stops y
 
 | Path | What it is |
 |---|---|
-| [`rules/`](rules/README.md) | The rules. The numbered files apply to every project. `rules/types/` covers backend services and data/ML pipelines. `rules/platform/` holds one checkable rules file per platform, plus [`ai-features.md`](rules/platform/ai-features.md) for apps with AI features. Every rule names the check that enforces it. |
+| [`rules/`](rules/README.md) | The rules. `00-priority-rules.md` and the platform file are always loaded; the other numbered files are reference for one area each. `rules/types/` covers backend services and data/ML pipelines. `rules/platform/` holds one checkable rules file per platform, plus [`ai-features.md`](rules/platform/ai-features.md) for apps with AI features. Every rule names the check that enforces it. |
 | [`enforcement/`](enforcement/README.md) | The checks: the rules scanner, the doc-comment check, the rule verifier, linter configs, git hooks, Claude Code hooks, and the installer `adopt.py`. |
 | [`docs/`](docs/README.md) | The user documentation. |
 | [`skills/adopt-coast-standards/`](skills/adopt-coast-standards/SKILL.md) | A skill that lets an AI agent run the install. |

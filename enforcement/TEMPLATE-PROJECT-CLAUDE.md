@@ -3,9 +3,8 @@
 
 {{PRODUCT_AT_START}} follows the Coast Standards repo, `{{STANDARDS_PATH}}` (GitHub: Up-Coast/coast-standards). It was adopted for the **{{PLATFORM}}** platform from standards release `{{STANDARDS_COMMIT}}`.
 
-1. Read `rules/00-priority-rules.md` in that repo first. DRY is the rule above all other rules.
-2. Then read `rules/01-working-style.md`.
-3. Read the other rules files when the work touches their area.
+1. Hold `rules/00-priority-rules.md` from that repo and `{{RULES_DOCUMENT}}` on every task. DRY is the rule above all other rules.
+2. Read another numbered rules file when the task matches its "Read this when …" line.
 
 This project's checkable rules are in `{{RULES_DOCUMENT}}`. Reviews judge every change against exactly that file.
 

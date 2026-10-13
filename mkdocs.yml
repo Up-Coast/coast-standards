@@ -96,7 +96,7 @@ nav:
       - Index: rules/README.md
       - Priority rules: rules/00-priority-rules.md
       - Project types: rules/PROJECT-TYPES.md
-      - Reasoning layer:
+      - Reference:
           - Working style: rules/01-working-style.md
           - Architecture and code: rules/02-architecture-and-code.md
           - Security (OWASP): rules/03-security-owasp.md

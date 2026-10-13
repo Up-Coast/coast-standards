@@ -4,6 +4,50 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.12.1 — 2026-10-13
+
+Every rule file is rewritten to be short: one sentence per rule, with every id, check and requirement kept.
+
+### Changed
+
+- **Every rule file is rewritten to be short enough for an agent to hold.** Each rule is now one imperative sentence and its check tag, with a reason only where it is not obvious. Origin stories, dates, quotes and examples that restate a rule are gone; every rule id, check tag and requirement is kept.
+- **The rules say which files an agent holds and which it looks up.** `00-priority-rules.md` and the platform file (`docs/domain-rules.md` in a project) are always loaded. Every other numbered file, `PROJECT-TYPES.md` and `types/` opens with a "Read this when …" line, and the CLAUDE.md block the installer writes says the same.
+- **Check tags no longer carry a source name.** A tag now reads `[check: review]`. The guides the rules are drawn from are listed once, under Sources in [rules/README.md](https://github.com/Up-Coast/coast-standards/blob/main/rules/README.md).
+- **Each rule file's size, in bytes, before and after this release:**
+
+| File | Before | After |
+|---|---|---|
+| `rules/00-priority-rules.md` | 10,109 | 3,645 |
+| `rules/01-working-style.md` | 5,396 | 2,698 |
+| `rules/02-architecture-and-code.md` | 8,936 | 4,234 |
+| `rules/03-security-owasp.md` | 6,616 | 3,377 |
+| `rules/04-localization.md` | 2,172 | 982 |
+| `rules/05-design-and-ui.md` | 5,444 | 2,631 |
+| `rules/06-testing.md` | 17,023 | 8,432 |
+| `rules/07-documentation-git-process.md` | 12,970 | 6,530 |
+| `rules/08-auditing-and-completeness.md` | 12,321 | 5,716 |
+| `rules/09-models-and-agents.md` | 3,022 | 1,400 |
+| `rules/10-development-environment.md` | 2,158 | 991 |
+| `rules/PROJECT-TYPES.md` | 5,048 | 2,390 |
+| `rules/types/backend-service.md` | 4,543 | 2,147 |
+| `rules/types/data-and-ml.md` | 4,681 | 2,251 |
+| `rules/platform/domain-rules-ios.md` | 24,338 | 12,200 |
+| `rules/platform/domain-rules-macos.md` | 26,551 | 13,408 |
+| `rules/platform/domain-rules-android.md` | 24,351 | 12,600 |
+| `rules/platform/domain-rules-react-native.md` | 24,730 | 13,089 |
+| `rules/platform/domain-rules-web.md` | 23,101 | 13,231 |
+| `rules/platform/domain-rules-python.md` | 14,948 | 9,646 |
+| `rules/platform/ai-features.md` | 12,532 | 6,190 |
+| `rules/platform/shared/*.md` (12 files) | 17,474 | 8,894 |
+
+### Removed
+
+- **Five rules that repeated another rule in the same file are merged into it.** In `05-design-and-ui.md`, "Status and colour, concretely" is part of "Color is never the only signal". In `07-documentation-git-process.md`, "Secret-scan before a first push" is part of "Repos are private in the owner's organization", "Hosted CI is optional" is part of "CI confirms; it never discovers", "Every change updates the documents that describe it" is part of "Docs ship WITH the feature, not after", and "Documents are created only in defined types" is part of "One predictably-named document per subject". Each kept rule carries the merged rule's checks.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. It replaces `docs/domain-rules.md` with the shorter file; an edited copy is kept as `docs/domain-rules.v<release>.md`, so copy your own rules across from it.
+
 ## 1.12.0 — 2026-10-13
 
 A new priority rule, fix the class and not the instance, and DRY-5 now covers routing.

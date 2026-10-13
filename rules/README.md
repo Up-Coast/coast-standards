@@ -1,35 +1,33 @@
 # The rules
 
-*Last updated: 2026-10-13*
+An agent holds two files on every task and reads the others only when its task touches their area.
 
-There are 666 rules. You don't read them all. Read these three, and let the checks enforce the rest:
+1. **[00-priority-rules.md](00-priority-rules.md)**: the non-negotiables, in priority order. Always loaded.
+2. **Your platform's document**, from [the table below](#the-checkable-layer-pick-one): the checkable rules, copied into your project as `docs/domain-rules.md`. Always loaded.
+3. **[PROJECT-TYPES.md](PROJECT-TYPES.md)**: which rules apply to your kind of project. Read it when setting a project up.
 
-1. **[00-priority-rules.md](00-priority-rules.md). Read this first, always.** The non-negotiables, in priority order. DRY is the rule above all other rules.
-2. **[PROJECT-TYPES.md](PROJECT-TYPES.md). Read this second.** Which rules apply to your kind of project: app, backend service, data/ML pipeline, or library/CLI. A project with a frontend and an API counts as two types, one for each part.
-3. **Your platform's document**, from [the table below](#the-checkable-layer-pick-one). It holds the checkable rules, and it is the file copied into your project.
+## Always loaded, and reference
 
-## Two layers, and which is which
+| Set | Files | What it is |
+|---|---|---|
+| Always loaded | `00-priority-rules.md` and the platform document | Short rules an agent holds on every task. Each rule is one checkable sentence and its check tag. |
+| Reference | `01`–`10`, `PROJECT-TYPES.md`, `types/` | Rules for one area. Each file opens with the line "Read this when …", and stays in this repository. |
 
-| Layer | Files | What it is | Where it lives |
-|---|---|---|---|
-| Reasoning | The numbered files (`00`–`10`) | Why each rule exists, what it prevents, and how to judge cases a machine can't | Stays in this repository; read it here |
-| Checkable | The platform documents | The same standards as numbered rules that a reviewer or scanner can answer yes or no | One is copied into your project as `docs/domain-rules.md` when you adopt; after that your copy is yours to edit |
+For example, `04-localization.md` holds the locale defaults; the twelve checked localization rules (`L-1` to `L-12`) are in each platform document.
 
-For example, `04-localization.md` explains why an app is localizable from day one. The twelve rules that are actually checked (`L-1` to `L-12`) are in each platform document.
-
-## The reasoning layer
+## Reference files
 
 | File | What it covers | Applies to |
 |---|---|---|
 | [00-priority-rules.md](00-priority-rules.md) | The non-negotiables, in priority order. **DRY is the rule above all other rules.** | every project |
 | [01-working-style.md](01-working-style.md) | How agents work with a project's owner: communication, verification, reporting, decisions | every project |
-| [02-architecture-and-code.md](02-architecture-and-code.md) | Layering, single responsibility, naming, how to apply DRY; MVVM, reactive state and responsive layout | all types; the platform-behaviour section is apps only |
+| [02-architecture-and-code.md](02-architecture-and-code.md) | Layering, single responsibility, naming, DRY, reactive state and responsive layout | all types; the platform-behaviour section is apps only |
 | [03-security-owasp.md](03-security-owasp.md) | OWASP-based security rules, and handling sensitive code | every project |
-| [04-localization.md](04-localization.md) | Why every app is localizable from day one, and the Canadian defaults | apps and frontends only |
+| [04-localization.md](04-localization.md) | Locale defaults and language requirements | apps and frontends only |
 | [05-design-and-ui.md](05-design-and-ui.md) | Reading design mocks, interaction rules, copy rules, accessibility | apps and frontends only |
 | [06-testing.md](06-testing.md) | Test types, TDD, tests that pass when they shouldn't, what "coverage" means | every project |
 | [07-documentation-git-process.md](07-documentation-git-process.md) | Docs, diagrams, decision logs, git and pull-request practice | every project |
-| [08-auditing-and-completeness.md](08-auditing-and-completeness.md) | How to audit: rebuild the list from the code, never review the list. Includes a log of real audit misses | every project |
+| [08-auditing-and-completeness.md](08-auditing-and-completeness.md) | How to audit: rebuild the list from the code, never review the list | every project |
 | [09-models-and-agents.md](09-models-and-agents.md) | Default model effort, checking which model is running | every project |
 | [10-development-environment.md](10-development-environment.md) | Single commands and permission prompts, disk space, the cost of switching branches | every project |
 
@@ -106,6 +104,20 @@ Every rule ends with a tag that says what enforces it:
 
 - [What gets checked](../docs/what-gets-checked.md) lists the scanner checks in plain words.
 - [When a check stops you](../docs/when-a-check-stops-you.md) explains what to do when a check refuses a change, including the approved way to set a check aside.
+
+## Sources
+
+The DRY, L and DES rules are Coast Standards rules. Every other rule is an original plain-language statement drawn from these guides; no text from them is reproduced.
+
+- [OWASP Application Security Verification Standard (ASVS)](https://owasp.org/www-project-application-security-verification-standard/), [Mobile Application Security Verification Standard (MASVS)](https://mas.owasp.org/MASVS/), [Cheat Sheet Series](https://cheatsheetseries.owasp.org/) and [Top 10](https://owasp.org/www-project-top-ten/) (CC BY-SA 4.0)
+- [W3C Web Content Accessibility Guidelines (WCAG) 2.2](https://www.w3.org/TR/WCAG22/)
+- [PCI Security Standards (PCI DSS)](https://www.pcisecuritystandards.org/)
+- [The Twelve-Factor App](https://12factor.net/)
+- Apple: [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/), [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/), [security documentation](https://developer.apple.com/documentation/security/), [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), [SwiftLint](https://github.com/realm/SwiftLint)
+- Android: [Google Play Developer Program policies](https://play.google/developer-content-policy/), [app security best practices](https://developer.android.com/privacy-and-security/security-tips), [app architecture guidance](https://developer.android.com/topic/architecture), [Material Design accessibility](https://m3.material.io/foundations/accessible-design/overview), [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html), [ktlint](https://github.com/pinterest/ktlint), [detekt](https://github.com/detekt/detekt)
+- JavaScript: [React](https://react.dev/), [React Native security](https://reactnative.dev/docs/security), [TypeScript](https://www.typescriptlang.org/docs/), [ESLint](https://eslint.org/), [typescript-eslint](https://typescript-eslint.io/), [Prettier](https://prettier.io/)
+- Python: [PEPs 8, 257 and 484](https://peps.python.org/), [PyPA packaging guidance](https://packaging.python.org/), [Python documentation](https://docs.python.org/3/)
+- AI features: see the Sources section of [platform/ai-features.md](platform/ai-features.md)
 
 ## Changing a rule
 
