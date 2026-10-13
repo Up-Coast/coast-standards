@@ -1,4 +1,4 @@
-<!-- coast-standards-release: 1.6.0 -->
+<!-- coast-standards-release: 1.12.0 -->
 # Project rules
 
 This file is your project's rule set. It starts as a default drawn from widely used engineering and safety guides, listed under Sources at the end.
@@ -17,7 +17,7 @@ Each piece of knowledge is defined in one place, and all other code uses it from
 - **DRY-2** All styling lives in one theme file: `Theme.kt`, the Material theme and its tokens. Every colour, font, size, weight and spacing value is a token in that file. Never create a second theme file, and never write a styling literal in a feature file. [Coast standard; check: scan:styling-literal, scan:second-theme-file]
 - **DRY-3** Strings live in one catalog per locale (`res/values-<locale>/strings.xml`). Add new strings only there, and reuse an existing key before adding a near-duplicate. [Coast standard; check: scan:one-catalog-per-locale]
 - **DRY-4** Error messages are defined in one place, like other strings. Never assemble error text where the error is thrown or shown. [Coast standard; check: scan:ui-string-literal]
-- **DRY-5** Shared behaviour, such as gestures, animations, formatting and validation, is defined in one place and called from there. Never re-implement it locally. [Coast standard; check: tool:jscpd, review]
+- **DRY-5** Shared behaviour (routing and navigation, gestures, animations, formatting, validation, error and after-save paths) lives in one place and is called from there. Never reimplement it locally. Routing in particular: one module decides where a screen, overlay or action goes next, including Back, Close, Cancel and the error path; a screen never names its own destinations. Calling the platform's navigation API from each screen is not native navigation, it is hand-written routing. [Coast standard; check: tool:jscpd, review]
 - **DRY-6** Every derived value (a total, a score, a status, a rounding) is computed in one place and reused. Never recompute it slightly differently somewhere else. [Coast standard; check: tool:jscpd, review]
 - **DRY-7** Use one name for each thing, everywhere. Choose the vocabulary once, and never introduce a synonym for something that already has a name. [Coast standard; check: review]
 

@@ -4,6 +4,22 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.12.0 — 2026-10-13
+
+A new priority rule, fix the class and not the instance, and DRY-5 now covers routing.
+
+### Added
+
+- **A new priority rule: fix the class, not the instance.** A defect report names one place, but the defect is rarely only there. The agent now searches for every other place with the same shape, fixes them through one shared piece of code, checks the error, cancel, keyboard and cold-load paths together with the success path, and adds a guard. A second rejection of the same area is an architecture task, not another patch.
+
+### Changed
+
+- **DRY-5 now names routing.** One module decides where a screen, overlay or action goes next, including Back, Close, Cancel and the error path, and a screen never names its own destinations. Error and after-save paths are listed as shared behaviour. The change is in the web, iOS, Android, macOS and React Native rules documents.
+
+### Upgrading
+
+Re-run `adopt.py <project>`. No other changes are needed.
+
 ## 1.11.0 — 2026-10-13
 
 The commit-msg hook no longer asks for a model trailer.

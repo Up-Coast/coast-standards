@@ -1,4 +1,4 @@
-<!-- coast-standards-release: 1.6.0 -->
+<!-- coast-standards-release: 1.12.0 -->
 # Project rules
 
 This file is a starting set of rules for your project. They come from well-known engineering and security guides, listed under Sources at the bottom.
@@ -23,7 +23,7 @@ Every piece of knowledge is defined in exactly one place. Everything else uses i
 - **DRY-2** Styling lives in one theme file (`theme.ts` or the tokens stylesheet). Every colour, font, size, weight and spacing value is a token there. Never create a second theme file, and never write a styling value directly in a feature file. [Coast standard; check: scan:styling-literal, scan:second-theme-file]
 - **DRY-3** Strings live in one catalog per locale (`locales/<lang>/…`). Add new strings there. Reuse an existing key before adding a near-duplicate. [Coast standard; check: scan:one-catalog-per-locale]
 - **DRY-4** Error messages live in one place, like other strings. Never build error text where it is thrown or shown. [Coast standard; check: scan:ui-string-literal]
-- **DRY-5** Shared behaviour (gestures, animations, formatting, validation) lives in one place and is called from there. Never reimplement it locally. [Coast standard; check: tool:jscpd, review]
+- **DRY-5** Shared behaviour (routing and navigation, gestures, animations, formatting, validation, error and after-save paths) lives in one place and is called from there. Never reimplement it locally. Routing in particular: one module decides where a screen, overlay or action goes next, including Back, Close, Cancel and the error path; a screen never names its own destinations. Calling the platform's navigation API from each screen is not native navigation, it is hand-written routing. [Coast standard; check: tool:jscpd, review]
 - **DRY-6** Compute every derived value (a total, a score, a status, a rounding) in one place and reuse it. Never compute it again, slightly differently, somewhere else. [Coast standard; check: tool:jscpd, review]
 - **DRY-7** Use one name per thing, everywhere. Choose the vocabulary once. Never add a synonym for something that already has a name. [Coast standard; check: review]
 

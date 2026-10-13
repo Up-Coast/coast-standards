@@ -8,7 +8,7 @@ Every piece of knowledge is defined in exactly one place. Everything else uses t
 
 The checkable rules are **DRY-1 to DRY-7 in every platform rules document** (`rules/platform/domain-rules-<platform>.md`, copied into a project as `docs/domain-rules.md`). Each one names the check that enforces it.
 
-In short: create a component once and reuse it (DRY-1). Keep styling in one theme file and never inline it (DRY-2). Keep strings in one catalog per locale (DRY-3; see rule 2). Define error messages in one place (DRY-4). Define cross-cutting behaviour in one place (DRY-5). Compute every derived value in one place (DRY-6, PAY-3 generalized). Use one name per thing (DRY-7).
+In short: create a component once and reuse it (DRY-1). Keep styling in one theme file and never inline it (DRY-2). Keep strings in one catalog per locale (DRY-3; see rule 2). Define error messages in one place (DRY-4). Define cross-cutting behaviour, routing included, in one place (DRY-5). Compute every derived value in one place (DRY-6, PAY-3 generalized). Use one name per thing (DRY-7).
 
 These rules live in the platform document, not here, so a project has one rules document to read and one place where rules are counted. The one case the duplicate-code check cannot see is parallel work streams; how they are sequenced and merged is in `06-testing.md`, under Cadence.
 [check: context]
@@ -32,6 +32,23 @@ In practice, implement the standard pattern for the problem, in full, using the 
 
 This rule prevents over-engineering. It never allows a coding agent to take shortcuts.
 [check: review]
+
+## 2b-1. Fix the class, not the instance
+
+A defect report, a rejected review or an owner's complaint names one place where a defect shows. The defect is almost never only there.
+
+**Search first.** Before fixing, search the codebase for every other place with the same shape: the same pattern, the same copy-pasted branch, the same hand-written path. List them.
+
+**Fix them all through one shared piece of code,** or file why each one that is left alone is left alone.
+
+**Sibling paths change together.** When a flow's success path changes, check and change its error, cancel, keyboard and cold-load paths in the same task.
+
+**Add a guard.** A fix that establishes a cross-cutting rule ships with a scan, lint or test that fails when a new instance is written (see Definition of done below).
+
+**A second rejection is an architecture task.** When the same area is rejected a second time, it is no longer a bug. Build the shared piece. A second patch is refused.
+
+Why: an owner reported the same defect class six times over weeks. Each session fixed the one page named. The class kept reappearing in new work, because nothing shared existed and nothing guarded it.
+[check: review, process]
 
 ## 2c. A coding agent never changes infrastructure unless told to
 
