@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.12.4 — 2026-10-14
+
+The duplicate-code check skips database migrations.
+
+### Changed
+
+- `jscpd` no longer reads any `migrations` folder (`**/migrations/**` in the layout's ignore list). An applied migration is frozen, and a migration that changes a database function restates the whole function, so a copy there is required and can never be extracted. Before, every such migration added clones that blocked the push to the default branch until the baseline was raised. Application code, tests and scripts are still checked. An upgraded project's clone count falls: lower the baseline with `adopt.py <project> --lower-baselines`.
+
 ## 1.12.3 — 2026-10-14
 
 The unreached-view check knows web file-based routing, and the second-theme-file check needs styling content as well as a theme file name.

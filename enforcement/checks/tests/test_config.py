@@ -77,6 +77,7 @@ class LayoutTableTests(unittest.TestCase):
         self.assertEqual(table.session_hook_dir, ".coast/hooks")
         self.assertEqual(table.settings_local_file, ".claude/settings.local.json")
         self.assertIn("**/.coast/**", table.jscpd_ignore)
+        self.assertIn("**/migrations/**", table.jscpd_ignore)
 
     def test_the_settings_template_and_the_governing_classes_render_from_the_table(self):
         table = lay.defaults()
