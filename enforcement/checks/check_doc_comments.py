@@ -332,7 +332,7 @@ def swift_token_prefix(line):
     tokens = []
     current = ""
     for character in line:
-        if character.isalnum() or character in "_@":
+        if character.isalnum() or character in "_@`":
             current += character
         elif character in "()":
             current += character
@@ -381,6 +381,60 @@ def swift_name(kind, after_keyword):
         else:
             break
     return "".join(name).replace("`", "")
+
+
+SWIFT_TYPE_KEYWORDS = {"class", "struct", "enum", "actor", "protocol", "extension"}
+
+
+def swift_type_name(signature, keyword):
+    """The name after a type keyword as the compiler's parser reads it: an ``extension`` keeps its whole
+    dotted, generic name (``Outer.Inner<Int>``); every other type is its identifier alone."""
+    found = re.search(r"(?<![\w`])" + keyword + r"\s+", signature)
+    if not found:
+        return ""
+    rest = signature[found.end():]
+    if keyword != "extension":
+        return leading_identifier(rest)
+    depth = 0
+    name = []
+    for offset, character in enumerate(rest):
+        if character in "<([":
+            depth += 1
+        elif character in ">)]":
+            depth -= 1
+        elif depth == 0 and (character in ":{" or rest.startswith(" where ", offset)):
+            break
+        name.append(character)
+    return "".join("".join(name).split()).replace("`", "")
+
+
+def swift_binding_names(signature, keyword):
+    """Every name a ``var``/``let`` binds: ``var x, y: Int`` declares two. Empty when the pattern is not a
+    plain list of names (a tuple pattern), so the caller keeps the first name alone."""
+    found = re.search(r"(?<![\w`])" + keyword + r"\s+", signature)
+    if not found:
+        return []
+    names = []
+    chunk = ""
+    depth = 0
+    initialised = False
+    for character in signature[found.end():] + ",":
+        if character in "([{" or (character == "<" and not initialised):
+            depth += 1
+        elif character in ")]}" or (character == ">" and not initialised and depth > 0):
+            depth -= 1
+        elif character == "=" and depth == 0:
+            initialised = True
+        if character == "," and depth == 0:
+            name = leading_identifier(chunk.strip(" \t"))
+            if not name or chunk.strip(" \t").startswith("("):
+                return []
+            names.append(name)
+            chunk = ""
+            initialised = False
+            continue
+        chunk += character
+    return names
 
 
 def swift_case_names(signature):
@@ -433,11 +487,26 @@ def swift_parse_declaration(lines, start):
     while paren_balance(text) > 0 and next_index < len(lines):
         text += " " + lines[next_index].strip(" \t")
         next_index += 1
+    first_word = after_keyword.split(" ", 1)[0]
+    if keyword in SWIFT_TYPE_KEYWORDS and first_word not in SWIFT_KEYWORDS | SWIFT_MODIFIERS:
+        # A type header may wrap (inheritance, a where clause, the brace): it ends at its brace.
+        while "{" not in text and next_index < len(lines) and next_index - start < 30:
+            following = lines[next_index].strip(" \t")
+            if not following or following.startswith("///"):
+                break
+            text += " " + following
+            next_index += 1
     signature = collapse(swift_signature_text(text))
-    name = swift_name(keyword, after_keyword)
+    name = swift_type_name(signature, keyword) if keyword in SWIFT_TYPE_KEYWORDS else swift_name(keyword, after_keyword)
+    if not name:
+        name = swift_name(keyword, after_keyword)
     if not name:
         return None
     names = [name]
+    if keyword in ("var", "let"):
+        bound = swift_binding_names(signature, keyword)
+        if len(bound) > 1:
+            names = bound
     if keyword == "case":
         listed = swift_case_names(signature)
         if len(listed) > 1:

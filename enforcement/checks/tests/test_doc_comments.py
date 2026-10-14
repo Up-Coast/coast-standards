@@ -8,6 +8,7 @@ Run from the repo root:  python3 -m unittest -q enforcement.checks.tests.test_do
 
 import os
 import sys
+import tempfile
 import unittest
 
 CHECKS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -89,6 +90,63 @@ class PythonTests(unittest.TestCase):
 
     def test_a_file_that_does_not_parse_reports_nothing(self):
         self.assertEqual(dc.python_declarations("def broken(:\n    pass\n"), [])
+
+
+
+def swift_entries(source):
+    """(entry, is_public, has_doc) for every Swift declaration, members as ``Type.member``."""
+    found = []
+
+    def walk(declaration, path):
+        here = f"{path}.{declaration.name}" if path else declaration.name
+        found.append((here, declaration.kind, declaration.is_public, bool(declaration.doc)))
+        for member in declaration.members:
+            walk(member, here)
+
+    for declaration in dc.swift_declarations(source):
+        walk(declaration, "")
+    return found
+
+
+class SwiftShapeTests(unittest.TestCase):
+    """One fixture per declaration shape the check once missed (the compiler's parser reads all four)."""
+
+    def test_a_multi_name_binding_is_one_declaration_per_name(self):
+        found = swift_entries("public struct S {\n    public var x, y: Int\n}\n")
+        self.assertEqual([e[0] for e in found], ["S", "S.x", "S.y"])
+        self.assertTrue(all(e[2] for e in found))
+
+    def test_a_backticked_name_is_read_without_its_backticks(self):
+        found = swift_entries("public struct S {\n    public var `default`: Int\n    public func `repeat`() {}\n}\n")
+        self.assertEqual([e[0] for e in found], ["S", "S.default", "S.repeat"])
+
+    def test_a_type_header_wrapped_onto_a_second_line_still_opens_its_body(self):
+        source = "public struct Wide\n    : Equatable,\n      Hashable\n{\n    public var inside: Int\n}\npublic func after() {}\n"
+        found = swift_entries(source)
+        self.assertEqual([e[0] for e in found], ["Wide", "Wide.inside", "after"])
+
+    def test_an_extension_keeps_its_whole_dotted_name(self):
+        found = swift_entries("public extension Outer.Inner {\n    func added() {}\n}\n")
+        self.assertEqual([e[0] for e in found], ["Outer.Inner", "Outer.Inner.added"])
+        self.assertTrue(found[1][2])
+
+    def test_an_extension_on_a_generic_or_wrapped_name(self):
+        found = swift_entries("extension Outer.Inner<Int>\n    where Element: Equatable\n{\n    public func added() {}\n}\n")
+        self.assertEqual([e[0] for e in found], ["Outer.Inner<Int>", "Outer.Inner<Int>.added"])
+
+    def test_the_four_shapes_are_reported_when_undocumented(self):
+        source = ("public struct S {\n    public var x, y: Int\n    public var `default`: Int\n}\n"
+                  "public struct Wide\n    : Equatable\n{\n    public var inside: Int\n}\n"
+                  "public extension Outer.Inner {\n    func added() {}\n}\n")
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "Sources", "M", "A.swift")
+            os.makedirs(os.path.dirname(path))
+            with open(path, "w") as handle:
+                handle.write(source)
+            entries = [entry for _, _, entry in dc.undocumented([path], "macos")]
+        self.assertEqual(entries, ["S (struct)", "S.x (var)", "S.y (var)", "S.default (var)", "Wide (struct)",
+                                   "Wide.inside (var)", "Outer.Inner.added (func)"])
+
 
 
 if __name__ == "__main__":

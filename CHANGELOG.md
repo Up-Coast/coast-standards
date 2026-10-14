@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.12.2 — 2026-10-13
+
+The doc-comments check reads four Swift declaration shapes it used to miss.
+
+### Fixed
+
+- The `doc-comments` check now reads four Swift declaration shapes it used to miss, matching the compiler's own parser: a multi-name binding (`public var x, y: T` is two declarations), a backticked name (`default`), a type header wrapped onto a second line (the body is still opened), and a dotted extension name (`extension A.B` is `A.B`, not `A`). An upgraded project may see new missing-doc-comment findings.
+
 ## 1.12.1 — 2026-10-13
 
 Every rule file is rewritten to be short: one sentence per rule, with every id, check and requirement kept.
