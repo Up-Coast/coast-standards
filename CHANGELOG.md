@@ -4,6 +4,15 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.12.3 — 2026-10-14
+
+The unreached-view check knows web file-based routing, and the second-theme-file check needs styling content as well as a theme file name.
+
+### Fixed
+
+- `scan:unreached-view` on the web platform now knows file-based routing (issue #2). A file named `page`, `layout`, `template`, `error`, `not-found`, `loading`, `global-error` or `route` under `app/` or `src/app/`, a Pages Router file, a Remix or React Router route module and a Vite `main`/`index` entry are routes; the check follows their imports (relative, the `@/` alias, re-exports) and treats every view on that graph as reached. A view in a file no route reaches is still reported, and `not-mounted-yet:` still suppresses.
+- `scan:second-theme-file` on the web and react-native platforms no longer refuses a file only for its name. A `tokens.ts`, `theme.ts` and the like is a theme file only when it holds styling: a hex colour, a `px` or `rem` value, a font family or a `--css-variable` declaration.
+
 ## 1.12.2 — 2026-10-13
 
 The doc-comments check reads four Swift declaration shapes it used to miss.

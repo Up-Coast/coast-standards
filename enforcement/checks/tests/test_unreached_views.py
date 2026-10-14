@@ -130,18 +130,51 @@ class KotlinAndWebUnreachedViewTests(unittest.TestCase):
         paths = self.Paths({"src/components/Banner.tsx": "ui_lib", "src/components/Banner.stories.tsx": "gallery"})
         out = uv.failures_for("web", paths, list(texts), dict(texts))
         self.assertEqual([(p, l) for p, l, _ in out], [("src/components/Banner.tsx", 1)])
-        texts["src/pages/Home.tsx"] = "export function Home() { return <Banner /> }\n"
-        paths = self.Paths({"src/components/Banner.tsx": "ui_lib", "src/components/Banner.stories.tsx": "gallery", "src/pages/Home.tsx": "ui"})
+        texts["src/screens/Home.tsx"] = "export function Home() { return <Banner /> }\n"
+        paths = self.Paths({"src/components/Banner.tsx": "ui_lib", "src/components/Banner.stories.tsx": "gallery", "src/screens/Home.tsx": "ui"})
         out = uv.failures_for("web", paths, list(texts), dict(texts))
-        self.assertEqual([p for p, _, _ in out], ["src/pages/Home.tsx"])   # Home itself is on no route
+        self.assertEqual([p for p, _, _ in out], ["src/screens/Home.tsx"])   # Home itself is on no route
 
     def test_criterion_a_route_table_entry_counts(self):
         texts = {
-            "src/pages/Home.tsx": "export function Home() { return <div/> }\n",
+            "src/screens/Home.tsx": "export function Home() { return <div/> }\n",
             "src/routes.ts": "export const routes = [{ path: '/', component: Home }]\n",
         }
-        paths = self.Paths({"src/pages/Home.tsx": "ui"})
+        paths = self.Paths({"src/screens/Home.tsx": "ui"})
         self.assertEqual(uv.failures_for("web", paths, list(texts), dict(texts)), [])
+
+    def _web(self, texts, classes):
+        paths = self.Paths(classes)
+        return [p for p, _, _ in uv.failures_for("web", paths, list(texts), dict(texts))]
+
+    def test_criterion_app_router_page_reaches_a_component_two_hops_away(self):
+        texts = {
+            "src/app/page.tsx": "import { cards } from '@/lib/registry'\nexport default function Page() { return cards.length }\n",
+            "src/lib/registry.ts": "import { Card } from '../components/Card'\nexport const cards = [Card]\n",
+            "src/components/Card.tsx": "export function Card() { return <div/> }\n",
+            "src/components/Barrel.ts": "export * from './Card'\n",
+        }
+        classes = {"src/app/page.tsx": "ui", "src/components/Card.tsx": "ui_lib"}
+        self.assertEqual(self._web(texts, classes), [])
+
+    def test_criterion_every_route_file_name_is_a_root(self):
+        for name in ("layout", "template", "error", "not-found", "loading", "global-error"):
+            path = f"app/{name}.tsx"
+            self.assertEqual(self._web({path: "export default function Thing() { return null }\n"}, {path: "ui"}), [], name)
+        self.assertEqual(self._web({"pages/index.tsx": "export default function Home() { return null }\n"}, {"pages/index.tsx": "ui"}), [])
+        self.assertEqual(self._web({"src/main.tsx": "export function Shell() { return null }\n"}, {"src/main.tsx": "ui"}), [])
+
+    def test_criterion_a_component_file_nothing_imports_is_still_reported(self):
+        texts = {
+            "src/app/page.tsx": "export default function Page() { return null }\n",
+            "src/components/Orphan.tsx": "export function Orphan() { return <div/> }\n",
+        }
+        classes = {"src/app/page.tsx": "ui", "src/components/Orphan.tsx": "ui_lib"}
+        self.assertEqual(self._web(texts, classes), ["src/components/Orphan.tsx"])
+
+    def test_criterion_not_mounted_yet_still_suppresses_on_web(self):
+        texts = {"src/components/Orphan.tsx": "// not-mounted-yet: W1 — later\nexport function Orphan() { return <div/> }\n"}
+        self.assertEqual(self._web(texts, {"src/components/Orphan.tsx": "ui_lib"}), [])
 
     def test_criterion_python_has_nothing_to_judge(self):
         self.assertEqual(uv.failures_for("python", self.Paths({}), ["app/views.py"], {"app/views.py": "class X: pass\n"}), [])

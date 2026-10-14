@@ -27,6 +27,17 @@ module's own business and is constructed where it is declared):
   ``export default function Name(`` in a ``ui``/``ui_lib`` file, PascalCase.
 * Python: none — the rule is UI-shaped.
 
+Web file-based routing: a file is a route (a root the framework reaches) when it sits under
+``app/`` or ``src/app/`` and is named ``page``, ``layout``, ``template``, ``error``,
+``not-found``, ``loading``, ``global-error``, ``default`` or ``route``; when it sits under
+``pages/`` or ``src/pages/`` (Pages Router); when it is a Remix or React Router route module
+(``routes/`` under ``app/`` or ``src/``, or ``root``/``routes`` in ``app/``); or when it is a
+Vite entry (``main``/``index`` directly under ``src/``). Reachability follows the module import
+graph from those roots (relative imports and the ``@/`` alias to ``src/``, re-exports and
+dynamic imports included), so a view in any file on that graph is reached, whether it is built
+directly, through a registry constant or through a library module. A view in a file no root
+reaches, and that nothing constructs, is still reported.
+
 What is a construction site: a use of the name followed by ``(`` or ``<`` (Swift, Kotlin,
 TS calls) or ``<Name`` / ``component: Name`` / ``element: Name`` (JSX, route tables) in any
 file the path classes do not put under ``gallery``, ``tests``, ``generated`` or ``plans``,
@@ -57,6 +68,68 @@ TS_EXPORTS = (
     re.compile(r"^\s*export\s+const\s+([A-Z]\w*)\s*[:=]"),
 )
 PASCAL = re.compile(r"^[A-Z]\w*$")
+
+ROUTE_NAMES = {"page", "layout", "template", "error", "not-found", "loading", "global-error", "default", "route"}
+ROUTE_DIRS = ("app/", "src/app/")
+PAGES_DIRS = ("pages/", "src/pages/")
+REMIX_DIRS = ("app/routes/", "src/routes/", "routes/")
+REMIX_FILES = {"app/root", "app/routes", "src/root", "src/routes"}
+VITE_ENTRIES = {"src/main", "src/index"}
+IMPORT_SPECIFIER = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)['"]([^'"]+)['"]""")
+RESOLVE_SUFFIXES = ("", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js", "/index.jsx")
+
+
+def _stem(path):
+    return path.rsplit(".", 1)[0] if "." in path.rsplit("/", 1)[-1] else path
+
+
+def is_web_route(path):
+    """Whether a file is a framework route: a root nothing in the product has to import."""
+    path = path.lstrip("./")
+    stem = _stem(path)
+    name = stem.rsplit("/", 1)[-1]
+    if path.startswith(ROUTE_DIRS) and name in ROUTE_NAMES:
+        return True
+    if path.startswith(PAGES_DIRS + REMIX_DIRS):
+        return True
+    return stem in REMIX_FILES or stem in VITE_ENTRIES
+
+
+def _resolve(importer, specifier, known):
+    """The tracked file a relative or ``@/`` import names, or None."""
+    if specifier.startswith("."):
+        parts = importer.split("/")[:-1]
+        for piece in specifier.split("/"):
+            if piece == "..":
+                if parts:
+                    parts.pop()
+            elif piece != ".":
+                parts.append(piece)
+        bases = ["/".join(parts)]
+    elif specifier.startswith("@/"):
+        bases = ["src/" + specifier[2:], specifier[2:]]
+    else:
+        return None
+    for base in bases:
+        for suffix in RESOLVE_SUFFIXES:
+            if base + suffix in known:
+                return base + suffix
+    return None
+
+
+def web_reachable_files(texts):
+    """Every file reachable from a framework route over the import graph (``texts``: path -> source)."""
+    known = set(texts)
+    seen = {path for path in texts if is_web_route(path)}
+    queue = list(seen)
+    while queue:
+        path = queue.pop()
+        for specifier in IMPORT_SPECIFIER.findall(texts[path]):
+            target = _resolve(path, specifier, known)
+            if target and target not in seen:
+                seen.add(target)
+                queue.append(target)
+    return seen
 
 
 def _comment_tag(lines, index):
@@ -193,9 +266,13 @@ def failures_for(platform, paths, files, texts=None):
                 continue
             declared.append((path, line, name, tag))
 
+    on_routes = set()
+    if platform == "web":
+        on_routes = web_reachable_files({path: "\n".join(lines) for path, lines in product.items()})
+
     failures = []
     for path, line, name, tag in declared:
-        if tag:
+        if tag or path in on_routes:
             continue
         own = product.get(path, [])
         own_without_declaration = [text for number, text in enumerate(own, 1) if number != line]

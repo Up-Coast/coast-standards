@@ -332,6 +332,28 @@ class TreeRatchetAndAdvisoryTests(unittest.TestCase):
         self.assertNotIn("Theme/Theme.swift", out, "the bound theme file is the one home, not a second file")
 
 
+class SecondThemeFileWebTests(unittest.TestCase):
+    """The shipped signature on the web platform: a theme-named file needs styling content."""
+
+    def setUp(self):
+        self.repo = Repo()
+        self.addCleanup(self.repo.cleanup)
+        self.repo.write("package.json", '{"name": "x"}\n')
+
+    def hits(self):
+        self.repo.commit("files")
+        code, out = self.repo.run("--tree", "--platform", "web")
+        return [line for line in out.splitlines() if ":second-theme-file:" in line]
+
+    def test_a_tokens_module_with_no_styling_is_not_a_theme_file(self):
+        self.repo.write("src/lib/tokens.ts", "import { createHmac } from 'crypto'\nexport function signToken(id: string) { return createHmac('sha256', 'k').update(id).digest('hex') }\n")
+        self.assertEqual(self.hits(), [])
+
+    def test_a_tokens_file_holding_styling_is_a_second_theme_file(self):
+        self.repo.write("src/lib/tokens.ts", "export const brand = '#0a84ff'\n")
+        self.assertEqual(len(self.hits()), 1)
+
+
 class WaveOneThroughTheRunnerTests(unittest.TestCase):
     def setUp(self):
         self.repo = Repo()
