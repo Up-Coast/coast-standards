@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.13.0 — 2026-10-21
+
+Rules for running background agents: two at a time, own worktrees, one integrator.
+
+### Added
+
+- Rules for running background agents (`rules/06-testing.md`, `rules/07-documentation-git-process.md`): at most two at once and one when free memory is low; a builder tests only what it changed; each agent works in its own worktree, commits locally and never pushes, deploys or migrates; one integrator runs one type check, one full suite, one deploy, one migration, one merge to main and one push; a worktree is removed as soon as its branch is merged.
+
 ## 1.12.4 — 2026-10-14
 
 The duplicate-code check skips database migrations.

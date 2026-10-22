@@ -68,6 +68,8 @@ When main fails, nobody starts new work until it passes, whoever broke it. [chec
 
 - Streams run their own test target while working and the **full suite once** before their final commit; a serial merge step re-runs it after each merge.
 - **Parallel work streams that build the same kind of thing do not run at once.** One lands first, or the shared pieces go in one small serial commit both cut from, named in each brief. Run the duplicate-code check on the merged tree before main. Any fan-out plan has a "shared pieces first" step. [check: process]
+- **No more than two background agents run at once.** Check free memory before starting a second; below about 40% free, run one at a time. A type check and a full test run each use gigabytes, so the cap protects the machine every session shares. [check: process]
+- **A background builder tests only what it changed.** It runs the tests of the files it touched, by path, and never the full suite or a whole-project type check. The coordinator runs one type check and one full suite on the merged work. [check: process]
 - **One review pass per task, at the end**: not per file or commit. [check: process]
 - Run the full suite once per batch, never on unchanged code.
 - **After a failure, re-run only what failed.** Re-run the failures plus tests for code changed since. A push or merge gate records results per commit and runs fast checks, last failures and tests touched since the last pass; it never skips a last failure. The full suite runs once per integration, never per feature or push. [check: process]

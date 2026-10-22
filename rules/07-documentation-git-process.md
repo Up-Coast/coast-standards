@@ -5,9 +5,12 @@ Read this when a task commits, pushes, reviews or writes docs.
 ## Git
 
 - **Commit per task, not per session.** Each is one finished, tested task, named in its message. [check: process]
-- **Every commit gets pushed — same session, no exceptions.** If refused, fetch, reconcile, retry. [check: session:unpushed-at-stop]
+- **Every commit gets pushed — same session, no exceptions.** If refused, fetch, reconcile, retry. A background builder's commits are pushed by the integrator in that same session (next rules). [check: session:unpushed-at-stop]
 - **Repos are private in the owner's organization** unless the owner says otherwise. Secret-scan all history before a first push: server keys, `.p8`/`.p12` and `.env` files block it and are reported; client-safe SDK keys do not. [check: process, scan:secret-literal]
 - **Worktrees: fine when a person or session manages them; not in shipped software.** The creator cleans them up. Shipped software uses one checkout unless cleanup survives every ending (pause, block, crash, abandon). Park work as a commit on its branch; keep `main` releasable. [check: process]
+- **Each background agent works in its own worktree on its own branch, commits locally and never pushes, deploys or migrates.** The owner may ask for the branches to stay local until the work is done. [check: process]
+- **One integrator ships.** It merges every branch, runs one type check and one full test run on the merged work, then one deploy, one database migration, one merge to main and one push. Builders never ship; a failure goes back to the builder whose branch caused it. [check: process]
+- **Remove a worktree as soon as its branch is merged.** The branch stays until main has it. Idle worktrees cost disk and memory on a shared machine. [check: process]
 - **Protected main where the platform allows it:** pull request required, review required, status checks required, no force-push, no deletion. [check: tool:gh-ruleset]
 - **Versions and build numbers.** One file holds the version, raised only per release (patch fix, minor feature, major breaking) with a dated change-log section. Builds get an increasing number from one source and record their commit. Git-installed repos raise and tag the version every merge to main. [check: review]
 
