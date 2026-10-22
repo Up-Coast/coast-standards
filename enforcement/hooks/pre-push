@@ -165,7 +165,7 @@ wants() {
   wants_named "$1" || return 1
   if [ "${work_branch_push:-0}" = 1 ]; then
     case "$1" in
-      build|tests|jscpd|doc-comments)
+      build|tests|doc-comments)
         printf 'gate: %s HELD for the push to %s\n' "$1" "$default_branch"
         return 1 ;;
     esac
@@ -284,11 +284,13 @@ if [ -n "$refs_file" ]; then
 fi
 [ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
 
-# A push that only updates work branches is a backup, not a release. Build, tests, jscpd and
-# the doc-comment count are held for the push to the default branch, which judges every
+# A push that only updates work branches is a backup, not a release. Build, tests and the
+# doc-comment count are held for the push to the default branch, which judges every
 # commit it brings in, so nothing reaches it unverified; the fast seats still run. Work must
 # be pushed as often as it is committed, and parallel sessions sharing one checkout queued
 # for hours behind each other's full batteries with their work on one machine only.
+# jscpd is never held: a copied block is caught at the push of the session that wrote it,
+# not left for whoever integrates every branch at the end.
 # A push naming the default branch, a tag, or no ref lines (a `--seat` run) runs everything.
 work_branch_push=0
 default_branch=main
@@ -305,7 +307,7 @@ if [ -n "$refs_file" ] && [ -s "$refs_file" ]; then
     esac
   done < "$refs_file"
 fi
-[ "$work_branch_push" = 1 ] && printf 'gate: work branches only — build, tests, jscpd and the doc-comment count wait for the push to %s\n' "$default_branch"
+[ "$work_branch_push" = 1 ] && printf 'gate: work branches only — build, tests and the doc-comment count wait for the push to %s\n' "$default_branch"
 
 scope_files_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
 scope_measured_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1

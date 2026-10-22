@@ -52,7 +52,7 @@ What runs depends on what the push changed:
 - **Documents only:** none of the code checks.
 - **Code:** the linter and formatter on the changed files, and the tests of the modules that depend on the change.
 - **The checks themselves:** everything.
-- **Work branches only** (the push names no default branch and no tag): the build, the tests, jscpd and the doc-comment count wait for the push to the default branch, which checks every commit it brings in. Push a work branch every time you commit.
+- **Work branches only** (the push names no default branch and no tag): the build, the tests and the doc-comment count wait for the push to the default branch, which checks every commit it brings in. jscpd runs on every push, so a copied block stops the push of the session that wrote it. Push a work branch every time you commit.
 
 ### Baselines
 

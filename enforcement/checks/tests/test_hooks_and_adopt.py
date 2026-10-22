@@ -415,12 +415,13 @@ class AdoptTests(unittest.TestCase):
         tip = sh(self.project.path, "git", "rev-parse", "HEAD")
         overrides, record = self._stub_tools()
         work = f"refs/heads/lane/one {tip} refs/heads/lane/one {base}\n"
-        code, out = self.project.hook("pre-push", "--seat", "build,tests,jscpd,doc-comments",
+        code, out = self.project.hook("pre-push", "--seat", "build,tests,doc-comments",
                                       stdin=work, env=clean_env(**overrides))
         self.assertEqual(code, 0, out)
         self.assertIn("gate: work branches only", out)
-        for seat in ("build", "tests", "jscpd", "doc-comments"):
+        for seat in ("build", "tests", "doc-comments"):
             self.assertIn(f"gate: {seat} HELD for the push to main", out)
+        self.assertNotIn("gate: jscpd HELD", out)
         calls = []
         if os.path.exists(record):
             with open(record, encoding="utf-8") as handle:

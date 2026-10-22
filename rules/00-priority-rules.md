@@ -5,6 +5,11 @@ Always loaded with the platform rules file (`docs/domain-rules.md`). Other numbe
 ## 1. DRY is the rule above all other rules
 
 Define each piece of knowledge once. Checkable rules: DRY-1 to DRY-7 in the platform rules file.
+
+Every time, before you write:
+- Search the codebase for code that already does it: a function, component, query, string, test setup or fixture. Reuse it.
+- When it almost fits, extract the shared piece and make both callers use it. Never copy code and edit the copy, including in tests.
+- Before you call work done, run the duplicate-code check (jscpd, the command the pre-push hook runs) and remove every new clone it reports. Every push runs it, so a copy stops your own push.
 [check: context]
 
 ## 2. User-facing text is never hardcoded — always, from day one

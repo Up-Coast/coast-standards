@@ -4,6 +4,15 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.14.0 — 2026-10-21
+
+The duplicate-code check runs on every push; rule 1 spells out the DRY steps
+
+### Changed
+
+- The duplicate-code check (`jscpd`) now runs on every push, work branches included; only the build, the tests and the doc-comment count are held for the push to the default branch. A copied block now stops the push of the session that wrote it, instead of surfacing for the first time at the integration push.
+- Priority rule 1 (DRY) now states the steps: search for existing code before writing, reuse it or extract the shared piece, never copy and edit, and run the duplicate-code check before calling work done.
+
 ## 1.13.0 — 2026-10-21
 
 Rules for running background agents: two at a time, own worktrees, one integrator.
