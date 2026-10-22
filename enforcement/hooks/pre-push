@@ -344,8 +344,32 @@ previous_hooks() {
   fi
 }
 
+# Test seats run last: every other check is quick and can refuse the push, so a
+# push is never refused by one of them after a long test run. run() queues a
+# seat named "tests…" (quoted, so its arguments survive) and run_deferred_tests
+# runs the queue at the end, in the order it was queued.
+deferred_tests=""
+quote_args() {  # <arg>… — each argument single-quoted, for eval
+  for arg in "$@"; do
+    printf "'%s' " "$(printf '%s' "$arg" | sed "s/'/'\\\\''/g")"
+  done
+}
+run_deferred_tests() {
+  [ -n "$deferred_tests" ] || return 0
+  eval "$deferred_tests"
+}
+
 run() {
   name=$1; shift
+  case "$name" in
+    tests*)
+      if [ "${running_deferred:-0}" = 0 ]; then
+        printf 'gate: %s — runs last, after the quick checks\n' "$name"
+        deferred_tests="${deferred_tests}running_deferred=1 run $(quote_args "$name" "$@")
+"
+        return 0
+      fi ;;
+  esac
   printf 'gate: %s\n' "$name"
   if ! "$@"; then
     printf 'gate: %s failed — the push was refused. Fix what it printed, then push again.\n' "$name" >&2
@@ -1044,7 +1068,11 @@ sys.exit(1)
 }
 wants gh-ruleset && run "gh-ruleset (protected main)" gh_ruleset_seat
 
+# The project's own hook runs before the test seats; COAST_GATE tells it the gate
+# runs the tests, so a hook that also runs them can leave them to the gate.
+export COAST_GATE=1
 [ "$seats" = all ] && run "the hooks this project already had" previous_hooks
+run_deferred_tests
 [ -n "$refs_file" ] && rm -f "$refs_file"
 rm -f "$scope_files_listing" "$scope_measured_listing" "$scope_tests_listing"
 

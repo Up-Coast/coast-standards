@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.15.0 — 2026-10-21
+
+The pre-push hook runs the test seats last
+
+### Changed
+
+- The pre-push hook runs the test seats last. Every other check, the project's own earlier hook included, runs first, so a quick check never refuses a push after a long test run. The earlier hook sees `COAST_GATE=1` and can leave the tests to the gate.
+
 ## 1.14.0 — 2026-10-21
 
 The duplicate-code check runs on every push; rule 1 spells out the DRY steps
