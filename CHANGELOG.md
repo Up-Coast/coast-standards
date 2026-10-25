@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.16.0 — 2026-10-24
+
+Three checks for Apple projects: catalog strings and view model ownership.
+
+### Added
+
+- Three checks for Apple projects: `format-on-catalog-string` refuses `String(format:)` filled from a catalog string, `view-model-in-presentation` refuses an observable view model built inside a `.sheet`, `.fullScreenCover`, `.popover` or navigation destination, and `view-model-in-let` refuses a view that builds its own view model into a `let` or plain `var` instead of `@State`; each would otherwise wait for a reviewer to find a sentence the catalog cannot translate or a model that loses its state.
+
 ## 1.15.0 — 2026-10-21
 
 The pre-push hook runs the test seats last

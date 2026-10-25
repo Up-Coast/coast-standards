@@ -1,6 +1,6 @@
 # Coast Standards Enforcement — Developer Guide
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-10-24*
 
 The technical reference for developers who adopt or maintain the enforcement layer: the scanner, the hooks and the installer. The current release number is in the root `CHECKS-VERSION`. The design and build plan are in [README.md](README.md).
 
@@ -302,6 +302,8 @@ Each signature needs fixtures in `checks/tests/plants/<platform>/`: `<id>.fail.<
 | `blocking-call` (python) | `async_blocking.py` | Blocking calls inside `async def`. |
 | `test-criterion-tag` | `test_criteria.py` | Tests with no `AC-<n>` or "criterion" in the name, the three lines above, or the first body line. |
 | `type-size` | `type_size.py` | Types over 300 lines or files over 400 (advisory). |
+| `view-model-in-presentation` (ios, macos) | `view_model_ownership.py` | An observable view model built inside a `.sheet`, `.fullScreenCover`, `.popover`, `.navigationDestination` or `NavigationLink`. |
+| `view-model-in-let` (ios, macos) | `view_model_ownership.py` | A SwiftUI view that builds its own observable view model into a `let` or plain `var` instead of `@State`. |
 | `unreached-view` | `unreached_views.py` | Public views or components no route constructs. Previews, galleries and tests do not count as routes. A `not-mounted-yet: <task>` comment above the declaration passes. |
 | `secret-file` | `check_rules.py` | New, renamed or copied files named like secrets. |
 | `plaintext-http` | `check_rules.py` | `http://` URLs, `usesCleartextTraffic="true"`, and `NSAllowsArbitraryLoads` set to `<true/>`. |

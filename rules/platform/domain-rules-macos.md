@@ -1,4 +1,4 @@
-<!-- coast-standards-release: 1.12.1 -->
+<!-- coast-standards-release: 1.16.0 -->
 # Project rules
 
 Your project's rules: edit, delete or add any; reviewers check every change against this file. Each rule ends with what checks it: `review` a reviewer, `scan:` the scanner refuses it, `ratchet:` a count that may only fall, `advisory:` reported only, `tool:`, `swiftlint` or `swiftformat` the pre-push hook, `process` the pipeline or a person. Write every rule so a reviewer can answer yes or no.
@@ -23,7 +23,7 @@ DRY comes before every other rule: each piece of knowledge lives in one place.
 - **L-1** From the first commit, every user-visible string is a catalog key: labels, errors, empty states, loading text, tooltips, accessibility labels, titles, notifications, units. [check: scan:ui-string-literal]
 - **L-2** `Localizable.xcstrings` is each locale's only string source (see DRY-3). [check: scan:one-catalog-per-locale]
 - **L-3** Keys name the meaning, not the English (`status.doNotDispatch`, not `do_not_dispatch_text`). [check: scan:english-key]
-- **L-4** Never join strings into sentences; use `String(localized:)` with `\(…)` placeholders. [check: scan:ui-string-concat]
+- **L-4** Never join strings into sentences or fill a catalog string with `String(format:)`; use `String(localized:)` with `\(…)` placeholders. [check: scan:ui-string-concat, scan:format-on-catalog-string]
 - **L-5** Plurals use catalog plural variants, never `if count == 1`. [check: scan:manual-plural]
 - **L-6** Format dates, numbers and currency with `FormatStyle`, never templates. [check: review]
 - **L-7** Layouts fit text 30% longer than English without clipping; test German, pseudo-locale and, in scope, right-to-left. [check: review]
@@ -111,7 +111,7 @@ DRY comes before every other rule: each piece of knowledge lives in one place.
 - **A-2** Dependencies go one way with no cycles; features depend on domain abstractions, never on each other or concrete data code. [check: scan:import-matrix]
 - **A-3** One job per type or module; split rather than add a second. Size warnings are hints, not failures. [check: advisory:type-size, review]
 - **A-4** Add a protocol only for a second implementation, a test fake or a module boundary. [check: review]
-- **A-5** Use the platform's standard navigation, state and dependency wiring, never a home-made framework. [check: scan:native-pattern]
+- **A-5** Use the platform's standard navigation, state and dependency wiring, never a home-made framework. A view that creates an observable view model owns it in `@State`; it never builds one inside a presentation builder (`.sheet`, `.fullScreenCover`, `.popover`, a navigation destination) or holds one it built in a `let`, because SwiftUI rebuilds both and the model loses its state. [check: scan:native-pattern]
 - **A-6** Names use standard terms and never claim a role the code does not play (a ViewModel prepares display state, a Repository accesses data, a Screen is navigable). [check: review]
 - **A-7** Use the platform feature for window chrome, toolbar, navigation, tab bars, modals, alerts, search, sidebars, split views, menus, lists, progress and pickers; a rebuild from native parts (custom title bar, overlay modal, own search field, overridden focus) is a substitute and needs a deviation the plan approved. Each UI plan item names the native feature it uses. [check: scan:native-pattern]
 <!-- end shared-section -->

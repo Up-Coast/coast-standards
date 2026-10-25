@@ -844,6 +844,60 @@
       }
     },
     {
+      "id": "view-model-in-presentation",
+      "rule": "A-5",
+      "group": "native-pattern",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "an observable view model built inside a presentation builder (.sheet, .fullScreenCover, .popover, a navigation destination) is rebuilt every time the body runs and loses its state — hold it in the presenting view as `@State private var model: Model?`, set it when presenting, and pass it in",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        }
+      }
+    },
+    {
+      "id": "view-model-in-let",
+      "rule": "A-5",
+      "group": "native-pattern",
+      "kind": "builtin",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests"
+      ],
+      "words": "a SwiftUI view that creates its own observable view model holds it in a `let` or plain `var`, so the model is rebuilt with the view and loses its state — own it with `@State private var model = Model()` (or `@State private var model: Model?`), or take it from the parent",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ]
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ]
+        }
+      }
+    },
+    {
       "id": "import-matrix",
       "rule": "A-2",
       "kind": "builtin",
@@ -2216,6 +2270,39 @@
             "**/*.jsx"
           ],
           "pattern": "[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]\\s*\\+\\s*[A-Za-z_($]|[A-Za-z_)\\]]\\s*\\+\\s*[\\'\"](?=[^\\'\"]*[A-Za-z])(?=[^\\'\"]*\\s)[^\\'\"]*[\\'\"]"
+        }
+      }
+    },
+    {
+      "id": "format-on-catalog-string",
+      "rule": "L-4",
+      "severity": "block",
+      "scope": "added",
+      "applies_to": [
+        "*"
+      ],
+      "excludes": [
+        "tests",
+        "docs",
+        "plans",
+        "design_bundle",
+        "generated",
+        "governing",
+        "git"
+      ],
+      "words": "`String(format:)` applied to a catalog string builds the sentence outside the catalog — put the value in the entry with a placeholder: `String(localized: \"key \\(value)\")`",
+      "platforms": {
+        "ios": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bString\\(\\s*format:\\s*(String\\(\\s*localized:|NSLocalizedString\\()"
+        },
+        "macos": {
+          "files": [
+            "**/*.swift"
+          ],
+          "pattern": "\\bString\\(\\s*format:\\s*(String\\(\\s*localized:|NSLocalizedString\\()"
         }
       }
     },

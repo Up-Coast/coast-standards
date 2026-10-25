@@ -1,6 +1,6 @@
 # Rules enforcement: design and build plan
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-10-24*
 
 ## Summary
 
@@ -417,6 +417,7 @@ Per-platform patterns live in `rules_signatures.json`. This table summarises the
 | `destructive-default-key` | MAC-6, 05 | SwiftUI `role: .destructive` wired to `.defaultAction`; Compose `onDone`, RN `onSubmitEditing`, web `onSubmit`/`autoFocus` firing a delete. | Added lines |
 | `manual-plural` | L-5 | A `count == 1` check choosing words. | Added lines; UI paths |
 | `ui-string-concat` | L-4 | A string with a space concatenated with a value; Swift interpolation in a `LocalizedStringKey`. | Added lines; UI paths |
+| `format-on-catalog-string` | L-4 | Swift: `String(format:)` whose first argument is `String(localized:` or `NSLocalizedString(`. | Added lines; all but tests |
 | `baked-case` | L-12 | `uppercased`, `capitalized`, `toUpperCase`, CSS `text-transform` on display text. Comparisons and sorts excused. | Added lines; UI paths |
 | `one-catalog-per-locale` | L-2 | A catalog outside the bound `strings` class or beside the platform's one. iOS: only `Localizable`, `InfoPlist`, `AppShortcuts` catalogs, no legacy `.lproj` tables. Android: one `strings.xml` per `values*`. Web/RN: one file per locale folder. | Whole tree |
 | `english-key` | L-3 | A catalog key with a space or sentence punctuation. Dotted keys are fine. | Added lines in catalogs |
@@ -426,7 +427,7 @@ Per-platform patterns live in `rules_signatures.json`. This table summarises the
 | `test-criterion-tag` | TEST-1 | A test whose declaration, the three lines above it, and its first body line name neither `AC-<n>` nor "criterion". Built-in (`test_criteria.py`), every test language. | Added lines in tests |
 | `hermetic-test` | TEST-2 | A live host, `URLSession.shared`, `fetch("http`, `requests.get`, `OkHttpClient()`, `axios` in a test file without a `LIVE_TESTS` guard on the line. | Added lines in tests |
 | `test-weakened` | 06 test changes | Skips, disables, `.only`, empty assertions, wide tolerances. | Added lines in tests |
-| `native-pattern` | A-5, A-7 | Coast's native-patterns lists, folded in unchanged (same ids, patterns, paired rule, `Tests/` exemption). Python adds `hand-rolled-password-hash`, `hand-rolled-query-parse`, `hand-rolled-arg-parse`. | Added lines |
+| `native-pattern` | A-5, A-7 | Coast's native-patterns lists, folded in unchanged (same ids, patterns, paired rule, `Tests/` exemption). Python adds `hand-rolled-password-hash`, `hand-rolled-query-parse`, `hand-rolled-arg-parse`. iOS and macOS add two built-ins (`view_model_ownership.py`): `view-model-in-presentation`, an observable view model built inside a `.sheet`, `.fullScreenCover`, `.popover`, `.navigationDestination` or `NavigationLink`; and `view-model-in-let`, a SwiftUI view that builds its own observable view model into a `let` or plain `var` (a default value, or `self.<name> =` in its `init`) instead of `@State`. A view model is a type named `…ViewModel` or one the file declares `@Observable` or `ObservableObject`; a model the view receives from its parent is not refused. | Added lines |
 | `import-matrix` | A-2 | Built-in (`import_matrix.py`): module-layer import rules, including multi-line TypeScript imports. Project module kinds in `.coast/module-kinds.json`. | Whole tree |
 | `doc-comments` | DOC-1, Python STYLE-4 | Every public declaration has a doc comment (section 6, E1.5). Built-in (`check_doc_comments.py`). | Added lines; whole-tree count is advisory at push |
 | `type-size` | A-3, 02 granularity | A Swift, Kotlin or Python type over 300 lines, or any file over 400, reported once at the first added line inside it. Built-in (`type_size.py`). `advisory`. | Added lines |

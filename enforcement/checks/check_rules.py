@@ -535,7 +535,8 @@ def files_match(signature, path, extensions):
 def builtin_hits(signature, path, text):
     """[(line, text)] of a built-in added-scope check over one file's whole text — the one dispatch
     the scanner and the plant test both use (``ui-string-literal``: literals.py; the Python
-    ``blocking-call``: async_blocking.py). Tree-scope built-ins (``import-matrix``,
+    ``blocking-call``: async_blocking.py; ``view-model-in-presentation`` and
+    ``view-model-in-let``: view_model_ownership.py). Tree-scope built-ins (``import-matrix``,
     ``unreached-view``) are dispatched in ``Scan.scan_tree`` instead."""
     if signature["id"] == "ui-string-literal":
         import literals  # beside this file
@@ -549,6 +550,12 @@ def builtin_hits(signature, path, text):
     if signature["id"] == "type-size":
         import type_size  # beside this file
         return type_size.hits(path, text)
+    if signature["id"] == "view-model-in-presentation":
+        import view_model_ownership  # beside this file
+        return view_model_ownership.presentation_hits(text)
+    if signature["id"] == "view-model-in-let":
+        import view_model_ownership  # beside this file
+        return view_model_ownership.let_hits(text)
     if signature["id"] == "doc-comments":
         import check_doc_comments  # beside this file — reads the file (and, for Swift, its module) from disk
         platform = os.environ.get("COAST_PLATFORM") or check_doc_comments.platform_for(path)
