@@ -406,32 +406,28 @@ class AdoptTests(unittest.TestCase):
         self.assertIn("gate: scope all — everything", out)
         self.assertIn("gate: build (warnings-as-errors)", out)
 
-    def test_a_push_of_work_branches_only_holds_the_heavy_seats_for_main(self):
+    def test_a_push_of_work_branches_only_runs_no_check(self):
+        # 1.17.0: a work branch is a backup of work in progress, pushed compiling or not;
+        # the push to the default branch judges every commit it brings in.
         self.project.adopt()
         self.project.commit("adopt")
         base = sh(self.project.path, "git", "rev-parse", "HEAD")
-        self.project.write("Sources/App/Feature.swift", "/// A feature.\npublic struct Feature {}\n")
-        self.project.commit("a feature")
+        self.project.write("Sources/App/Views/FeatureView.swift", PLANTED_VIEW.replace("HomeView", "FeatureView"))
+        self.project.commit("a feature with a planted finding")
         tip = sh(self.project.path, "git", "rev-parse", "HEAD")
         overrides, record = self._stub_tools()
         work = f"refs/heads/lane/one {tip} refs/heads/lane/one {base}\n"
-        code, out = self.project.hook("pre-push", "--seat", "build,tests,doc-comments",
-                                      stdin=work, env=clean_env(**overrides))
+        code, out = self.project.hook("pre-push", stdin=work, env=clean_env(**overrides))
         self.assertEqual(code, 0, out)
-        self.assertIn("gate: work branches only", out)
-        for seat in ("build", "tests", "doc-comments"):
-            self.assertIn(f"gate: {seat} HELD for the push to main", out)
-        self.assertNotIn("gate: jscpd HELD", out)
-        calls = []
-        if os.path.exists(record):
-            with open(record, encoding="utf-8") as handle:
-                calls = handle.read().splitlines()
-        heavy = [c for c in calls if not c.startswith("swift package")]
-        self.assertEqual(heavy, [], "no build or test tool ran; only the scope read the package graph")
+        self.assertIn("gate: work branches only — no check runs", out)
+        self.assertNotIn("gate: rules-scan", out)
+        self.assertNotIn("gate: jscpd", out)
+        self.assertNotIn("FeatureView.swift", out, "the planted finding is for the push to main")
+        self.assertFalse(os.path.exists(record), "no tool ran")
         # A push that names main alongside the work branch runs the full battery.
         both = work + self._push_refs(base, tip)
         code, out = self.project.hook("pre-push", "--seat", "build", stdin=both, env=clean_env(**overrides))
-        self.assertNotIn("HELD", out)
+        self.assertNotIn("no check runs", out)
         self.assertIn("gate: build", out)
 
     def test_a_scoped_push_rebuilds_the_affected_targets_and_runs_their_tests(self):
@@ -1150,8 +1146,10 @@ class HookTests(unittest.TestCase):
         tip = sh(self.project.path, "git", "rev-parse", "HEAD")
         sh(self.project.path, "git", "checkout", "-q", "main")
         zero = "0" * 40
-        # Pushing feature (a ref the remote has never seen) refuses, though HEAD is main and clean.
-        code, out = self.project.hook("pre-push", "--seat", "rules-scan", stdin=f"refs/heads/feature {tip} refs/heads/feature {zero}\n")
+        # Pushing feature onto main (`git push origin feature:main`) refuses, though HEAD is main
+        # and clean: the pushed sha is feature's. (A push of feature to its own branch runs no
+        # check at all since 1.17.0.)
+        code, out = self.project.hook("pre-push", "--seat", "rules-scan", stdin=f"refs/heads/feature {tip} refs/heads/main {zero}\n")
         self.assertEqual(code, 1, out)
         self.assertIn("FeatureView.swift", out)
         self.assertIn(f"on {tip[:7]}", out)

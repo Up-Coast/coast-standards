@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.17.0 — 2026-10-29
+
+A push that updates only work branches runs no check.
+
+### Changed
+
+- A push that updates only work branches runs no check at all. Until now the linter, the formatter, the scanner with its tree-wide ratchets and the duplicate-code check ran on every push, so a session could be refused a push of its own work in progress for debt elsewhere in the tree, and non-compiling work could not be saved to its branch. The push to the default branch is unchanged: it judges every commit it brings in. The owner's decision: a team's branches carry work in progress; the integration is where the checks belong.
+
 ## 1.16.0 — 2026-10-24
 
 Three checks for Apple projects: catalog strings and view model ownership.

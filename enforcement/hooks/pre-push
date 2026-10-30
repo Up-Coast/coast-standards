@@ -55,10 +55,9 @@
 #          file no target owns, or <prefix>SCOPE=all in the environment
 # jscpd, the whole-tree scan and the doc-comment count run whenever code changed:
 # a clone pairs a changed file with an unchanged one, so the tree is their unit.
-# A push that updates only work branches (no default branch, no tag) holds build, tests,
-# jscpd and the doc-comment count for the push to the default branch, which judges every
-# commit it brings in; the fast seats still run, so a work branch can be pushed as often
-# as it is committed.
+# A push that updates only work branches (no default branch, no tag) runs NO check: a work
+# branch is a backup of work in progress, pushed as often as it is committed, compiling or
+# not. The push to the default branch judges every commit it brings in.
 #
 # git calls this as `pre-push <remote> <url>` with the ref lines on stdin.
 # Run by hand as `pre-push --seat <name>[,<name>]` to run named seats
@@ -163,13 +162,6 @@ switched_off() {  # <list> <name>
 }
 wants() {
   wants_named "$1" || return 1
-  if [ "${work_branch_push:-0}" = 1 ]; then
-    case "$1" in
-      build|tests|doc-comments)
-        printf 'gate: %s HELD for the push to %s\n' "$1" "$default_branch"
-        return 1 ;;
-    esac
-  fi
   if switched_off "${config_seats_off:-}" "$1"; then
     printf 'gate: %s OFF (config)\n' "$1"
     return 1
@@ -284,13 +276,13 @@ if [ -n "$refs_file" ]; then
 fi
 [ -z "$ranges" ] && ranges="$(git rev-parse --verify -q '@{upstream}' 2>/dev/null || echo "$empty_tree"):HEAD"
 
-# A push that only updates work branches is a backup, not a release. Build, tests and the
-# doc-comment count are held for the push to the default branch, which judges every
-# commit it brings in, so nothing reaches it unverified; the fast seats still run. Work must
-# be pushed as often as it is committed, and parallel sessions sharing one checkout queued
-# for hours behind each other's full batteries with their work on one machine only.
-# jscpd is never held: a copied block is caught at the push of the session that wrote it,
-# not left for whoever integrates every branch at the end.
+# A push that only updates work branches is a backup, not a release: it runs no check at
+# all. Work in progress is pushed as often as it is committed, compiling or not, the way a
+# team's branches work; a session is never kept from saving its work by a check that
+# belongs to the integration. The push to the default branch judges every commit it brings
+# in, so nothing reaches it unverified (the owner's decision, 1.17.0; until then the fast
+# seats ran on every push and the tree-wide ratchets refused work branches for debt they
+# had not added).
 # A push naming the default branch, a tag, or no ref lines (a `--seat` run) runs everything.
 work_branch_push=0
 default_branch=main
@@ -307,7 +299,11 @@ if [ -n "$refs_file" ] && [ -s "$refs_file" ]; then
     esac
   done < "$refs_file"
 fi
-[ "$work_branch_push" = 1 ] && printf 'gate: work branches only — build, tests and the doc-comment count wait for the push to %s\n' "$default_branch"
+if [ "$work_branch_push" = 1 ]; then
+  printf 'gate: work branches only — no check runs; the push to %s judges every commit it brings in\n' "$default_branch"
+  [ -n "$refs_file" ] && rm -f "$refs_file"
+  exit 0
+fi
 
 scope_files_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
 scope_measured_listing=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}scope.XXXXXX") || exit 1
