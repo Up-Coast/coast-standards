@@ -948,6 +948,12 @@ class Adoption:
     def set_hooks_path(self):
         hooks = self.layout["hooks_dir"]
         current = git(self.project, "config", "--get", "core.hooksPath", check=False)
+        if current and self.same_directory(current, hooks):
+            # The same directory spelled another way (an absolute path, a trailing slash): a
+            # re-adopt must never record our own hooks as the project's previous ones, or the
+            # pre-push would run itself after itself.
+            current = hooks
+        self.forget_previous_hooks_that_are_ours(hooks)
         if current and current != hooks:
             self.keep_existing_hooks(current)
         elif not current:
@@ -964,6 +970,24 @@ class Adoption:
         self.say("would set" if self.dry_run else "set", "git config core.hooksPath", hooks)
         if not self.dry_run:
             git(self.project, "config", "core.hooksPath", hooks)
+
+    def same_directory(self, a, b):
+        """Whether two hook paths, relative to the project or absolute, name one directory."""
+        return os.path.realpath(os.path.join(self.project, a)) == os.path.realpath(os.path.join(self.project, b))
+
+    def forget_previous_hooks_that_are_ours(self, hooks):
+        """An earlier adopt that recorded our own hooks directory as the project's previous
+        hooks left a pre-push that would call itself; the record is removed."""
+        recorded = os.path.join(self.project, self.state("previous-hooks-path"))
+        if not os.path.isfile(recorded):
+            return
+        with open(recorded, encoding="utf-8") as handle:
+            previous = handle.read().strip()
+        if previous and self.same_directory(previous, hooks):
+            if not self.dry_run:
+                os.remove(recorded)
+            self.say("would remove" if self.dry_run else "removed", self.state("previous-hooks-path"),
+                     "it named this layer's own hooks directory; a pre-push must not run itself after itself")
 
     def keep_existing_hooks(self, current):
         """A project that already had hooks keeps them: ours run first, then its own.

@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.17.1 — 2026-10-29
+
+adopt.py never records its own hooks directory as a project's previous hooks.
+
+### Fixed
+
+- `adopt.py` no longer records this layer's own hooks directory as a project's previous hooks when `core.hooksPath` names it by another spelling (an absolute path). A re-adopt had left a pre-push that ran the gate a second time from inside the first; a record an earlier adopt left is removed.
+
 ## 1.17.0 — 2026-10-29
 
 A push that updates only work branches runs no check.

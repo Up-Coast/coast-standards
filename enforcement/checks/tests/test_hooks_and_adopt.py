@@ -796,6 +796,24 @@ class AdoptTests(unittest.TestCase):
         self.assertLess(text.index("Before."), text.index("<!-- coast-standards: begin"))
         self.assertLess(text.index("<!-- coast-standards: end -->"), text.index("After."))
 
+    def test_our_own_hooks_dir_under_another_spelling_is_never_kept_as_previous_hooks(self):
+        # 1.17.1: a project whose core.hooksPath named our hooks dir by its absolute path was
+        # re-adopted with its own pre-push recorded as the "previous" hooks, so the push to main
+        # would have run the gate twice, the second time from inside the first.
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        sh(self.project.path, "git", "config", "core.hooksPath", os.path.join(self.project.path, ".githooks"))
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, ".coast/previous-hooks-path")), out)
+        self.assertNotIn("kept and run after ours", out)
+        # A record an earlier adopt left behind is removed.
+        self.project.write(".coast/previous-hooks-path", ".githooks\n")
+        code, out = self.project.adopt()
+        self.assertEqual(code, 0, out)
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, ".coast/previous-hooks-path")), out)
+        self.assertIn("a pre-push must not run itself after itself", out)
+
     def test_hooks_in_gits_own_hooks_dir_are_kept_and_an_executable_one_runs_as_itself(self):
         # pre-commit-framework, lefthook and the old husky install into .git/hooks with no
         # core.hooksPath; pointing it at .githooks switched them off. And a hook whose shebang
