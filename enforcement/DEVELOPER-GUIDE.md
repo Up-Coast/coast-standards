@@ -522,7 +522,7 @@ Behaviour follows Anthropic's hooks reference (https://code.claude.com/docs/en/h
 | `force-push` | PreToolUse (Bash) | `git push` with `--force`, `-f`, `--force-with-lease`, `--force-if-includes`, or `+refspec` |
 | `scan-at-commit` | PreToolUse (Bash) | a commit whose staged scan fails |
 | `scan-on-edit` | PostToolUse (edit tools) | nothing; shows the scanner's findings to the model |
-| `unpushed-at-stop` | Stop | ending a turn with unpushed commits or uncommitted source changes |
+| `unpushed-at-stop` | Stop | ending a turn with uncommitted source changes, or the first turn after a commit that is not on the remote (later turns get a note until the next commit) |
 | `rules-at-start` | SessionStart | nothing; prints the platform, ratchet counts and what will be refused |
 
 **`infra-command`** refuses `fly`/`flyctl`, `wrangler`, `cloudflared`, `terraform`/`tofu`, `pulumi`, `doctl`, `aws`, `gcloud`, `az` and `nsupdate`, unless the command is read-only (for example `fly status`, `aws s3 ls`, `terraform plan`). It also refuses `gh repo delete`, `gh secret|variable|ruleset`, and mutating `gh api` calls on repo settings endpoints.

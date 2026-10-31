@@ -433,6 +433,28 @@ class UnpushedAtStop(HookCase):
         self.repo.push()
         self.assertPassed(self.stop())
 
+    def test_the_same_unpushed_commits_are_refused_once_then_noted(self):
+        self.repo.write("Sources/App/HomeView.swift", CLEAN_VIEW)
+        self.repo.commit("home")
+        self.assertRefused(self.stop(), "push before finishing")
+        second = self.stop()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("still not on origin/main", second.stdout)
+        self.assertIn("said once", second.stdout)
+        self.repo.write("Sources/App/AboutView.swift", CLEAN_VIEW)
+        self.repo.commit("about")
+        self.assertRefused(self.stop(), "push before finishing", "2 commit(s) are not on origin/main")
+        self.repo.push()
+        self.assertPassed(self.stop())
+
+    def test_uncommitted_source_is_refused_every_time(self):
+        self.repo.write("Sources/App/HomeView.swift", CLEAN_VIEW)
+        self.repo.commit("home")
+        self.stop()
+        self.repo.write("Sources/App/AboutView.swift", CLEAN_VIEW)
+        self.assertRefused(self.stop(), "uncommitted changes to product source")
+        self.assertRefused(self.stop(), "uncommitted changes to product source")
+
     def test_stop_hook_active_never_blocks(self):
         self.repo.write("Sources/App/HomeView.swift", CLEAN_VIEW)
         self.repo.commit("home")

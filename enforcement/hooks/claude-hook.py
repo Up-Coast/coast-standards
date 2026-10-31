@@ -776,6 +776,13 @@ def unpushed_at_stop(event):
         changed = [p for p in changed if any(classes.classify(p) not in NOT_PRODUCT_SOURCE for classes in tables)]
     if not ahead_lines and not changed:
         return PASS
+    if ahead_lines and not changed and unpushed_already_said(event, root, upstream.stdout.strip()):
+        # Said once per set of commits: an integration session holds its commits for
+        # hours and pushes once at the end, and a refusal at every turn in between
+        # only makes it push early and queue behind every other session's gate.
+        print(f"unpushed-at-stop: {len(ahead_lines)} commit(s) are still not on {upstream.stdout.strip()} "
+              "(said once; push before the session ends).")
+        return PASS
     lines = ["unpushed-at-stop: push before finishing."]
     if ahead_lines:
         lines.append(f"{len(ahead_lines)} commit(s) are not on {upstream.stdout.strip()}: " + "; ".join(ahead_lines[:5]))
@@ -783,6 +790,30 @@ def unpushed_at_stop(event):
         lines.append("uncommitted changes to product source: " + ", ".join(changed[:10]))
     lines.append("Commit what is finished, push it (every commit gets pushed in the same session), then finish.")
     return refuse(*lines)
+
+
+def unpushed_already_said(event, root, upstream):
+    """Whether this session was already refused for exactly these unpushed commits
+    (same HEAD, same upstream). Records the refusal otherwise. The record lives in
+    the repository's own git directory, so it is per worktree and never committed."""
+    head = run(["git", "rev-parse", "HEAD"], cwd=root).stdout.strip()
+    git_dir = run(["git", "rev-parse", "--absolute-git-dir"], cwd=root).stdout.strip()
+    if not head or not git_dir:
+        return False
+    key = f"{event.get('session_id') or 'session'} {head} {upstream}"
+    marker = os.path.join(git_dir, "coast-unpushed-said")
+    try:
+        with open(marker, encoding="utf-8") as handle:
+            if handle.read().strip() == key:
+                return True
+    except OSError:
+        pass
+    try:
+        with open(marker, "w", encoding="utf-8") as handle:
+            handle.write(key + "\n")
+    except OSError:
+        pass
+    return False
 
 
 def number_labels(checks):

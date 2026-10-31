@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.18.0 — 2026-10-30
+
+unpushed-at-stop refuses a set of unpushed commits once per session, then notes it until the next commit.
+
+### Changed
+
+- `unpushed-at-stop` refuses a set of unpushed commits once per session, then passes with a one-line note until a new commit arrives. Until now it refused at every turn, so an integration session that holds many commits and pushes once at the end was pushed into early, repeated pushes that each ran the full gate and queued behind every other session's. Uncommitted source changes are still refused every time.
+
 ## 1.17.1 — 2026-10-29
 
 adopt.py never records its own hooks directory as a project's previous hooks.
