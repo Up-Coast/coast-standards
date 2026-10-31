@@ -73,6 +73,7 @@ Publish nothing before the owner's manual QA pass. Supply a testable build and a
 - One subscription layer per app, chosen once.
 - Draft marketing freely; publish only on the owner's go, each time.
 - Check claims about external products against primary sources.
+- A decision recorded in the code or the docs (a comment that says the owner decided, a decisions record) stands. A plan carries it forward; a builder never reverses it; a verifier checks the live behaviour, not only that the change matches the plan. It changes only when the owner says so in the current conversation, and the change quotes the owner.
 [check: process]
 
 ## Definition of done: a rule without its guard is not done (2026-09-01)

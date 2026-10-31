@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.19.0 — 2026-10-30
+
+Priority rule 10: a recorded decision stands until the owner reverses it in the current conversation.
+
+### Added
+
+- Priority rule 10 gains a standing decision: a decision recorded in the code or the docs stands until the owner reverses it in the current conversation; a plan carries it forward, a builder never reverses it, and a verifier checks the live behaviour, not only that the change matches the plan. Until now a plan written from the code could undo a recorded performance decision and no check caught it before production slowed.
+
 ## 1.18.0 — 2026-10-30
 
 unpushed-at-stop refuses a set of unpushed commits once per session, then notes it until the next commit.
