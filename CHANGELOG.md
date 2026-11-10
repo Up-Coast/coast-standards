@@ -4,6 +4,14 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.19.1 — 2026-11-10
+
+The pre-push rules scan works on a new repository's first push.
+
+### Fixed
+
+- The pre-push rules scan no longer fails on the first push of a new repository whose adoption commit is its first commit. `git rev-parse` printed the unresolved `<commit>^` before the fallback ran, so the scan received two bases.
+
 ## 1.19.0 — 2026-10-30
 
 Priority rule 10: a recorded decision stands until the owner reverses it in the current conversation.

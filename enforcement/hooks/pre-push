@@ -913,7 +913,7 @@ if wants rules-scan; then
   # other lane's commits landed between the measurement and the push.
   since_adoption() {  # <base> <tip>
     adopted=$(git log --diff-filter=A --format=%H --reverse "$1..$2" -- "$state/platform" 2>/dev/null | head -n 1)
-    if [ -n "$adopted" ]; then git rev-parse "$adopted^" 2>/dev/null || echo "$1"; else echo "$1"; fi
+    if [ -n "$adopted" ]; then git rev-parse --verify -q "$adopted^" || echo "$1"; else echo "$1"; fi
   }
   for range in $ranges; do
     base=${range%%:*}; tip=${range#*:}
