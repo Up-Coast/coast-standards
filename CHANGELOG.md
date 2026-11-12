@@ -4,6 +4,15 @@ What changes for a project that upgrades, one section per version. Every merge t
 
 ## Unreleased
 
+## 1.20.0 — 2026-11-11
+
+A refused push ends with what failed and keeps its whole output; a retry runs only the failed tests
+
+### Added
+
+- The pre-push hook keeps its whole output in `<git dir>/coast-gate/last-push.log` and ends a refused push with the failure lines and the log's path. Until now the failing test names scrolled away, and a session that kept only the last lines ran the whole suite again to find them.
+- A retried push runs only the test files that failed plus the tests the changes since then reach (jest and vitest), when the remote tip has not moved. Until now every retry ran the whole related set again, which on a change to a shared layout meant hundreds of test files for one fixed test.
+
 ## 1.19.1 — 2026-11-10
 
 The pre-push rules scan works on a new repository's first push.

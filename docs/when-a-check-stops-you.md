@@ -1,6 +1,6 @@
 # When a check stops you
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-11-11*
 
 ## Reading a refusal
 
@@ -51,6 +51,14 @@ Below, `.coast/` is your project's checks folder and `<standards>` is your copy 
 3. Push again.
 
 Build warnings, linter findings, formatter findings and duplicate code do not refuse when they fall. The hook prints a note suggesting the same command.
+
+## "gate: REFUSED. What failed:"
+
+**Means:** a pre-push check refused the push. The lines under it are the failures the hook found in its output, and the last line names the file that holds the whole output (`.git/coast-gate/last-push.log`, or the worktree's own git dir).
+
+1. Read the failure lines. Open the log for the full context; do not run the whole suite again to find them.
+2. Fix what failed.
+3. Push again. If tests failed, the retry runs only those test files and the tests your new changes reach, as long as nobody pushed to the default branch in between.
 
 ## "The test run passed … s with no verdict" (`tests-deadline`)
 

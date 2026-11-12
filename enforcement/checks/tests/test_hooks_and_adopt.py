@@ -565,6 +565,95 @@ class AdoptTests(unittest.TestCase):
         with open(record, encoding="utf-8") as handle:
             self.assertEqual(handle.read().strip(), "npm test --silent -- --passWithNoTests --findRelatedTests src/one.ts")
 
+    def _vitest_project(self):
+        """A web project whose test script is vitest, with a test file and two sources; returns
+        (base, tip) where tip changes src/one.ts."""
+        return self._scoped_project("web", {
+            "package.json": json.dumps({"name": "site", "scripts": {"test": "vitest"}}),
+            "src/one.ts": "export const one = 1;\n",
+            "src/two.ts": "export const two = 2;\n",
+            "tests/a.test.ts": "import { one } from '../src/one';\n",
+        }, {"src/one.ts": "export const one = 11;\n"})
+
+    # A stub `npx` that records its arguments and fails as vitest does while STUB_FAIL is set.
+    FAILING_VITEST = ("if [ -n \"${STUB_FAIL:-}\" ]; then\n"
+                      "  printf ' FAIL  tests/a.test.ts > a name\\nError: Test timed out in 30000ms.\\n'\n"
+                      "  exit 1\nfi\nexit 0\n")
+
+    def _calls(self, record):
+        with open(record, encoding="utf-8") as handle:
+            return [line.strip() for line in handle if line.strip()]
+
+    def test_a_refused_push_keeps_its_whole_output_and_ends_with_what_failed(self):
+        # Criterion: a refused push names its failing tests on its last lines and keeps the
+        # whole output in a file, so nobody runs the suite again to learn what failed.
+        base, tip = self._vitest_project()
+        overrides, _ = self._stub("npx", self.FAILING_VITEST)
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip),
+                                      env=clean_env(STUB_FAIL="1", **overrides))
+        self.assertNotEqual(code, 0, out)
+        tail = out[out.index("gate: REFUSED. What failed:"):]
+        self.assertIn(" FAIL  tests/a.test.ts > a name", tail)
+        self.assertIn("Test timed out in 30000ms", tail)
+        log = os.path.join(self.project.path, ".git", "coast-gate", "last-push.log")
+        self.assertIn(f"the whole output of this push is in {log}", tail)
+        with open(log, encoding="utf-8") as handle:
+            self.assertIn("gate: tests (vitest related, 1 changed file(s))", handle.read())
+
+    def test_a_passing_push_prints_no_refusal_summary(self):
+        # Criterion (negative): a green push ends as before, with no failure summary.
+        base, tip = self._vitest_project()
+        overrides, _ = self._stub("npx", self.FAILING_VITEST)
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip),
+                                      env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("REFUSED", out)
+        self.assertIn("gate: every check green", out)
+
+    def test_a_retry_runs_only_the_failed_test_files_and_what_changed_since(self):
+        # Criterion: after a refused push, the next push to the same remote tip runs the test
+        # files that failed plus the tests the new changes reach, not the whole related set.
+        base, tip = self._vitest_project()
+        overrides, record = self._stub("npx", self.FAILING_VITEST)
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip),
+                                      env=clean_env(STUB_FAIL="1", **overrides))
+        self.assertNotEqual(code, 0, out)
+        self.project.write("src/two.ts", "export const two = 22;\n")
+        self.project.commit("the fix")
+        fixed = sh(self.project.path, "git", "rev-parse", "HEAD")
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, fixed),
+                                      env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"a retry of {tip[:8]} runs the 1 test file(s) that failed there", out)
+        self.assertEqual(self._calls(record)[-1],
+                         "npx --no-install vitest related --run --passWithNoTests src/two.ts tests/a.test.ts")
+        self.assertFalse(os.path.exists(os.path.join(self.project.path, ".git", "coast-gate", "failed-tests")),
+                         "a passing run clears the record")
+        # With the record cleared, the next push runs its full related scope again.
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, fixed),
+                                      env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("a retry of", out)
+        self.assertEqual(self._calls(record)[-1],
+                         "npx --no-install vitest related --run --passWithNoTests src/one.ts src/two.ts")
+
+    def test_a_retry_against_a_moved_remote_runs_the_full_scope(self):
+        # Criterion (negative): when the remote tip is not the one the failure was recorded
+        # against, nothing is trusted and the whole related set runs.
+        base, tip = self._vitest_project()
+        overrides, record = self._stub("npx", self.FAILING_VITEST)
+        self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(base, tip),
+                          env=clean_env(STUB_FAIL="1", **overrides))
+        self.project.write("src/two.ts", "export const two = 22;\n")
+        self.project.commit("more")
+        later = sh(self.project.path, "git", "rev-parse", "HEAD")
+        code, out = self.project.hook("pre-push", "--seat", "tests", stdin=self._push_refs(tip, later),
+                                      env=clean_env(**overrides))
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("a retry of", out)
+        self.assertEqual(self._calls(record)[-1],
+                         "npx --no-install vitest related --run --passWithNoTests src/two.ts")
+
     def test_a_python_push_runs_the_test_files_the_change_reaches(self):
         base, tip = self._scoped_project("python", {
             "pkg/__init__.py": "",

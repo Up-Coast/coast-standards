@@ -55,6 +55,9 @@
 #          file no target owns, or <prefix>SCOPE=all in the environment
 # jscpd, the whole-tree scan and the doc-comment count run whenever code changed:
 # a clone pairs a changed file with an unchanged one, so the tree is their unit.
+# A refused push ends with the failure lines and the path of its whole output
+# (<git dir>/coast-gate/last-push.log); a retry of refused jest or vitest tests runs only the
+# failed test files plus what the changes since reach (see retry_listing below).
 # A push that updates only work branches (no default branch, no tag) runs NO check: a work
 # branch is a backup of work in progress, pushed as often as it is committed, compiling or
 # not. The push to the default branch judges every commit it brings in.
@@ -72,7 +75,35 @@
 # JSCPD_BIN names a jscpd binary when it is not on PATH. GOVERNING: agents
 # never edit the files that define their own checks.
 set -u
+
+# THE WHOLE OUTPUT IS KEPT. A refused push used to scroll its failing test names off the
+# screen, and a session that kept only the last lines had to run the whole suite again to
+# learn which test failed. The hook runs itself once more under tee: everything it prints
+# goes to the terminal and to <git dir>/coast-gate/last-push.log, and a refusal ends with
+# the failure lines gathered from that log and the log's path.
+if [ -z "${COAST_GATE_TEED:-}" ]; then
+  gate_self=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0")
+  gate_dir=$(git rev-parse --absolute-git-dir 2>/dev/null)/coast-gate
+  if mkdir -p "$gate_dir" 2>/dev/null && gate_tmp=$(mktemp "$gate_dir/push.XXXXXX"); then
+    { COAST_GATE_TEED=1 sh "$gate_self" "$@" 2>&1; echo $? > "$gate_tmp.status"; } | tee "$gate_tmp"
+    gate_status=$(cat "$gate_tmp.status" 2>/dev/null)
+    gate_status=${gate_status:-1}
+    rm -f "$gate_tmp.status"
+    mv -f "$gate_tmp" "$gate_dir/last-push.log"
+    if [ "$gate_status" != 0 ]; then
+      # Colour codes stripped; one line per failure, in the order they were printed.
+      failures=$(tr -d '\033' < "$gate_dir/last-push.log" | sed 's/\[[0-9;]*m//g' \
+        | grep -E '(^| )FAIL( |$)|FAILED|✕|^ *× |^not ok |error TS[0-9]+|: error:|Test timed out|the push was refused' \
+        | awk '!seen[$0]++' | tail -n 40)
+      printf '\ngate: REFUSED. What failed:\n%s\ngate: the whole output of this push is in %s\n' \
+        "${failures:-  (no failure line recognised; read the log)}" "$gate_dir/last-push.log"
+    fi
+    exit "$gate_status"
+  fi
+fi
+
 cd "$(git rev-parse --show-toplevel)" || exit 1
+gate_dir=$(git rev-parse --absolute-git-dir)/coast-gate
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_PREFIX
 export PYTHONDONTWRITEBYTECODE=1   # the checks leave no __pycache__ in the project
 export SWT_SF_SYMBOLS_ENABLED=0   # Swift Testing's marks paste as plain text
@@ -631,6 +662,67 @@ xcode_tests() {
   rm -f "$log"
   return $status
 }
+# A RETRY RUNS ONLY WHAT FAILED (jest and vitest). A refused push records which test files
+# failed, at which commit, against which remote tip (<git dir>/coast-gate/failed-tests).
+# The next push to the same remote tip, from a descendant of that commit, runs those test
+# files plus the tests related to every file changed since, not the whole related set
+# again: the rest passed on the recorded commit and nothing they import has changed. Any
+# other push (the remote moved, history was rewritten, another runner) runs the full scope.
+# A test run that passes clears the record.
+push_tip=""; push_base=""
+if [ -n "$refs_file" ] && [ -s "$refs_file" ]; then
+  while read -r _local_ref local_sha remote_ref remote_sha; do
+    [ "${remote_ref:-}" = "refs/heads/$default_branch" ] && { push_tip=$local_sha; push_base=$remote_sha; }
+  done < "$refs_file"
+fi
+failed_record="$gate_dir/failed-tests"
+
+# <runner> <listing>: prints the listing the related-tests run takes: the scope's own, or
+# on a retry the recorded failures plus what changed since (and says so on stderr).
+retry_listing() {
+  runner_now=$1; listing=$2
+  if [ -z "$push_tip" ] || [ ! -s "$failed_record" ]; then echo "$listing"; return; fi
+  read -r rec_base rec_tip rec_runner < "$failed_record"
+  if [ "$rec_runner" != "$runner_now" ] || [ "$rec_base" != "$push_base" ] \
+     || ! git merge-base --is-ancestor "$rec_tip" "$push_tip" 2>/dev/null; then
+    echo "$listing"; return
+  fi
+  retry=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}retry.XXXXXX") || { echo "$listing"; return; }
+  tail -n +2 "$failed_record" > "$retry.failed"
+  git diff --name-only "$rec_tip" "$push_tip" > "$retry.changed" 2>/dev/null || : > "$retry.changed"
+  sort -u "$retry.failed" "$retry.changed" | while IFS= read -r path; do
+    [ -n "$path" ] && [ -e "$path" ] && printf '%s\n' "$path"
+  done > "$retry"
+  printf 'gate: tests: a retry of %s runs the %s test file(s) that failed there, plus the tests %s file(s) changed since reach\n' \
+    "$(printf '%s' "$rec_tip" | cut -c1-8)" "$(grep -c . "$retry.failed")" "$(grep -c . "$retry.changed")" >&2
+  rm -f "$retry.failed" "$retry.changed"
+  echo "$retry"
+}
+
+# <runner> <command…>: runs the related-tests command, showing its output as it comes, and
+# records the test files that failed (or clears the record when it passes).
+remember_failures() {
+  runner_now=$1; shift
+  seat_out=$(mktemp "${TMPDIR:-/tmp}/${layout_temp_prefix}tests.XXXXXX") || { "$@"; return $?; }
+  { "$@"; echo $? > "$seat_out.status"; } 2>&1 | tee "$seat_out"
+  seat_status=$(cat "$seat_out.status" 2>/dev/null)
+  seat_status=${seat_status:-1}
+  if [ "$seat_status" = 0 ]; then
+    rm -f "$failed_record"
+  else
+    # ` FAIL  tests/a.test.ts > a name` (vitest), `FAIL tests/a.test.ts` (jest).
+    failed=$(tr -d '\033' < "$seat_out" | sed 's/\[[0-9;]*m//g' \
+      | sed -n -E 's/^ ?FAIL +([^ >]+).*/\1/p' | sort -u)
+    if [ -n "$failed" ] && [ -n "$push_tip" ]; then
+      printf '%s %s %s\n%s\n' "$push_base" "$push_tip" "$runner_now" "$failed" > "$failed_record"
+    else
+      rm -f "$failed_record"
+    fi
+  fi
+  rm -f "$seat_out" "$seat_out.status"
+  return "$seat_status"
+}
+
 # <command…>: the tests seat. An existing app with no test target at all cannot pass
 # a test run; under a tests-missing entry (adopt.py --measure-tools wrote it, with the
 # deadline) the seat judges that instead, and runs the real tests the day a target exists.
@@ -818,11 +910,13 @@ case "$platform" in
       runner=$(python3 "$checks/jsonc.py" package.json scripts.test 2>/dev/null | tr -d '"' | awk '{print $1}')
       runner=${runner##*/}
       if [ "$scope_kind" = files ] && [ "$runner" = jest ] && [ -s "$scope_files_listing" ]; then
+        tests_listing=$(retry_listing jest "$scope_files_listing")
         run "tests (jest --findRelatedTests, $scope_files changed file(s))" \
-          timed_tests with_listing "$scope_files_listing" npm test --silent -- --passWithNoTests --findRelatedTests
+          timed_tests remember_failures jest with_listing "$tests_listing" npm test --silent -- --passWithNoTests --findRelatedTests
       elif [ "$scope_kind" = files ] && [ "$runner" = vitest ] && [ -s "$scope_files_listing" ]; then
+        tests_listing=$(retry_listing vitest "$scope_files_listing")
         run "tests (vitest related, $scope_files changed file(s))" \
-          timed_tests with_listing "$scope_files_listing" npx --no-install vitest related --run --passWithNoTests
+          timed_tests remember_failures vitest with_listing "$tests_listing" npx --no-install vitest related --run --passWithNoTests
       elif [ "$scope_kind" = files ] && [ "$scope_modules" = 1 ]; then
         run "tests (npm test, affected workspaces: $scope_test_targets)" timed_tests npm test --silent --if-present $(workspace_flags $scope_test_targets)
       else

@@ -1,6 +1,6 @@
 # Coast Standards Enforcement — Developer Guide
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-11-11*
 
 The technical reference for developers who adopt or maintain the enforcement layer: the scanner, the hooks and the installer. The current release number is in the root `CHECKS-VERSION`. The design and build plan are in [README.md](README.md).
 
@@ -469,6 +469,8 @@ Then the checks run in this order, and any failure stops the push:
 | `gh-ruleset` | read-only `gh api` check that the default branch has an active ruleset with `pull_request`, `deletion`, `non_fast_forward` and no bypass | same | same | same |
 
 - **Time limit.** Test runs are stopped after `tests_deadline_seconds` (default 900), and the push is refused with a message saying a test is hanging.
+- **The whole output is kept.** Everything the hook prints also goes to `<git dir>/coast-gate/last-push.log` (in a worktree, that worktree's own git dir). A refused push ends with `gate: REFUSED. What failed:`, the failure lines found in the log (failing tests, type errors, the refusing seat), and the log's path.
+- **A retry runs only what failed** (jest and vitest). When the related-tests run fails, the hook writes the failing test files to `<git dir>/coast-gate/failed-tests` with the pushed commit and the remote tip. The next push to the same remote tip, from a descendant of that commit, runs those test files plus the tests that the files changed since then reach, and prints `gate: tests: a retry of <sha> …`. If the remote tip moved or history was rewritten, the full related set runs. A passing run deletes the record.
 - A missing tool is a refusal with its install command.
 - Xcode uses the scheme in `.coast/xcode-scheme`, or the first one listed. Builds run with `CODE_SIGNING_ALLOWED=NO`.
 
